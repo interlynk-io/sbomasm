@@ -1,0 +1,54 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: app-sources
+DocumentNamespace: http://spdx.org/spdxdocs/zephyr-65f2599b-fc54-419f-93af-dc98db9bb6f4/app
+Creator: Tool: Zephyr SPDX builder
+Created: 2023-04-27T18:01:21Z
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-app-sources
+
+##### Package: app-sources
+
+PackageName: app-sources
+SPDXID: SPDXRef-app-sources
+PackageDownloadLocation: NOASSERTION
+PackageLicenseConcluded: Apache-2.0
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageLicenseInfoFromFiles: Apache-2.0
+FilesAnalyzed: true
+PackageVerificationCode: 6815ae4336a9a2aca9c706e60a1c66a95dfa6531
+
+FileName: ./src/dynamic_cmd.c
+SPDXID: SPDXRef-File-dynamic-cmd.c
+FileChecksum: SHA1: af27bfbe15814f357351839be3707d10ec064a53
+FileChecksum: SHA256: 954127f14852edadd84a1efa30167700a006aeef3168fbe2ac815e115084fc7c
+LicenseConcluded: Apache-2.0
+LicenseInfoInFile: Apache-2.0
+FileCopyrightText: NOASSERTION
+
+FileName: ./src/main.c
+SPDXID: SPDXRef-File-main.c
+FileChecksum: SHA1: b06663196c79be76ee9b54bd2b22c0bc10b990c0
+FileChecksum: SHA256: 7b41fe722b0c939a029433fc7ed41f0e1776f06a4275388df286e44f6bb3688d
+LicenseConcluded: Apache-2.0
+LicenseInfoInFile: Apache-2.0
+FileCopyrightText: NOASSERTION
+
+FileName: ./src/test_module.c
+SPDXID: SPDXRef-File-test-module.c
+FileChecksum: SHA1: 419247ddadeebc4a5676481ae9fbae7044cf5410
+FileChecksum: SHA256: 642d1dd39f811284365355d816718f34994451c62b860d25b0142c0b8df8c251
+LicenseConcluded: Apache-2.0
+LicenseInfoInFile: Apache-2.0
+FileCopyrightText: NOASSERTION
+
+FileName: ./src/uart_reinit.c
+SPDXID: SPDXRef-File-uart-reinit.c
+FileChecksum: SHA1: 57b906b837061cfa0c97dc40383f0ad5e687e9d7
+FileChecksum: SHA256: 82c46db5741714ff6fc70f06ce971e2b616fadb6f997198ddd302c1c15733d1d
+LicenseConcluded: Apache-2.0
+LicenseInfoInFile: Apache-2.0
+FileCopyrightText: NOASSERTION
+
