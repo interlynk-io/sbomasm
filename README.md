@@ -55,15 +55,15 @@ An assembled SBOM encompasses all the components/packages, dependencies, files, 
 
 ```
 +-----------------------+   +-----------------------+   +-----------------------+
-|       Micro SBOM 1     |   |       Micro SBOM 2      |   |       Micro SBOM 3      |
+|       Micro SBOM 1    |   |       Micro SBOM 2    |   |       Micro SBOM 3    |
 |-----------------------|   |-----------------------|   |-----------------------|
-|  Component 1           |   |  Component 3           |   |  Component 5           |
-|  Component 2           |   |  Component 1           |   |  Component 6           |
-|  File 1 (Comp1)        |   |  File 1 (Comp3)        |   |  File 1 (Comp5)        |
-|  File 2 (Comp1)        |   |  File 2 (Comp3)        |   |                        |
-|  Dependency 1 (Comp1)  |   |  Dependency 1 (Comp2)  |   |  Dependency 2 (Comp3)  |
-|  License: Apache 2.0   |   |  License: MIT          |   |  License: BSD          |
-|  Metadata 1            |   |  Metadata 1            |   |  Metadata 1            |
+|  Component 1          |   |  Component 3          |   |  Component 4          |
+|  Component 2          |   |  Component 1          |   |  Component 5          |
+|  File 1 (Comp1)       |   |  File 1 (Comp3)       |   |  File 1 (Comp5)       |
+|  File 2 (Comp1)       |   |  File 2 (Comp3)       |   |                       |
+|  Dependency 1 (Comp1) |   |  Dependency 1 (Comp2) |   |  Dependency 2 (Comp3) |
+|  License: Apache 2.0  |   |  License: MIT         |   |  License: BSD         |
+|  Metadata 1           |   |  Metadata 1           |   |  Metadata 1           |
 |-----------------------|   |-----------------------|   |-----------------------|
 |          ↓            |   |          ↓            |   |          ↓            |
 +-----------------------+   +-----------------------+   +-----------------------+
@@ -75,6 +75,7 @@ An assembled SBOM encompasses all the components/packages, dependencies, files, 
                       |  Component 2                       |
                       |  Component 3                       |
                       |  Component 1                       |
+                      |  Component 4                       |
                       |  Component 5                       |
                       |                                    |
                       |  File 1 (Comp1)                    |
