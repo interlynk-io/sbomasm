@@ -22,13 +22,12 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sbomasm",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "sbomasm is your primary tool to assemble SBOMs, for easy management and distribution.", 
+	Long: `sbomasm is your primary tool to assemble SBOMs, for easy management and distribution. The tool
+can process both spdx and cyclonedx input sboms, it autotects the file formats for input sboms. The tool
+can output both spdx and cyclonedx sboms. Multiple algorithms are supported for assembling component sboms
+into a final sbom.
+`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 }
