@@ -27,11 +27,11 @@ import (
 var assembleCmd = &cobra.Command{
 	Use:   "assemble",
 	Short: "helps assembling sboms into a final sbom",
-	Long: `The assemble command will help assembling sboms into a final sbom. 
+	Long: `The assemble command will help assembling sboms into a final sbom.
 
 Basic Example:
-    $ sbomasm assemble -n "mega-app" -v "1.0.0" in-sbom1.json in-sbom2.json 
-    $ sbomasm assemble -n "mega-app" -v "1.0.0" -f -o "mega_app_flat.sbom.json" in-sbom1.json in-sbom2.json 
+    $ sbomasm assemble -n "mega-app" -v "1.0.0" -t "application" in-sbom1.json in-sbom2.json
+    $ sbomasm assemble -n "mega-app" -v "1.0.0" -t "application" -f -o "mega_app_flat.sbom.json" in-sbom1.json in-sbom2.json
 
 Advanced Example:
 	$ sbomasm generate > config.yaml (edit the config file to add your settings)
@@ -68,7 +68,8 @@ func init() {
 
 	assembleCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
 	assembleCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")
-	assembleCmd.MarkFlagsRequiredTogether("name", "version")
+	assembleCmd.Flags().StringP("type", "t", "", "product type of the assembled sbom (application, framework, library, container, device, firmware)")
+	assembleCmd.MarkFlagsRequiredTogether("name", "version", "type")
 
 	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
 	assembleCmd.Flags().BoolP("hierMerge", "m", true, "hierarchical merge")
@@ -116,9 +117,11 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 
 	name, _ := cmd.Flags().GetString("name")
 	version, _ := cmd.Flags().GetString("version")
+	typeValue, _ := cmd.Flags().GetString("type")
 
 	aParams.Name = name
 	aParams.Version = version
+	aParams.Type = typeValue
 
 	flatMerge, _ := cmd.Flags().GetBool("flatMerge")
 	hierMerge, _ := cmd.Flags().GetBool("hierMerge")

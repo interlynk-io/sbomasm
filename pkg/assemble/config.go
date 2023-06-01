@@ -100,7 +100,7 @@ var defaultConfig = config{
 		Name:           "[REQUIRED]",
 		Version:        "[REQUIRED]",
 		Description:    "[OPTIONAL]",
-		PrimaryPurpose: "[OPTIONAL]",
+		PrimaryPurpose: "[REQUIRED]",
 		Purl:           "[OPTIONAL]",
 		CPE:            "[OPTIONAL]",
 		License: license{
@@ -186,10 +186,13 @@ func (c *config) readAndMerge(p *Params) error {
 		c.App.Version = strings.Trim(p.Version, " ")
 	}
 
+	if p.Type != "" {
+		c.App.PrimaryPurpose = strings.Trim(p.Type, " ")
+	}
+
 	if p.Xml {
 		c.Output.FileFormat = "xml"
 	}
-
 	return nil
 }
 

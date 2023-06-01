@@ -26,6 +26,7 @@ type Params struct {
 
 	Name    string
 	Version string
+	Type    string
 
 	FlatMerge bool
 	HierMerge bool
