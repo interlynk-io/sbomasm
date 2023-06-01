@@ -29,12 +29,12 @@ other installation [options](#installation).
 # Usage
 `SPDX` assemble multiple SBOMs
 ```sh
-sbomasm assemble -n "mega spdx app" -v "1.0.0" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json 
+sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json 
 ```
 
 `CDX` assemble multiple SBOMs
 ```sh
-sbomasm assemble -n "mega cdx app" -v "1.0.0" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
+sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
 ```
 
 # Features
