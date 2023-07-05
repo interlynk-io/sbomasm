@@ -1,4 +1,4 @@
-name: Build and Push to GHCR
+name: GHCR Publishing
 on:
   release:
     types:
