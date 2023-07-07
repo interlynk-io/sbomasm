@@ -191,6 +191,27 @@ To get more details in case of issues or just information, run the above command
 
 The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you dont have one, reach out to us, we are building an SBOM monitor product, to help with this. 
 
+
+#### Using containerized sbomasm
+
+```sh
+$docker run [volume-maps] ghcr.io/interlynk-io/sbomasm:v0.0.4 [options]
+```
+Example
+```sh
+docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.0.4 assemble -n "assemble cdx app" -v "v2.0.0" -t "application" -o /app/sboms/final-prod.cdx.json /app/sboms/one.cdx.json /app/sboms/two.cdx.json
+```
+```
+Unable to find image 'ghcr.io/interlynk-io/sbomasm:v0.0.4' locally
+v0.0.4: Pulling from interlynk-io/sbomasm
+8f0c96af9a89: Already exists
+c0dfa2243edd: Already exists
+Digest: sha256:99f91ccbdae1000fe1e34afd6ef98e693af26458deb5c5a8a07bc90550d6b9a6
+Status: Downloaded newer image for ghcr.io/interlynk-io/sbomasm:v0.0.4
+```
+
+
+
 # Installation 
 
 ## Using Prebuilt binaries 
