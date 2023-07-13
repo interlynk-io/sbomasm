@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v52/github"
 	"github.com/spf13/cobra"
 	version "sigs.k8s.io/release-utils/version"
@@ -26,7 +27,7 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sbomasm",
-	Short: "sbomasm is your primary tool to assemble SBOMs, for easy management and distribution.", 
+	Short: "sbomasm is your primary tool to assemble SBOMs, for easy management and distribution.",
 	Long: `sbomasm is your primary tool to assemble SBOMs, for easy management and distribution. The tool
 can process both spdx and cyclonedx input sboms, it autotects the file formats for input sboms. The tool
 can output both spdx and cyclonedx sboms. Multiple algorithms are supported for assembling component sboms
@@ -74,7 +75,18 @@ func checkIfLatestRelease() {
 		return
 	}
 
-	if rr.GetTagName() != version.GetVersionInfo().GitVersion {
+	verLatest, err := semver.NewVersion(version.GetVersionInfo().GitVersion)
+	if err != nil {
+		return
+	}
+
+	verInstalled, err := semver.NewVersion(rr.GetTagName())
+	if err != nil {
+		return
+	}
+
+	result := verInstalled.Compare(verLatest)
+	if result < 0 {
 		fmt.Printf("\nA new version of sbomasm is available %s.\n\n", rr.GetTagName())
 	}
 }
