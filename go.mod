@@ -3,7 +3,7 @@ module github.com/interlynk-io/sbomasm
 go 1.20
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.7.1
+	github.com/CycloneDX/cyclonedx-go v0.7.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/uuid v1.3.0
