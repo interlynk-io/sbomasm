@@ -116,7 +116,7 @@ We currently support two algorithm
 For `spdx hierarchical merge`, all packages, dependencies, externalrefs, files are consolidates into a individual lists, no duplicates are removed. The hierarchy is maintained via dependencies. A new primary package is created, which the generated SBOM describes. This primary package also adds contains
 relationship between itself and the primary components of the individual SBOMs. 
 
-For `cdx hierarchical merge` for each input SBOM, we associate the dependent components with its primary component. This primary component, is then included as a depedenct of the newly created primary component for the assembled SBOM. 
+For `cdx hierarchical merge` for each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM. 
 
 # A complete example/use-case
 Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.
@@ -189,13 +189,13 @@ To get more details in case of issues or just information, run the above command
 2023-05-03T04:49:33.570-0700    DEBUG   spdx/merge.go:339       wrote sbom 3825558 bytes to interlynk.combined-sbom.spdx.json with packages:202, files:4396, deps:4598, snips:0 otherLics:0, annotations:0, externaldocRefs:0
 ```
 
-The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you dont have one, reach out to us, we are building an SBOM monitor product, to help with this. 
+The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this. 
 
 
 #### Using containerized sbomasm
 
 ```sh
-$docker run [volume-maps] ghcr.io/interlynk-io/sbomasm:v0.0.4 [options]
+docker run [volume-maps] ghcr.io/interlynk-io/sbomasm:v0.0.4 [options]
 ```
 Example
 ```sh
@@ -251,12 +251,18 @@ We look forward to your contributions, below are a few guidelines on how to subm
 - Push your changes (`git push origin feature/new-feature`)
 - Create a new pull-request
 
-# Contact 
-We appreciate all feedback, the best way to get in touch with us
-- hello@interlynk.io
-- github.com/interlynk-io/sbomasm/issues 
-- https://twitter.com/InterlynkIo
+# Other SBOM Open Source tools
+- [SBOM Assembler](https://github.com/interlynk-io/sbomasm) - A tool to compose a single SBOM by combining other (part) SBOMs
+- [SBOM Quality Score](https://github.com/interlynk-io/sbomqs) - A tool for evaluating the quality and completeness of SBOMs
+- [SBOM Search Tool](https://github.com/interlynk-io/sbomagr) - A tool to grep style semantic search in SBOMs
+- [SBOM Explorer](https://github.com/interlynk-io/sbomex) - A tool for discovering and downloading SBOM from a public repository
 
+# Contact 
+We appreciate all feedback. The best ways to get in touch with us:
+- :phone: [Live Chat](https://www.interlynk.io/#hs-chat-open)
+- 📫 [Email Us](mailto:hello@interlynk.io)
+- 🐛 [Report a bug or enhancement](https://github.com/interlynk-io/sbomex/issues) 
+- :x: [Follow us on X](https://twitter.com/InterlynkIo)
 
 # Stargazers
 
