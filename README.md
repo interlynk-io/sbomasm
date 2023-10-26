@@ -18,6 +18,8 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/interlynk-io/sbomasm.svg)](https://pkg.go.dev/github.com/interlynk-io/sbomasm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/interlynk-io/sbomasm)](https://goreportcard.com/report/github.com/interlynk-io/sbomasm)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
+![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
 `sbomasm` is your primary tool to assemble SBOMs, for easy management and distribution. 
 
