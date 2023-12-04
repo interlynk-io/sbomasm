@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/samber/lo v1.38.1
+	github.com/samber/lo v1.39.0
 	github.com/spdx/tools-golang v0.5.3
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.26.0
