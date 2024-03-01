@@ -1,0 +1,36 @@
+name: Build and Push SBOM to Interlynk
+
+on:
+  workflow_dispatch
+
+jobs:
+  build-sbom:
+    name: SBOM build and Push to Platform
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3 
+        with:
+            fetch-depth: 0
+      - name: Download syft binary
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Run syft
+        run: syft version
+      - name: Get Tag
+        id: get_tag
+        run: echo "tag=$(git describe --tags HEAD)" > $GITHUB_ENV
+      - name: Build SBOM
+        run: |
+          syft --source-name 'sbomasm' --source-version ${{ env.tag }} --exclude ./public --exclude ./.github -o cyclonedx-json --file sbomasm.cdx.json .
+      
+      - name: Clone Python Tool (replace with actual organization and repo)
+        run: |
+          git clone https://github.com/interlynk-io/pylynk
+          cd pylynk ; pip3 install -r requirement.txt; cp pylynk* /tmp; cp lynkctx.py /tmp; chmod +x /tmp/pylynk*; chmod +x /tmp/lynkctx.py  # Navigate into the cloned directory
+     
+      - name: Upload SBOM
+        run: |
+          python3 /tmp/pylynk.py upload --prod 'sbomasm' --sbom sbomasm.cdx.json --${{ secrets.INTERLYNK_SECURITY_TOKEN }}
