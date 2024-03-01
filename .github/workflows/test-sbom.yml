@@ -28,7 +28,7 @@ jobs:
       
       - name: Clone Python Tool (replace with actual organization and repo)
         run: |
-          git clone https://github.com/interlynk-io/pylynk
+          git clone https://interlynk-io:${{ secrets.GITHUB_TOKEN }}@github.com/interlynk-io/pylynk
           cd pylynk ; pip3 install -r requirement.txt; cp pylynk* /tmp; cp lynkctx.py /tmp; chmod +x /tmp/pylynk*; chmod +x /tmp/lynkctx.py  # Navigate into the cloned directory
      
       - name: Upload SBOM
