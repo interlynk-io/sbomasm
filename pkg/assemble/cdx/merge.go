@@ -52,7 +52,7 @@ func (m *merge) initOutBom() {
 	m.out.SerialNumber = newSerialNumber()
 	m.out.Metadata = &cydx.Metadata{}
 	m.out.Metadata.Timestamp = utcNowTime()
-	m.out.Metadata.Tools = &[]cydx.Tool{
+	m.out.Metadata.Tools.Tools = &[]cydx.Tool{
 		{Vendor: "Interlynk.io", Name: "sbomasm", Version: version.GetVersionInfo().GitVersion},
 	}
 
@@ -148,7 +148,7 @@ func (m *merge) flatMerge() error {
 	log.Debug("Merging BOMs into a flat list")
 	tools := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Tool {
 		if bom.Metadata.Tools != nil {
-			return *bom.Metadata.Tools
+			return *bom.Metadata.Tools.Tools
 		}
 		return []cydx.Tool{}
 	}))
@@ -188,7 +188,7 @@ func (m *merge) flatMerge() error {
 	}))
 
 	m.out.Metadata.Component = m.setupPrimaryComp()
-	m.out.Metadata.Tools = &tools
+	m.out.Metadata.Tools.Tools = &tools
 
 	//Add the primary component to the list of components
 	for _, c := range priComps {
@@ -225,7 +225,7 @@ func (m *merge) hierarchicalMerge() error {
 
 	tools := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Tool {
 		if bom.Metadata.Tools != nil {
-			return *bom.Metadata.Tools
+			return *bom.Metadata.Tools.Tools
 		}
 		return []cydx.Tool{}
 	}))
@@ -266,7 +266,7 @@ func (m *merge) hierarchicalMerge() error {
 	}))
 
 	m.out.Metadata.Component = m.setupPrimaryComp()
-	m.out.Metadata.Tools = &tools
+	m.out.Metadata.Tools.Tools = &tools
 
 	//Add depedencies between new primary component and old primary components
 	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {
