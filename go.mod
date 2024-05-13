@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/release-utils v0.8.1
+	sigs.k8s.io/release-utils v0.8.2
 )
 
 require (
@@ -33,6 +33,6 @@ require (
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/oauth2 v0.19.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
