@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.5
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.8.0
+	github.com/CycloneDX/cyclonedx-go v0.9.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/google/go-github/v52 v52.0.0
 	github.com/google/uuid v1.6.0
