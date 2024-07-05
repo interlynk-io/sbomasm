@@ -25,9 +25,11 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/mitchellh/copystructure"
+	"github.com/samber/lo"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx"
+	"github.com/spdx/tools-golang/spdx/v2/common"
 	"github.com/spdx/tools-golang/spdx/v2/v2_3"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
@@ -97,4 +99,44 @@ func composeNamespace(docName string) string {
 		Path:   path,
 	}
 	return url.String()
+}
+
+// If we are merging documents, which are included as external references, we should
+// remove those. As they are no longer external references.
+func externalDocumentRefs(docs []*v2_3.Document) []v2_3.ExternalDocumentRef {
+	currentDocNamespaces := lo.Map(docs, func(doc *v2_3.Document, _ int) string {
+		return doc.DocumentNamespace
+	})
+
+	refs := []v2_3.ExternalDocumentRef{}
+
+	for _, doc := range docs {
+		for _, ref := range doc.ExternalDocumentReferences {
+			if !lo.Contains(currentDocNamespaces, ref.URI) {
+				refs = append(refs, ref)
+			}
+		}
+	}
+
+	return refs
+}
+
+func getAllCreators(docs []*v2_3.Document) []common.Creator {
+	var creators []common.Creator
+	var uniqCreator = make(map[string]common.Creator)
+
+	for _, doc := range docs {
+		if doc.CreationInfo != nil {
+			for _, c := range doc.CreationInfo.Creators {
+				if c.Creator == "" {
+					continue
+				}
+				if _, ok := uniqCreator[c.Creator]; !ok {
+					uniqCreator[c.Creator] = c
+					creators = append(creators, c)
+				}
+			}
+		}
+	}
+	return creators
 }

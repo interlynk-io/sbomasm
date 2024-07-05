@@ -88,6 +88,10 @@ func (m *merge) initOutBom() {
 		Creator:     fmt.Sprintf("%s-%s", "sbomasm", version.GetVersionInfo().GitVersion),
 	})
 
+	//Add all creators from the input sboms
+	creators := getAllCreators(m.in)
+	m.out.CreationInfo.Creators = append(m.out.CreationInfo.Creators, creators...)
+
 	lVersions := lo.Uniq(lo.Map(m.in, func(bom *spdx.Document, _ int) string {
 		if bom.CreationInfo != nil && bom.CreationInfo.LicenseListVersion != "" {
 			return bom.CreationInfo.LicenseListVersion
@@ -111,13 +115,10 @@ func (m *merge) initOutBom() {
 	} else if len(lVersions) == 1 && strings.Trim(lVersions[0], " ") != "" {
 		finalLicVersion = lVersions[0]
 	}
+
 	log.Debugf("No of Licenses: %d:  Selected:%s", len(lVersions), finalLicVersion)
 	m.out.CreationInfo.LicenseListVersion = finalLicVersion
-
-	m.out.ExternalDocumentReferences = lo.FlatMap(m.in, func(bom *spdx.Document, _ int) []spdx.ExternalDocumentRef {
-		return bom.ExternalDocumentReferences
-	})
-
+	m.out.ExternalDocumentReferences = append(m.out.ExternalDocumentReferences, externalDocumentRefs(m.in)...)
 }
 
 func (m *merge) setupPrimaryComp() *spdx.Package {
@@ -137,7 +138,7 @@ func (m *merge) setupPrimaryComp() *spdx.Package {
 		p.PackageSupplier.Supplier = "NOASSERTION"
 	}
 
-	p.FilesAnalyzed = false
+	p.FilesAnalyzed = true
 
 	if len(m.settings.App.Checksums) > 0 {
 		p.PackageChecksums = []common.Checksum{}
@@ -223,12 +224,17 @@ func (m *merge) hierarchicalMerge() error {
 
 	pkgs := []*spdx.Package{pc}
 	deps := []*spdx.Relationship{}
+	files := []*spdx.File{}
 
 	//Add relationship between document and primary package
 	deps = append(deps, &spdx.Relationship{
 		RefA:         common.MakeDocElementID("", "DOCUMENT"),
 		RefB:         common.MakeDocElementID("", string(pc.PackageSPDXIdentifier)),
 		Relationship: common.TypeRelationshipDescribe,
+	})
+
+	docNames := lo.Map(m.in, func(doc *spdx.Document, _ int) string {
+		return doc.DocumentName
 	})
 
 	for _, doc := range m.in {
@@ -245,6 +251,9 @@ func (m *merge) hierarchicalMerge() error {
 			return rel.Relationship == common.TypeRelationshipDescribe
 		})
 
+		newDocPrimaryPackageIdent := common.ElementID(fmt.Sprintf("Package-%s", uuid.New().String()))
+		oldDocPrimaryPackageIdent := common.ElementID("")
+
 		for _, pkg := range doc.Packages {
 			isDescPkg := m.isDescribedPackage(pkg, descRels)
 
@@ -256,28 +265,59 @@ func (m *merge) hierarchicalMerge() error {
 
 			if isDescPkg {
 				//Change the SPDX Identifier to the package specified
-				cPkg.PackageSPDXIdentifier = common.ElementID(fmt.Sprintf("Package-%s", uuid.New().String()))
+				oldDocPrimaryPackageIdent = cPkg.PackageSPDXIdentifier
+				cPkg.PackageSPDXIdentifier = newDocPrimaryPackageIdent
 
 				deps = append(deps, &spdx.Relationship{
 					RefA:         common.MakeDocElementID("", string(pc.PackageSPDXIdentifier)),
 					RefB:         common.MakeDocElementID("", string(cPkg.PackageSPDXIdentifier)),
 					Relationship: common.TypeRelationshipContains,
 				})
-
-				//Update the relationships to point to the new package id
-				lo.ForEach(doc.Relationships, func(rel *spdx.Relationship, _ int) {
-					if rel == nil {
-						return
-					}
-					if rel.RefA.ElementRefID == pkg.PackageSPDXIdentifier {
-						rel.RefA.ElementRefID = cPkg.PackageSPDXIdentifier
-					}
-					if rel.RefB.ElementRefID == pkg.PackageSPDXIdentifier {
-						rel.RefB.ElementRefID = cPkg.PackageSPDXIdentifier
-					}
-				})
 			}
+
+			if !cPkg.FilesAnalyzed {
+				cPkg.PackageVerificationCode = nil
+			}
+
+			for _, f := range cPkg.Files {
+				if f.FileSPDXIdentifier == "" {
+					continue
+				}
+				files = append(files, f)
+			}
+
+			cPkg.Files = []*spdx.File{}
 			pkgs = append(pkgs, cPkg)
+		}
+
+		for _, rel := range doc.Relationships {
+			if rel == nil {
+				continue
+			}
+
+			if rel.RefA.ElementRefID == oldDocPrimaryPackageIdent {
+				rel.RefA.ElementRefID = newDocPrimaryPackageIdent
+			}
+
+			if rel.RefB.ElementRefID == oldDocPrimaryPackageIdent {
+				rel.RefB.ElementRefID = newDocPrimaryPackageIdent
+			}
+
+			// if the relationship has a DocumentRef defined, and the
+			// document is part of the merge set, we should null it out.
+
+			if rel.RefA.DocumentRefID != "" {
+				if lo.Contains(docNames, rel.RefA.DocumentRefID) {
+					rel.RefA.DocumentRefID = ""
+				}
+			}
+
+			if rel.RefB.DocumentRefID != "" {
+				if lo.Contains(docNames, rel.RefB.DocumentRefID) {
+					rel.RefB.DocumentRefID = ""
+				}
+			}
+			deps = append(deps, rel)
 		}
 	}
 
@@ -290,9 +330,11 @@ func (m *merge) hierarchicalMerge() error {
 		})
 	})...)
 
-	files := lo.Flatten(lo.Map(m.in, func(pkg *spdx.Document, _ int) []*spdx.File {
+	docFiles := lo.Flatten(lo.Map(m.in, func(pkg *spdx.Document, _ int) []*spdx.File {
 		return pkg.Files
 	}))
+
+	files = append(files, docFiles...)
 
 	otherLics := lo.FlatMap(m.in, func(doc *spdx.Document, _ int) []*spdx.OtherLicense {
 		return doc.OtherLicenses
