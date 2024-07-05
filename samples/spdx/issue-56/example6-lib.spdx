@@ -1,50 +1,81 @@
 SPDXVersion: SPDX-2.2
 DataLicense: CC0-1.0
 SPDXID: SPDXRef-DOCUMENT
-DocumentName: hello-go-bin
-DocumentNamespace: https://swinslow.net/spdx-examples/example6/hello-go-bin-v2
-ExternalDocumentRef:DocumentRef-hello-go-src https://swinslow.net/spdx-examples/example6/hello-go-src-v2 SHA1: b3018ddb18802a56b60ad839c98d279687b60bd6
-ExternalDocumentRef:DocumentRef-go-lib https://swinslow.net/spdx-examples/example6/go-lib-v2 SHA1: 58e4a6d5745f032b9788142e49edee1b508c7ac5
+DocumentName: go-lib
+DocumentNamespace: https://swinslow.net/spdx-examples/example6/go-lib-v2
 Creator: Person: Steve Winslow (steve@swinslow.net)
-Creator: Tool: github.com/spdx/tools-golang/builder
-Creator: Tool: github.com/spdx/tools-golang/idsearcher
-Created: 2021-08-26T01:56:00Z
+Created: 2021-08-26T01:55:00Z
 
-##### Package: hello-go-bin
+##### Package representing the Go distribution
 
-PackageName: hello-go-bin
-SPDXID: SPDXRef-Package-hello-go-bin
-PackageDownloadLocation: git+https://github.com/swinslow/spdx-examples.git#example6/content/build
-FilesAnalyzed: true
-PackageVerificationCode: 41acac4b846ee388cb6c1234f04489ccd5daa5a5
-PackageLicenseConcluded: GPL-3.0-or-later AND LicenseRef-Golang-BSD-plus-Patents
-PackageLicenseInfoFromFiles: NOASSERTION
+PackageName: go-1.15
+SPDXID: SPDXRef-Package-godist
+PackageFileName: go_6715.snap
+PackageVersion: 1.15.4
+PackageSupplier: Organization: Canonical Ltd.
+PackageOriginator: Organization: Google LLC
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 0d6e1420facd978e532eae7bd5cb6378b65522c12fa9dcf682129e698c34d1b2
+PackageHomePage: https://golang.org/ 
+PackageSourceInfo: installed using Ubuntu snap file, see https://snapcraft.io/go
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: LicenseRef-Golang-BSD-plus-Patents
+PackageCopyrightText: Copyright (c) 2009 The Go Authors. All rights reserved.
+PackageSummary: Ubuntu snap distribution of Golang v1.15.4 linux/amd64
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-godist
+
+##### Package representing the Go compiler
+
+PackageName: go
+SPDXID: SPDXRef-Package-go-compiler
+PackageFileName: go
+PackageVersion: 1.15.4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageChecksum: SHA256: 4448b9e62b3c364a073808e22643985d9f49c4ad44aa11d8e4a17c49600a7c3a
+PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
 
-Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-hello-go-bin
+Relationship: SPDXRef-Package-godist CONTAINS SPDXRef-Package-go-compiler
 
-FileName: ./hello
-SPDXID: SPDXRef-hello-go-binary
-FileChecksum: SHA1: 78ed46e8e6f86f19d3a6782979029be5f918235f
-FileChecksum: SHA256: 3d51cb6c9a38d437e8ee20a1902a15875ea1d3771a215622e14739532be14949
-FileChecksum: MD5: 9ec63d68bdceb2922548e3faa377e7d0
-LicenseConcluded: GPL-3.0-or-later AND LicenseRef-Golang-BSD-plus-Patents
-LicenseInfoInFile: NOASSERTION
-FileCopyrightText: NOASSERTION
+##### Packages representing Go standard library packages
 
-##### Relationships
+PackageName: go.fmt
+SPDXID: SPDXRef-Package-go.fmt
+PackageVersion: 1.15.4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: This represents the fmt standard library, not the gofmt command.
 
-Relationship: SPDXRef-hello-go-binary GENERATED_FROM DocumentRef-hello-go-src:SPDXRef-hello-go-src
-Relationship: SPDXRef-hello-go-binary GENERATED_FROM DocumentRef-hello-go-src:SPDXRef-Makefile
+Relationship: SPDXRef-Package-godist CONTAINS SPDXRef-Package-go.fmt
 
-Relationship: DocumentRef-go-lib:SPDXRef-Package-go-compiler BUILD_TOOL_OF SPDXRef-Package-hello-go-bin
+PackageName: go.reflect
+SPDXID: SPDXRef-Package-go.reflect
+PackageVersion: 1.15.4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
 
-Relationship: DocumentRef-go-lib:SPDXRef-Package-go.fmt RUNTIME_DEPENDENCY_OF SPDXRef-Package-hello-go-bin
-Relationship: DocumentRef-go-lib:SPDXRef-Package-go.fmt STATIC_LINK SPDXRef-Package-hello-go-bin
+Relationship: SPDXRef-Package-godist CONTAINS SPDXRef-Package-go.reflect
 
-Relationship: DocumentRef-go-lib:SPDXRef-Package-go.reflect STATIC_LINK SPDXRef-Package-hello-go-bin
-Relationship: DocumentRef-go-lib:SPDXRef-Package-go.strconv STATIC_LINK SPDXRef-Package-hello-go-bin
+PackageName: go.strconv
+SPDXID: SPDXRef-Package-go.strconv
+PackageVersion: 1.15.4
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+
+Relationship: SPDXRef-Package-godist CONTAINS SPDXRef-Package-go.strconv
 
 ##### Non-standard license
 
