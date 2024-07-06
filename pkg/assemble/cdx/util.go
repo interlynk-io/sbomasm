@@ -26,6 +26,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/hashstructure/v2"
+	"sigs.k8s.io/release-utils/version"
 )
 
 func newSerialNumber() string {
@@ -95,4 +96,46 @@ func utcNowTime() string {
 	location, _ := time.LoadLocation("UTC")
 	locationTime := time.Now().In(location)
 	return locationTime.Format(time.RFC3339)
+}
+
+func getAllTools(boms []*cydx.BOM) []cydx.Component {
+	tools := []cydx.Component{}
+
+	tools = append(tools, *toolInfo("sbomasm", version.GetVersionInfo().GitVersion, "Assembler for your sboms", "Interlynk", "https://interlynk.io", "support@interlynk.io", "Apache-2.0"))
+
+	for _, bom := range boms {
+		if bom.Metadata != nil && bom.Metadata.Tools != nil {
+			for _, tool := range *bom.Metadata.Tools.Tools {
+				tools = append(tools, *toolInfo(tool.Name, tool.Version, "", tool.Vendor, "", "", ""))
+			}
+		}
+
+		if bom.Metadata != nil && bom.Metadata.Tools != nil && bom.Metadata.Tools.Components != nil {
+			for _, tool := range *bom.Metadata.Tools.Components {
+				tools = append(tools, *toolInfo(tool.Name, tool.Version, "", "", "", "", ""))
+			}
+		}
+	}
+	return tools
+}
+
+func toolInfo(name, version, desc, sName, sUrl, sEmail, sLicense string) *cydx.Component {
+	return &cydx.Component{
+		Type:        cydx.ComponentTypeApplication,
+		Name:        name,
+		Version:     version,
+		Description: desc,
+		Supplier: &cydx.OrganizationalEntity{
+			Name:    sName,
+			URL:     &[]string{sUrl},
+			Contact: &[]cydx.OrganizationalContact{{Email: sEmail}},
+		},
+		Licenses: &cydx.Licenses{
+			{
+				License: &cydx.License{
+					ID: sLicense,
+				},
+			},
+		},
+	}
 }

@@ -349,7 +349,11 @@ func (m *merge) hierarchicalMerge() error {
 }
 
 func (m *merge) flatMerge() error {
-	return fmt.Errorf("spdx flat merge not implemented")
+	return fmt.Errorf("not implemented")
+}
+
+func (m *merge) assemblyMerge() error {
+	return fmt.Errorf("not implemented")
 }
 
 func (m *merge) writeSBOM() error {

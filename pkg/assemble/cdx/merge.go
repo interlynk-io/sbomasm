@@ -21,7 +21,6 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/samber/lo"
-	"sigs.k8s.io/release-utils/version"
 )
 
 type merge struct {
@@ -52,9 +51,6 @@ func (m *merge) initOutBom() {
 	m.out.SerialNumber = newSerialNumber()
 	m.out.Metadata = &cydx.Metadata{}
 	m.out.Metadata.Timestamp = utcNowTime()
-	m.out.Metadata.Tools.Tools = &[]cydx.Tool{
-		{Vendor: "Interlynk.io", Name: "sbomasm", Version: version.GetVersionInfo().GitVersion},
-	}
 
 	if m.settings.App.Supplier.Name != "" || m.settings.App.Supplier.Email != "" {
 		m.out.Metadata.Supplier = &cydx.OrganizationalEntity{}
@@ -146,12 +142,6 @@ func (m *merge) flatMerge() error {
 	cs := newComponentService(*m.settings.Ctx)
 
 	log.Debug("Merging BOMs into a flat list")
-	tools := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Tool {
-		if bom.Metadata.Tools != nil {
-			return *bom.Metadata.Tools.Tools
-		}
-		return []cydx.Tool{}
-	}))
 
 	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
 		if bom.Metadata != nil && bom.Metadata.Component != nil {
@@ -188,7 +178,12 @@ func (m *merge) flatMerge() error {
 	}))
 
 	m.out.Metadata.Component = m.setupPrimaryComp()
-	m.out.Metadata.Tools.Tools = &tools
+
+	tools := getAllTools(m.in)
+	m.out.Metadata.Tools = &cydx.ToolsChoice{
+		Components: &[]cydx.Component{},
+	}
+	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
 
 	//Add the primary component to the list of components
 	for _, c := range priComps {
@@ -217,18 +212,11 @@ func (m *merge) flatMerge() error {
 
 }
 
-func (m *merge) hierarchicalMerge() error {
+func (m *merge) assemblyMerge() error {
 	log := logger.FromContext(*m.settings.Ctx)
 	cs := newComponentService(*m.settings.Ctx)
 
-	log.Debug("Merging BOMs hierarchically")
-
-	tools := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Tool {
-		if bom.Metadata.Tools != nil {
-			return *bom.Metadata.Tools.Tools
-		}
-		return []cydx.Tool{}
-	}))
+	log.Debug("Merging BOMs as an assembly")
 
 	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
 		if bom.Metadata != nil && bom.Metadata.Component != nil {
@@ -266,7 +254,80 @@ func (m *merge) hierarchicalMerge() error {
 	}))
 
 	m.out.Metadata.Component = m.setupPrimaryComp()
-	m.out.Metadata.Tools.Tools = &tools
+
+	m.out.Metadata.Component.Components = &[]cydx.Component{}
+	for _, c := range priComps {
+		*m.out.Metadata.Component.Components = append(*m.out.Metadata.Component.Components, *c)
+	}
+
+	tools := getAllTools(m.in)
+	m.out.Metadata.Tools = &cydx.ToolsChoice{
+		Components: &[]cydx.Component{},
+	}
+	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
+
+	if m.settings.Assemble.IncludeComponents {
+		m.out.Components = &[]cydx.Component{}
+		for _, c := range priComps {
+			*m.out.Components = append(*m.out.Components, *c)
+		}
+	}
+
+	if m.settings.Assemble.IncludeDependencyGraph {
+		m.out.Dependencies = &deps
+	}
+
+	return m.writeSBOM()
+}
+
+func (m *merge) hierarchicalMerge() error {
+	log := logger.FromContext(*m.settings.Ctx)
+	cs := newComponentService(*m.settings.Ctx)
+
+	log.Debug("Merging BOMs hierarchically")
+
+	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
+		if bom.Metadata != nil && bom.Metadata.Component != nil {
+			pc := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
+
+			if pc.Components == nil {
+				pc.Components = &[]cydx.Component{}
+			}
+
+			for _, c := range lo.FromPtr(bom.Components) {
+				*pc.Components = append(*pc.Components, *cs.StoreAndCloneWithNewID(&c))
+			}
+			return pc
+		}
+		return &cydx.Component{}
+	})
+
+	deps := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
+		newDeps := []cydx.Dependency{}
+		for _, dep := range lo.FromPtr(bom.Dependencies) {
+			nd := cydx.Dependency{}
+			ref, found := cs.ResolveDepID(dep.Ref)
+			if !found {
+				log.Warnf("dependency %s not found", dep.Ref)
+				continue
+			}
+
+			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
+
+			nd.Ref = ref
+			nd.Dependencies = &deps
+			newDeps = append(newDeps, nd)
+		}
+		return newDeps
+	}))
+
+	m.out.Metadata.Component = m.setupPrimaryComp()
+
+	tools := getAllTools(m.in)
+	m.out.Metadata.Tools = &cydx.ToolsChoice{
+		Components: &[]cydx.Component{},
+	}
+	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
 
 	//Add depedencies between new primary component and old primary components
 	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {

@@ -72,10 +72,13 @@ func init() {
 	assembleCmd.MarkFlagsRequiredTogether("name", "version", "type")
 
 	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
-	assembleCmd.Flags().BoolP("hierMerge", "m", true, "hierarchical merge")
+	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
+	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge")
+	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge")
 
 	assembleCmd.Flags().BoolP("xml", "x", false, "output in xml format")
 	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
+	assembleCmd.MarkFlagsMutuallyExclusive("xml", "json")
 
 	assembleCmd.PersistentFlags().BoolP("debug", "d", false, "debug output")
 }
@@ -125,13 +128,11 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 
 	flatMerge, _ := cmd.Flags().GetBool("flatMerge")
 	hierMerge, _ := cmd.Flags().GetBool("hierMerge")
-
-	if flatMerge {
-		hierMerge = false
-	}
+	assemblyMerge, _ := cmd.Flags().GetBool("assemblyMerge")
 
 	aParams.FlatMerge = flatMerge
 	aParams.HierMerge = hierMerge
+	aParams.AssemblyMerge = assemblyMerge
 
 	xml, _ := cmd.Flags().GetBool("xml")
 	json, _ := cmd.Flags().GetBool("json")
