@@ -1,4 +1,4 @@
-name: Release| Build Binary
+name: Release | Build Binary
 
 on:
   push:

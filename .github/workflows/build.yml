@@ -1,4 +1,4 @@
-name: Release| Build GHCR image
+name: Release | Build GHCR image
 on:
   release:
     types: [published]
