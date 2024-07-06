@@ -1,4 +1,4 @@
-name: Dev| Build SBOM
+name: Dev | Build SBOM
 
 on:
   push:
