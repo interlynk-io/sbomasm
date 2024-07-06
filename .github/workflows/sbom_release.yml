@@ -12,7 +12,7 @@ env:
   DEFAULT_TAG: v0.0.1
   PYLYNK_TEMP_DIR: $RUNNER_TEMP/pylynk
   SBOM_TEMP_DIR: $RUNNER_TEMP/sbom
-  SBOM_ENV: production
+  SBOM_ENV: default
   MS_SBOM_TOOL_URL: https://github.com/microsoft/sbom-tool/releases/latest/download/sbom-tool-linux-x64
   MS_SBOM_SBOM_PATH: $RUNNER_TEMP/sbom/_manifest/spdx_2.2/manifest.spdx.json
   SBOM_EXCLUDE_DIRS: "**/samples/**"
