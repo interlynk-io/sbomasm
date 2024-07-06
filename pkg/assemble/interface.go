@@ -28,8 +28,9 @@ type Params struct {
 	Version string
 	Type    string
 
-	FlatMerge bool
-	HierMerge bool
+	FlatMerge     bool
+	HierMerge     bool
+	AssemblyMerge bool
 
 	Xml  bool
 	Json bool

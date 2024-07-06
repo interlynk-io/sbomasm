@@ -19,7 +19,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -85,6 +84,7 @@ type assemble struct {
 	includeDuplicateComponents bool
 	FlatMerge                  bool `yaml:"flat_merge"`
 	HierarchicalMerge          bool `yaml:"hierarchical_merge"`
+	AssemblyMerge              bool `yaml:"assembly_merge"`
 }
 
 type config struct {
@@ -125,6 +125,7 @@ var defaultConfig = config{
 	Assemble: assemble{
 		FlatMerge:                  false,
 		HierarchicalMerge:          true,
+		AssemblyMerge:              false,
 		IncludeComponents:          true,
 		IncludeDependencyGraph:     true,
 		includeDuplicateComponents: true,
@@ -158,7 +159,7 @@ func newConfig() *config {
 func (c *config) readAndMerge(p *Params) error {
 	if p.ConfigPath != "" {
 
-		yF, err := ioutil.ReadFile(p.ConfigPath)
+		yF, err := os.ReadFile(p.ConfigPath)
 		if err != nil {
 			return err
 		}
@@ -171,6 +172,7 @@ func (c *config) readAndMerge(p *Params) error {
 
 		c.Assemble.FlatMerge = p.FlatMerge
 		c.Assemble.HierarchicalMerge = p.HierMerge
+		c.Assemble.AssemblyMerge = p.AssemblyMerge
 	}
 
 	c.input.files = p.Input
@@ -274,14 +276,6 @@ func (c *config) validate() error {
 
 	if c.input.files == nil || len(c.input.files) == 0 {
 		return fmt.Errorf("input files are not set")
-	}
-
-	if !c.Assemble.FlatMerge && !c.Assemble.HierarchicalMerge {
-		return fmt.Errorf("flat merge or hierarchical merge must be set")
-	}
-
-	if c.Assemble.FlatMerge && c.Assemble.HierarchicalMerge {
-		return fmt.Errorf("flat merge or hierarchical merger can be set, not both")
 	}
 
 	err := c.validateInputContent()

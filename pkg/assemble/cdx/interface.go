@@ -109,6 +109,7 @@ type assemble struct {
 	IncludeDuplicateComponents bool
 	FlatMerge                  bool
 	HierarchicalMerge          bool
+	AssemblyMerge              bool
 }
 
 type MergeSettings struct {
@@ -129,7 +130,9 @@ func Merge(ms *MergeSettings) error {
 		return merger.flatMerge()
 	} else if ms.Assemble.HierarchicalMerge {
 		return merger.hierarchicalMerge()
+	} else if ms.Assemble.AssemblyMerge {
+		return merger.assemblyMerge()
 	}
 
-	return nil
+	return merger.hierarchicalMerge()
 }

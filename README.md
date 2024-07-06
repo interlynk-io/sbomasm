@@ -118,6 +118,7 @@ for input and output formats
 We currently support two algorithm 
 - Hierarchical: This merge algo tries to maintain, the order of the dependent components to its primary component. For spdx this is done via relationships and for cyclonedx via nested components & dependencies. 
 - Flat: As the name states, are just consolidated lists of components, dependencies, etc. 
+- Assembly: Merge is very similar to Hierarchical, except that it does not create dependency relationships among the merged sboms. 
 
 For `spdx hierarchical merge`, all packages, dependencies, externalrefs, files are consolidates into a individual lists, no duplicates are removed. The hierarchy is maintained via dependencies. A new primary package is created, which the generated SBOM describes. This primary package also adds contains
 relationship between itself and the primary components of the individual SBOMs. 
