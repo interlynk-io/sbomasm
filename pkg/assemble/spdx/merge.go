@@ -192,7 +192,7 @@ func (m *merge) hierarchicalMerge() error {
 	})
 
 	for _, doc := range m.in {
-		log.Debugf("processing sbom %s with packages:%d, files:%d, deps:%d, Snips:%d OtherLics:%d, Annotations:%d, externaldocrefs:%d",
+		log.Debugf("processing sbom %s with packages:%d, docFiles:%d, deps:%d, Snips:%d OtherLics:%d, Annotations:%d, externaldocrefs:%d",
 			fmt.Sprintf("%s-%s", doc.SPDXIdentifier, doc.DocumentName),
 			len(doc.Packages), len(doc.Files), len(doc.Relationships),
 			len(doc.Snippets), len(doc.OtherLicenses), len(doc.Annotations),
@@ -209,6 +209,7 @@ func (m *merge) hierarchicalMerge() error {
 		oldDocPrimaryPackageIdent := common.ElementID("")
 
 		for _, pkg := range doc.Packages {
+			log.Debugf("\tpackage %s : %s with pkgFiles:%d", pkg.PackageName, pkg.PackageVersion, len(pkg.Files))
 			isDescPkg := m.isDescribedPackage(pkg, descRels)
 
 			cPkg, err := cloneComp(pkg)
