@@ -81,9 +81,7 @@ func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 }
 
 func utcNowTime() string {
-	location, _ := time.LoadLocation("UTC")
-	locationTime := time.Now().In(location)
-	return locationTime.Format("2006-01-02T15:04:05Z")
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
 func cloneComp(c *spdx.Package) (*spdx.Package, error) {
@@ -194,6 +192,10 @@ func getLicenseListVersion(docs []*v2_3.Document) string {
 		return ""
 	}))
 
+	if len(versions) == 0 {
+		return ""
+	}
+
 	sort.Slice(versions, func(i, j int) bool {
 		return compareVersions(versions[i], versions[j])
 	})
@@ -224,6 +226,10 @@ func getOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
 	customLicenses := lo.FlatMap(docs, func(doc *spdx.Document, _ int) []*spdx.OtherLicense {
 		return doc.OtherLicenses
 	})
+
+	if len(customLicenses) == 0 {
+		return nil
+	}
 
 	return lo.UniqBy(customLicenses, func(license *spdx.OtherLicense) string {
 		// A license would be unique if the identifier is the same & content
