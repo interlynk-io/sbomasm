@@ -55,7 +55,6 @@ func (m *merge) loadBoms() {
 }
 
 func (m *merge) initOutBom() {
-	//log := logger.FromContext(*m.settings.Ctx)
 	m.out.SPDXVersion = spdx.Version
 	m.out.DataLicense = spdx.DataLicense
 	m.out.SPDXIdentifier = common.ElementID("DOCUMENT")
@@ -64,18 +63,8 @@ func (m *merge) initOutBom() {
 	m.out.CreationInfo = &v2_3.CreationInfo{}
 	m.out.CreationInfo.Created = utcNowTime()
 
-	for _, author := range m.settings.App.Authors {
-		c := common.Creator{}
-		c.CreatorType = "Organization"
-
-		if author.Name != "" || author.Email != "" {
-			c.Creator = fmt.Sprintf("%s (%s)", author.Name, author.Email)
-		}
-		m.out.CreationInfo.Creators = append(m.out.CreationInfo.Creators, c)
-	}
-
 	//Add all creators from the input sboms
-	creators := getAllCreators(m.in)
+	creators := getAllCreators(m.in, m.settings.App.Authors)
 	m.out.CreationInfo.Creators = append(m.out.CreationInfo.Creators, creators...)
 
 	version := getLicenseListVersion(m.in)
@@ -203,7 +192,7 @@ func (m *merge) hierarchicalMerge() error {
 	})
 
 	for _, doc := range m.in {
-		log.Debugf("processing sbom %s with packages:%d, files:%d, deps:%d, Snips:%d OtherLics:%d, Annotations:%d, externaldocrefs:%d",
+		log.Debugf("processing sbom %s with packages:%d, docFiles:%d, deps:%d, Snips:%d OtherLics:%d, Annotations:%d, externaldocrefs:%d",
 			fmt.Sprintf("%s-%s", doc.SPDXIdentifier, doc.DocumentName),
 			len(doc.Packages), len(doc.Files), len(doc.Relationships),
 			len(doc.Snippets), len(doc.OtherLicenses), len(doc.Annotations),
@@ -220,6 +209,7 @@ func (m *merge) hierarchicalMerge() error {
 		oldDocPrimaryPackageIdent := common.ElementID("")
 
 		for _, pkg := range doc.Packages {
+			log.Debugf("\tpackage %s : %s with pkgFiles:%d", pkg.PackageName, pkg.PackageVersion, len(pkg.Files))
 			isDescPkg := m.isDescribedPackage(pkg, descRels)
 
 			cPkg, err := cloneComp(pkg)
@@ -301,14 +291,10 @@ func (m *merge) hierarchicalMerge() error {
 
 	files = append(files, docFiles...)
 
-	otherLics := lo.FlatMap(m.in, func(doc *spdx.Document, _ int) []*spdx.OtherLicense {
-		return doc.OtherLicenses
-	})
-
 	m.out.Packages = pkgs
 	m.out.Files = files
 	m.out.Relationships = deps
-	m.out.OtherLicenses = otherLics
+	m.out.OtherLicenses = getOtherLicenses(m.in)
 
 	return m.writeSBOM()
 }
