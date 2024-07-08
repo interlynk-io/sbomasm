@@ -16,6 +16,7 @@ package spdx
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net/url"
 	"os"
@@ -125,7 +126,7 @@ func externalDocumentRefs(docs []*v2_3.Document) []v2_3.ExternalDocumentRef {
 	return refs
 }
 
-func getAllCreators(docs []*v2_3.Document) []common.Creator {
+func getAllCreators(docs []*v2_3.Document, authors []Author) []common.Creator {
 	var creators []common.Creator
 	var uniqCreator = make(map[string]common.Creator)
 
@@ -141,6 +142,19 @@ func getAllCreators(docs []*v2_3.Document) []common.Creator {
 				}
 			}
 		}
+	}
+
+	for _, author := range authors {
+		authorCreator := ""
+		if author.Email == "" {
+			authorCreator = author.Name
+		} else {
+			authorCreator = fmt.Sprintf("%s (%s)", author.Name, author.Email)
+		}
+		creators = append(creators, common.Creator{
+			CreatorType: "Person",
+			Creator:     authorCreator,
+		})
 	}
 
 	sbomAsmCreator := common.Creator{
@@ -204,4 +218,19 @@ func compareVersions(a, b string) bool {
 	}
 
 	return len(aParts) < len(bParts)
+}
+
+func getOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
+	customLicenses := lo.FlatMap(docs, func(doc *spdx.Document, _ int) []*spdx.OtherLicense {
+		return doc.OtherLicenses
+	})
+
+	return lo.UniqBy(customLicenses, func(license *spdx.OtherLicense) string {
+		// A license would be unique if the identifier is the same & content
+		contentList := []string{license.LicenseIdentifier, license.ExtractedText}
+		jointContent := strings.Join(contentList, "")
+
+		checksum := sha256.Sum256([]byte(jointContent))
+		return fmt.Sprintf("%x", checksum)
+	})
 }
