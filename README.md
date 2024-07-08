@@ -42,6 +42,10 @@ sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product
 ```sh
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
 ```
+`sbomasm` in an AirGapped Environment
+```sh
+INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
+```
 
 # Features
 - SBOM format agnostic
