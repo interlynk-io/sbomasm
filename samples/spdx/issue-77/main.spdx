@@ -1,0 +1,39 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: main
+DocumentNamespace: https://example.com/spdx/main
+ExternalDocumentRef: DocumentRef-other https://example.com/spdx/other SHA1: 084de3898580bbf1bae9c66d347c25f9a33b1a5e
+Creator: Tool: Compliance Tool
+Created: 2024-06-03T16:53:26Z
+
+#### Relationships
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-main
+
+Relationship: SPDXRef-Package-main CONTAINS DocumentRef-other:SPDXRef-Package-other
+Relationship: SPDXRef-Package-main CONTAINS SPDXRef-Package-rtty
+
+##### Package: main
+
+PackageName: main
+SPDXID: SPDXRef-Package-main
+PackageSupplier: Organization: ACME
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: LGPL-2.1-only
+PackageLicenseDeclared: LGPL-2.1-only
+PackageCopyrightText: NOASSERTION
+
+##### Package: rtty
+
+PackageName: rtty
+SPDXID: SPDXRef-Package-rtty
+PackageSupplier: Organization: ACME
+PackageVersion: 6.6.1
+PackageDownloadLocation: https://github.com/zhaojh329/rtty/releases
+FilesAnalyzed: false
+PackageLicenseConcluded: LGPL-2.1-only
+PackageLicenseDeclared: LGPL-2.1-only
+PackageCopyrightText: NOASSERTION
+PackageSummary:<text>remote debug client</text>

@@ -1,0 +1,37 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: other
+DocumentNamespace: https://example.com/spdx/other
+Creator: Tool: Compliance Tool
+Created: 2024-04-26T12:23:57Z
+
+#### Relationships
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-other
+
+Relationship: SPDXRef-Package-other CONTAINS SPDXRef-Package-libuv
+
+##### Package: other
+
+PackageName: other
+SPDXID: SPDXRef-Package-other
+PackageSupplier: Organization: ACME
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: MIT
+PackageLicenseDeclared: MIT
+PackageCopyrightText: NOASSERTION
+
+##### Package: libuv
+
+PackageName: libuv
+SPDXID: SPDXRef-Package-libuv
+PackageSupplier: Organization: ACME
+PackageVersion: v1.19.2
+PackageDownloadLocation: https://github.com
+FilesAnalyzed: false
+PackageLicenseConcluded: MIT AND BSD-3-Clause
+PackageLicenseDeclared: MIT AND BSD-3-Clause
+PackageCopyrightText: NOASSERTION
+PackageSummary:<text></text>

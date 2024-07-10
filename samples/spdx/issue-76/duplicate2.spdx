@@ -1,0 +1,37 @@
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: hello-go-src
+DocumentNamespace: https://swinslow.net/spdx-examples/example6/hello-go-src-v2
+Creator: Person: Steve Winslow (steve@swinslow.net)
+Creator: Tool: github.com/spdx/tools-golang/builder
+Created: 2021-08-26T01:55:30Z
+
+##### Package: hello-go-src
+
+PackageName: hello-go-src
+SPDXID: SPDXRef-Package-hello-go-src
+PackageDownloadLocation: git+https://github.com/swinslow/spdx-examples.git#example6/content/src
+FilesAnalyzed: true
+PackageVerificationCode: 6486e016b01e9ec8a76998cefd0705144d869234
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseInfoFromFiles: GPL-3.0-or-later
+PackageLicenseDeclared: GPL-3.0-or-later
+PackageCopyrightText: NOASSERTION
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-hello-go-src
+
+Relationship: SPDXRef-Package-hello-go-src CONTAINS SPDXRef-Package-crypto-js
+
+##### Package: crypto-js
+
+PackageName: crypto-js
+SPDXID: SPDXRef-Package-crypto-js
+PackageSupplier: Organization: ACME
+PackageVersion: 4.1.1
+PackageDownloadLocation: https://github.com/brix/crypto-js/archive/refs/tags/4.1.1.zip
+FilesAnalyzed: false
+PackageLicenseConcluded: MIT 
+PackageLicenseDeclared: MIT 
+PackageCopyrightText: NOASSERTION
+PackageSummary:<text></text>
