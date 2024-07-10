@@ -56,6 +56,8 @@ Advanced Example:
 		if err != nil {
 			return err
 		}
+
+		
 		assembleParams.Ctx = &ctx
 		return assemble.Assemble(assembleParams)
 	},
