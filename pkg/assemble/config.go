@@ -278,6 +278,10 @@ func (c *config) validate() error {
 		return fmt.Errorf("input files are not set")
 	}
 
+	if len(c.input.files) <= 1 {
+		return fmt.Errorf("assembly requires more than one sbom file")
+	}
+
 	err := c.validateInputContent()
 	if err != nil {
 		return err
