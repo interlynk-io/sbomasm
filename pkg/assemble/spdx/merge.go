@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/pingcap/log"
 	"github.com/samber/lo"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
@@ -127,7 +128,12 @@ func (m *merge) setupPrimaryComp() *spdx.Package {
 	}
 
 	p.PackageDescription = m.settings.App.Description
-	p.PrimaryPackagePurpose = m.settings.App.PrimaryPurpose
+
+	if _, ok := spdx_strings_to_types[m.settings.App.PrimaryPurpose]; ok {
+		p.PrimaryPackagePurpose = spdx_strings_to_types[m.settings.App.PrimaryPurpose]
+	} else {
+		log.Warn(fmt.Sprintf("PrimaryPurpose %s is not a valid SPDX Package Purpose", m.settings.App.PrimaryPurpose))
+	}
 
 	p.PackageExternalReferences = []*spdx.PackageExternalReference{}
 
