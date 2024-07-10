@@ -46,6 +46,10 @@ sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.
 ```sh
 INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
 ```
+`sbomasm` via containers
+```sh
+docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "assemble cdx app" -v "v2.0.0" -t "application" -o /app/sboms/final-prod.cdx.json /app/sboms/one.cdx.json /app/sboms/two.cdx.json
+```
 
 # Features
 - SBOM format agnostic
@@ -115,19 +119,22 @@ for input and output formats
 | Spec  | Input SBOM Formats | Output SBOM formats | Output SBOM spec version |
 |----------|----------|----------| -----------------------------|
 | SPDX   | json, yaml, rdf, tag-value   | json, xml   | 2.3 |
-| CycloneDX  | json, xml   | json,xml   | 1.4 |
+| CycloneDX  | json, xml   | json,xml   | 1.6 |
 
 
 ## Merge Algorithm
-We currently support two algorithm 
-- Hierarchical: This merge algo tries to maintain, the order of the dependent components to its primary component. For spdx this is done via relationships and for cyclonedx via nested components & dependencies. 
-- Flat: As the name states, are just consolidated lists of components, dependencies, etc. 
-- Assembly: Merge is very similar to Hierarchical, except that it does not create dependency relationships among the merged sboms. 
+The default merge algorithm is `Hierarchical` merge.
 
-For `spdx hierarchical merge`, all packages, dependencies, externalrefs, files are consolidates into a individual lists, no duplicates are removed. The hierarchy is maintained via dependencies. A new primary package is created, which the generated SBOM describes. This primary package also adds contains
-relationship between itself and the primary components of the individual SBOMs. 
+| Algo  | SBOM Spec | Notes |
+|----------|----------|----------|
+| Hierarchical   | SPDX  | All packages, dependencies, externalrefs, files are consolidates into a individual lists, no duplicates are removed. The hierarchy is maintained via dependencies. A new primary package is created, which the generated SBOM describes. This primary package also adds contains relationship between itself and the primary components of the individual SBOMs.   |
+| Hierarchical   | CycloneDX  | For each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM. |
+| Flat  | SPDX   | Coming Soon.. |
+| Flat  | CycloneDX   | Provides a flat list of components, duplicates are not removed. |
+| Assembly | SPDX | Coming Soon.. |
+| Assembly | CycloneDX | Similar to Hierarchical merge, but treats each sbom as not dependent, so no relationships are created with primary.  |
 
-For `cdx hierarchical merge` for each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM. 
+
 
 # A complete example/use-case
 Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.
@@ -202,27 +209,6 @@ To get more details in case of issues or just information, run the above command
 
 The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this. 
 
-
-#### Using containerized sbomasm
-
-```sh
-docker run [volume-maps] ghcr.io/interlynk-io/sbomasm:v0.0.4 [options]
-```
-Example
-```sh
-docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.0.4 assemble -n "assemble cdx app" -v "v2.0.0" -t "application" -o /app/sboms/final-prod.cdx.json /app/sboms/one.cdx.json /app/sboms/two.cdx.json
-```
-```
-Unable to find image 'ghcr.io/interlynk-io/sbomasm:v0.0.4' locally
-v0.0.4: Pulling from interlynk-io/sbomasm
-8f0c96af9a89: Already exists
-c0dfa2243edd: Already exists
-Digest: sha256:99f91ccbdae1000fe1e34afd6ef98e693af26458deb5c5a8a07bc90550d6b9a6
-Status: Downloaded newer image for ghcr.io/interlynk-io/sbomasm:v0.0.4
-```
-
-
-
 # Installation 
 
 ## Using Prebuilt binaries 
@@ -263,16 +249,17 @@ We look forward to your contributions, below are a few guidelines on how to subm
 - Create a new pull-request
 
 # Other SBOM Open Source tools
-- [SBOM Assembler](https://github.com/interlynk-io/sbomasm) - A tool to compose a single SBOM by combining other (part) SBOMs
-- [SBOM Quality Score](https://github.com/interlynk-io/sbomqs) - A tool for evaluating the quality and completeness of SBOMs
-- [SBOM Search Tool](https://github.com/interlynk-io/sbomagr) - A tool to grep style semantic search in SBOMs
-- [SBOM Explorer](https://github.com/interlynk-io/sbomex) - A tool for discovering and downloading SBOM from a public repository
+- [SBOM Quality Score](https://github.com/interlynk-io/sbomqs) - Quality & Compliance tool
+- [SBOM Search Tool](https://github.com/interlynk-io/sbomgr) - Search Tool
+- [SBOM Explorer](https://github.com/interlynk-io/sbomex) - Discovering and downloading SBOM from a public repository
+- [SBOM Benchmark](https://www.sbombenchmark.dev) is a repository of SBOM and quality score for most popular containers and repositories
 
-# Contact 
+# Contact
 We appreciate all feedback. The best ways to get in touch with us:
+- ❓& 🅰️ [Slack](https://join.slack.com/t/sbomqa/shared_invite/zt-2jzq1ttgy-4IGzOYBEtHwJdMyYj~BACA)
 - :phone: [Live Chat](https://www.interlynk.io/#hs-chat-open)
 - 📫 [Email Us](mailto:hello@interlynk.io)
-- 🐛 [Report a bug or enhancement](https://github.com/interlynk-io/sbomex/issues) 
+- 🐛 [Report a bug or enhancement](https://github.com/interlynk-io/sbomasm/issues)
 - :x: [Follow us on X](https://twitter.com/InterlynkIo)
 
 # Stargazers
