@@ -234,6 +234,11 @@ func (m *merge) hierarchicalMerge() error {
 				cPkg.PackageVerificationCode = nil
 			}
 
+			if cPkg.PackageVerificationCode != nil && cPkg.PackageVerificationCode.Value == "" {
+				cPkg.PackageVerificationCode = nil
+				cPkg.FilesAnalyzed = false
+			}
+
 			for _, f := range cPkg.Files {
 				if f.FileSPDXIdentifier == "" {
 					continue
