@@ -35,6 +35,21 @@ var spdx_hash_algos = map[string]spdx.ChecksumAlgorithm{
 	"BLAKE3":      spdx.BLAKE3,
 }
 
+var spdx_strings_to_types = map[string]string{
+	"application":      "APPLICATION",
+	"framework":        "FRAMEWORK",
+	"library":          "LIBRARY",
+	"container":        "CONTAINER",
+	"operating-system": "OPERATING-SYSTEM",
+	"device":           "DEVICE",
+	"firmware":         "FIRMWARE",
+	"source":           "SOURCE",
+	"archive":          "ARCHIVE",
+	"file":             "FILE",
+	"install":          "INSTALL",
+	"other":            "OTHER",
+}
+
 type Author struct {
 	Name  string
 	Email string
