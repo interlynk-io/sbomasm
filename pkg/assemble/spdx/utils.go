@@ -17,7 +17,9 @@ package spdx
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"sort"
@@ -29,6 +31,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/mitchellh/copystructure"
+	"github.com/pingcap/log"
 	"github.com/samber/lo"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
@@ -39,6 +42,8 @@ import (
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
 	"sigs.k8s.io/release-utils/version"
 )
+
+const NOA = "NOASSERTION"
 
 func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 	log := logger.FromContext(ctx)
@@ -84,13 +89,31 @@ func utcNowTime() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-func cloneComp(c *spdx.Package) (*spdx.Package, error) {
+func clonePkg(c *spdx.Package) (*spdx.Package, error) {
 	compCopy, err := copystructure.Copy(c)
 	if err != nil {
 		return nil, err
 	}
 
 	return compCopy.(*spdx.Package), nil
+}
+
+func cloneFile(c *spdx.File) (*spdx.File, error) {
+	fileCopy, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileCopy.(*spdx.File), nil
+}
+
+func cloneRelationship(c *spdx.Relationship) (*spdx.Relationship, error) {
+	relCopy, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return relCopy.(*spdx.Relationship), nil
 }
 
 func composeNamespace(docName string) string {
@@ -200,9 +223,6 @@ func getLicenseListVersion(docs []*v2_3.Document) string {
 		return compareVersions(versions[i], versions[j])
 	})
 
-	// fmt.Println("Sorted versions:", versions)
-	// fmt.Println("Highest version:", versions[len(versions)-1])
-
 	return versions[len(versions)-1]
 }
 
@@ -222,7 +242,7 @@ func compareVersions(a, b string) bool {
 	return len(aParts) < len(bParts)
 }
 
-func getOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
+func genOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
 	customLicenses := lo.FlatMap(docs, func(doc *spdx.Document, _ int) []*spdx.OtherLicense {
 		return doc.OtherLicenses
 	})
@@ -239,4 +259,346 @@ func getOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
 		checksum := sha256.Sum256([]byte(jointContent))
 		return fmt.Sprintf("%x", checksum)
 	})
+}
+
+func genSpdxDocument(ms *merge) (*v2_3.Document, error) {
+	if ms == nil {
+		return nil, fmt.Errorf("settings is required")
+	}
+
+	doc := v2_3.Document{}
+
+	doc.SPDXVersion = v2_3.Version
+	doc.DataLicense = v2_3.DataLicense
+	doc.SPDXIdentifier = common.ElementID("DOCUMENT")
+	doc.DocumentName = ms.settings.App.Name
+	doc.DocumentNamespace = composeNamespace(ms.settings.App.Name)
+
+	return &doc, nil
+}
+
+func genCreationInfo(ms *merge) (*v2_3.CreationInfo, error) {
+	ci := v2_3.CreationInfo{}
+
+	//set UTC time
+	ci.Created = utcNowTime()
+	ci.CreatorComment = getCreatorComments(ms.in)
+	lVersions := getLicenseListVersion(ms.in)
+	if lVersions != "" {
+		ci.LicenseListVersion = lVersions
+	}
+	creators := getAllCreators(ms.in, ms.settings.App.Authors)
+	ci.Creators = append(ci.Creators, creators...)
+	return &ci, nil
+}
+
+func genPrimaryPackage(ms *merge) (*v2_3.Package, error) {
+	pkg := v2_3.Package{}
+
+	pkg.PackageName = ms.settings.App.Name
+	pkg.PackageVersion = ms.settings.App.Version
+	pkg.PackageDescription = ms.settings.App.Description
+	pkg.PackageSPDXIdentifier = common.ElementID(fmt.Sprintf("RootPackage-%s", ms.rootPackageID))
+	pkg.PackageDownloadLocation = NOA
+	//This is set to true since we are analyzing the merged sboms files
+	pkg.FilesAnalyzed = true
+
+	//Add Supplier
+	if ms.settings.App.Supplier.Name != "" {
+		pkg.PackageSupplier = &common.Supplier{}
+		pkg.PackageSupplier.SupplierType = "Organization"
+
+		if ms.settings.App.Supplier.Email == "" {
+			pkg.PackageSupplier.Supplier = ms.settings.App.Supplier.Name
+		} else {
+			pkg.PackageSupplier.Supplier = fmt.Sprintf("%s (%s)", ms.settings.App.Supplier.Name, ms.settings.App.Supplier.Email)
+		}
+	}
+
+	//Add checksums if provided.
+	if len(ms.settings.App.Checksums) > 0 {
+		pkg.PackageChecksums = []common.Checksum{}
+		for _, c := range ms.settings.App.Checksums {
+			if len(c.Value) == 0 {
+				continue
+			}
+			pkg.PackageChecksums = append(pkg.PackageChecksums, common.Checksum{
+				Algorithm: spdx_hash_algos[c.Algorithm],
+				Value:     c.Value,
+			})
+		}
+	}
+
+	if ms.settings.App.License.Id != "" {
+		pkg.PackageLicenseConcluded = ms.settings.App.License.Id
+	} else if ms.settings.App.License.Expression != "" {
+		pkg.PackageLicenseConcluded = ms.settings.App.License.Expression
+	} else {
+		pkg.PackageLicenseConcluded = NOA
+	}
+
+	if ms.settings.App.Copyright != "" {
+		pkg.PackageCopyrightText = ms.settings.App.Copyright
+	} else {
+		pkg.PackageCopyrightText = NOA
+	}
+
+	if _, ok := spdx_strings_to_types[ms.settings.App.PrimaryPurpose]; ok {
+		pkg.PrimaryPackagePurpose = spdx_strings_to_types[ms.settings.App.PrimaryPurpose]
+	} else {
+		log.Warn(fmt.Sprintf("PrimaryPurpose %s is not a valid SPDX Package Purpose", ms.settings.App.PrimaryPurpose))
+	}
+	if ms.settings.App.Purl != "" {
+		purl := spdx.PackageExternalReference{
+			Category: common.CategoryPackageManager,
+			RefType:  common.TypePackageManagerPURL,
+			Locator:  ms.settings.App.Purl,
+		}
+		pkg.PackageExternalReferences = append(pkg.PackageExternalReferences, &purl)
+	}
+
+	if ms.settings.App.CPE != "" {
+		cpe := spdx.PackageExternalReference{
+			Category: common.CategorySecurity,
+			RefType:  common.TypeSecurityCPE23Type,
+			Locator:  ms.settings.App.CPE,
+		}
+		pkg.PackageExternalReferences = append(pkg.PackageExternalReferences, &cpe)
+	}
+	return &pkg, nil
+}
+
+func createLookupKey(docName, spdxId string) string {
+	return fmt.Sprintf("%s:%s", docName, spdxId)
+}
+
+func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
+	var pkgs []*v2_3.Package
+	mapper := make(map[string]string)
+
+	for _, doc := range ms.in {
+		for _, pkg := range doc.Packages {
+			//Clone the package
+			clone, err := clonePkg(pkg)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			newSpdxId := common.ElementID(fmt.Sprintf("Package-%s", uuid.New().String()))
+			oldSpdxId := createLookupKey(doc.DocumentNamespace, string(pkg.PackageSPDXIdentifier))
+
+			mapper[oldSpdxId] = string(newSpdxId)
+
+			clone.PackageSPDXIdentifier = newSpdxId
+
+			//Fixes
+			// if filesanalyzed is false, nil our verification code
+			if !clone.FilesAnalyzed {
+				clone.PackageVerificationCode = nil
+			}
+
+			if clone.PackageVerificationCode != nil && clone.PackageVerificationCode.Value == "" {
+				clone.PackageVerificationCode = nil
+				clone.FilesAnalyzed = false
+			}
+
+			clone.Files = nil
+
+			//Add the package to the list
+			pkgs = append(pkgs, clone)
+		}
+	}
+
+	return pkgs, mapper, nil
+}
+
+func genFileList(ms *merge) ([]*v2_3.File, map[string]string, error) {
+	var files []*v2_3.File
+	mapper := make(map[string]string)
+
+	for _, doc := range ms.in {
+		//Add the files from the document
+		for _, file := range doc.Files {
+			//Clone the file
+			clone, err := cloneFile(file)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			newSpdxId := common.ElementID(fmt.Sprintf("File-%s", uuid.New().String()))
+			oldSpdxId := createLookupKey(doc.DocumentNamespace, string(file.FileSPDXIdentifier))
+
+			mapper[oldSpdxId] = string(newSpdxId)
+			clone.FileSPDXIdentifier = newSpdxId
+
+			//Add the file to the list
+			files = append(files, clone)
+		}
+
+		//Add the files from the packages
+		for _, pkg := range doc.Packages {
+			for _, file := range pkg.Files {
+				//Clone the file
+				clone, err := cloneFile(file)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				newSpdxId := common.ElementID(fmt.Sprintf("File-%s", uuid.New().String()))
+				oldSpdxId := createLookupKey(doc.DocumentNamespace, string(file.FileSPDXIdentifier))
+
+				mapper[oldSpdxId] = string(newSpdxId)
+				clone.FileSPDXIdentifier = newSpdxId
+
+				//Add the file to the list
+				files = append(files, clone)
+			}
+		}
+	}
+
+	return files, mapper, nil
+}
+
+func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[string]string) ([]*v2_3.Relationship, error) {
+	var relationships []*v2_3.Relationship
+
+	docNames := lo.Map(ms.in, func(doc *v2_3.Document, _ int) string {
+		return doc.DocumentName
+	})
+
+	for _, doc := range ms.in {
+		for _, rel := range doc.Relationships {
+			if rel.Relationship == common.TypeRelationshipDescribe {
+				continue
+			}
+
+			//Clone the relationship
+			clone, err := cloneRelationship(rel)
+			if err != nil {
+				return nil, err
+			}
+
+			// if the relationship has a DocumentRef defined, and the
+			// document is part of the merge set, we should null it out.
+			if rel.RefA.DocumentRefID != "" {
+				if lo.Contains(docNames, rel.RefA.DocumentRefID) {
+					clone.RefA.DocumentRefID = ""
+				} else {
+					log.Warn(fmt.Sprintf("RefA: Could not find document name %s in the merge set", rel.RefA.DocumentRefID))
+				}
+			}
+
+			if rel.RefB.DocumentRefID != "" {
+				if lo.Contains(docNames, rel.RefB.DocumentRefID) {
+					clone.RefB.DocumentRefID = ""
+				} else {
+					log.Warn(fmt.Sprintf("RefB: Could not find document name %s in the merge set", rel.RefB.DocumentRefID))
+				}
+			}
+
+			//Update ElementId RefA and RefB
+			if rel.RefA.ElementRefID != "" {
+				namespace := ""
+				if rel.RefA.DocumentRefID != "" {
+					namespace = getDocumentNamespace(rel.RefA.DocumentRefID, ms)
+				} else {
+					namespace = doc.DocumentNamespace
+				}
+
+				key := createLookupKey(namespace, string(rel.RefA.ElementRefID))
+
+				if _, ok := pkgMapper[key]; ok {
+					clone.RefA.ElementRefID = common.ElementID(pkgMapper[key])
+				} else if _, ok := fileMapper[key]; ok {
+					clone.RefA.ElementRefID = common.ElementID(fileMapper[key])
+				} else {
+					log.Warn(fmt.Sprintf("RefA: Could not find element %s in the merge set", key))
+				}
+			}
+
+			if rel.RefB.ElementRefID != "" {
+				namespace := ""
+				if rel.RefB.DocumentRefID != "" {
+					namespace = getDocumentNamespace(rel.RefB.DocumentRefID, ms)
+				} else {
+					namespace = doc.DocumentNamespace
+				}
+
+				key := createLookupKey(namespace, string(rel.RefB.ElementRefID))
+				if _, ok := pkgMapper[key]; ok {
+					clone.RefB.ElementRefID = common.ElementID(pkgMapper[key])
+				} else if _, ok := fileMapper[key]; ok {
+					clone.RefB.ElementRefID = common.ElementID(fileMapper[key])
+				} else {
+					log.Warn(fmt.Sprintf("RefB: Could not find element %s in the merge set", key))
+				}
+			}
+
+			//Add the relationship to the list
+			relationships = append(relationships, clone)
+		}
+	}
+
+	return relationships, nil
+}
+
+func getDescribedPkgs(ms *merge) []string {
+	pkgs := []string{}
+
+	for _, doc := range ms.in {
+		for _, rel := range doc.Relationships {
+			if rel.Relationship == common.TypeRelationshipDescribe {
+				if rel.RefB.ElementRefID != "" {
+					pkgs = append(pkgs, createLookupKey(doc.DocumentNamespace, string(rel.RefB.ElementRefID)))
+				}
+			}
+		}
+	}
+
+	return pkgs
+}
+
+func writeSBOM(doc *v2_3.Document, m *merge) error {
+	log := logger.FromContext(*m.settings.Ctx)
+	var f io.Writer
+	outName := "stdout"
+
+	if m.settings.Output.File == "" {
+		f = os.Stdout
+	} else {
+		var err error
+		outName = m.settings.Output.File
+		f, err = os.Create(m.settings.Output.File)
+		if err != nil {
+			return err
+		}
+	}
+
+	buf, err := json.MarshalIndent(doc, "", " ")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(buf)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("wrote sbom %d bytes to %s with packages:%d, files:%d, deps:%d, snips:%d otherLics:%d, annotations:%d, externaldocRefs:%d",
+		len(buf), outName,
+		len(doc.Packages), len(doc.Files), len(doc.Relationships),
+		len(doc.Snippets), len(doc.OtherLicenses), len(doc.Annotations),
+		len(doc.ExternalDocumentReferences))
+
+	return nil
+}
+
+func getDocumentNamespace(docName string, ms *merge) string {
+	for _, doc := range ms.in {
+		if doc.DocumentName == docName {
+			return doc.DocumentNamespace
+		}
+	}
+
+	return ""
 }

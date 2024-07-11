@@ -113,19 +113,6 @@ type MergeSettings struct {
 
 func Merge(ms *MergeSettings) error {
 	merger := newMerge(ms)
-
 	merger.loadBoms()
-	merger.initOutBom()
-
-	if ms.Assemble.FlatMerge {
-		return merger.flatMerge()
-	} else if ms.Assemble.HierarchicalMerge {
-		return merger.hierarchicalMerge()
-	} else if ms.Assemble.AssemblyMerge {
-		return merger.assemblyMerge()
-	} else {
-		return merger.hierarchicalMerge()
-	}
-
-	return nil
+	return merger.combinedMerge()
 }

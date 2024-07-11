@@ -127,14 +127,12 @@ The default merge algorithm is `Hierarchical` merge.
 
 | Algo  | SBOM Spec | Notes |
 |----------|----------|----------|
-| Hierarchical   | SPDX  | All packages, dependencies, externalrefs, files are consolidates into a individual lists, no duplicates are removed. The hierarchy is maintained via dependencies. A new primary package is created, which the generated SBOM describes. This primary package also adds contains relationship between itself and the primary components of the individual SBOMs.   |
 | Hierarchical   | CycloneDX  | For each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM. |
-| Flat  | SPDX   | Coming Soon.. |
 | Flat  | CycloneDX   | Provides a flat list of components, duplicates are not removed. |
-| Assembly | SPDX | Coming Soon.. |
 | Assembly | CycloneDX | Similar to Hierarchical merge, but treats each sbom as not dependent, so no relationships are created with primary.  |
-
-
+| Hierarchical   | SPDX  | It maintains relationships among all the merged documents. Contains relationship is using to express dependencies. No duplicate components are removed.|
+| Flat  | SPDX   | It creates a flat list of all packages and files. It removes all relationships except the describes relationship|
+| Assembly | SPDX | Similar to Hierarchical, except the contains relationship is omitted |
 
 # A complete example/use-case
 Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.
