@@ -1,12 +1,14 @@
 <!--
  Copyright 2023 Interlynk.io
- 
+
+ SPDX-License-Identifier: Apache-2.0
+
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
- 
+
      http://www.apache.org/licenses/LICENSE-2.0
- 
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,30 +23,30 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
 ![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
-`sbomasm` is your primary tool to assemble SBOMs, for easy management and distribution. 
+`sbomasm` is your primary tool to assemble SBOMs, for easy management and distribution.
 
 ```sh
 go install github.com/interlynk-io/sbomasm@latest
 ```
 other installation [options](#installation).
 
-# SBOM Card 
+# SBOM Card
 [![SBOMCard](https://api.interlynk.io/api/v1/badges?type=hcard&project_group_id=c706ae8e-56dc-4386-9c8e-11c2401c0e94
 )](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
 
 # Usage
 `SPDX` assemble multiple SBOMs
 ```sh
-sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json 
+sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json
 ```
 
 `CDX` assemble multiple SBOMs
 ```sh
-sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
+sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 `sbomasm` in an AirGapped Environment
 ```sh
-INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json 
+INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 `sbomasm` via containers
 ```sh
@@ -57,7 +59,7 @@ docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "ass
 - Configurable primary component/package
 - Blazing fast :rocket:
 
-# Why should we assemble SBOMs? 
+# Why should we assemble SBOMs?
 - `Software Supply Chain Management`: When managing the software supply chain, organizations often need to merge multiple SBOMs from different vendors or sources to create a complete and accurate picture of the software components used in their products or systems.
 - `Software Development`: When developing software, teams often use multiple tools and technologies to create and manage different parts of the software stack. Merging the SBOMs from these tools can provide a holistic view of the entire software stack, making it easier to identify dependencies, vulnerabilities, and licensing issues.
 - `Regulatory Compliance`: Some regulations, such as the European Union's General Data Protection Regulation (GDPR), require companies to have a clear understanding of the software components used in their systems. Merging SBOMs can provide a comprehensive view of the software stack, making it easier to comply with these regulations.
@@ -65,7 +67,7 @@ docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "ass
 
 # How does assembling SBOMs work
 
-An assembled SBOM encompasses all the components/packages, dependencies, files, licenses,  selected metadata of its included sbom. A new primary component/package is generated based on configuration, which is then associated with the included SBOMs primary components. 
+An assembled SBOM encompasses all the components/packages, dependencies, files, licenses,  selected metadata of its included sbom. A new primary component/package is generated based on configuration, which is then associated with the included SBOMs primary components.
 
 ```
 +-----------------------+   +-----------------------+   +-----------------------+
@@ -113,13 +115,13 @@ An assembled SBOM encompasses all the components/packages, dependencies, files, 
 
 ```
 
-The assembled SBOM spec format is guided by the input SBOMs e.g if the inputs are all spdx, the output needs to be spdx format.  Below is the support matrix 
+The assembled SBOM spec format is guided by the input SBOMs e.g if the inputs are all SPDX, the output needs to be SPDX format.  Below is the support matrix
 for input and output formats
 
 | Spec  | Input SBOM Formats | Output SBOM formats | Output SBOM spec version |
 |----------|----------|----------| -----------------------------|
 | SPDX   | json, yaml, rdf, tag-value   | json, xml   | 2.3 |
-| CycloneDX  | json, xml   | json,xml   | 1.6 |
+| CycloneDX  | json, xml                | json, xml   | 1.6 |
 
 
 ## Merge Algorithm
@@ -137,7 +139,7 @@ The default merge algorithm is `Hierarchical` merge.
 # A complete example/use-case
 Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.
 
-The customer uses `sbomasm` to help assemble these SBOMs. The input SBOMs are the following 
+The customer uses `sbomasm` to help assemble these SBOMs. The input SBOMs are the following
 ```
 ├── sbom-tool
 │   ├── sbomex-spdx.json
@@ -145,7 +147,7 @@ The customer uses `sbomasm` to help assemble these SBOMs. The input SBOMs are th
 │   └── sbomqs-spdx.json
 ```
 
-To track all of these SBOMs, as a single unit, the first step will be to generate a config file, to capture the merged sbom details. 
+To track all of these SBOMs, as a single unit, the first step will be to generate a config file, to capture the merged sbom details.
 
 `sbomasm generate > interlynk-config.yml`
 
@@ -181,12 +183,12 @@ assemble:
   hierarchical_merge: true
 ```
 
-After saving the file, they run the following command 
+After saving the file, they run the following command
 `sbomasm assemble -c interlynk-config.yml -o interlynk.combined-sbom.spdx.json samples/spdx/sbom-tool/*`
 
-The output is an assembled SBOM for all of interlynks binaries `interlynk.combined-sbom.spdx.json`. If everything is successful, the cli command, just writes the file, and nothing is displayed to the screen. 
+The output is an assembled SBOM for all of interlynks binaries `interlynk.combined-sbom.spdx.json`. If everything is successful, the cli command, just writes the file, and nothing is displayed to the screen.
 
-To get more details in case of issues or just information, run the above command with a debug flag 
+To get more details in case of issues or just information, run the above command with a debug flag
 `sbomasm assemble -d -c interlynk-config.yml -o interlynk.combined-sbom.spdx.json samples/spdx/sbom-tool/*`
 
 ```
@@ -205,11 +207,11 @@ To get more details in case of issues or just information, run the above command
 2023-05-03T04:49:33.570-0700    DEBUG   spdx/merge.go:339       wrote sbom 3825558 bytes to interlynk.combined-sbom.spdx.json with packages:202, files:4396, deps:4598, snips:0 otherLics:0, annotations:0, externaldocRefs:0
 ```
 
-The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this. 
+The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this.
 
-# Installation 
+# Installation
 
-## Using Prebuilt binaries 
+## Using Prebuilt binaries
 
 ```console
 https://github.com/interlynk-io/sbomasm/releases
@@ -229,20 +231,20 @@ go install github.com/interlynk-io/sbomasm@latest
 
 ## Using repo
 
-This approach involves cloning the repo and building it. 
+This approach involves cloning the repo and building it.
 
 1. Clone the repo `git clone git@github.com:interlynk-io/sbomasm.git`
-2. `cd` into `sbomasm` folder 
-3. make; make build
+2. `cd` into `sbomasm` folder
+3. `make; make build`
 4. To test if the build was successful run the following command `./build/sbomasm version`
 
 
 # Contributions
-We look forward to your contributions, below are a few guidelines on how to submit them 
+We look forward to your contributions, below are a few guidelines on how to submit them
 
 - Fork the repo
-- Create your feature/bug branch (`git checkout -b feature/new-feature`)
-- Commit your changes (`git commit -am "awesome new feature"`)
+- Create your feature/bug branch (`git checkout -b feature/bug`)
+- Commit your changes (`git commit -aSm "awesome new feature"`) - commits must be signed
 - Push your changes (`git push origin feature/new-feature`)
 - Create a new pull-request
 
@@ -262,6 +264,6 @@ We appreciate all feedback. The best ways to get in touch with us:
 
 # Stargazers
 
-If you like this project, please support us by starring it. 
+If you like this project, please support us by starring it.
 
 [![Stargazers](https://starchart.cc/interlynk-io/sbomasm.svg)](https://starchart.cc/interlynk-io/sbomasm)
