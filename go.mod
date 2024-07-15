@@ -12,7 +12,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/pingcap/log v1.1.0
-	github.com/samber/lo v1.44.0
+	github.com/samber/lo v1.46.0
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
