@@ -59,7 +59,6 @@ Advanced Example:
 			return err
 		}
 
-		
 		assembleParams.Ctx = &ctx
 		return assemble.Assemble(assembleParams)
 	},
@@ -79,6 +78,12 @@ func init() {
 	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
 	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge")
 	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge")
+
+	assembleCmd.Flags().BoolP("outputSpecCdx", "g", true, "output in cdx format")
+	assembleCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in spdx format")
+	assembleCmd.MarkFlagsMutuallyExclusive("outputSpecCdx", "outputSpecSpdx")
+
+	assembleCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom")
 
 	assembleCmd.Flags().BoolP("xml", "x", false, "output in xml format")
 	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
@@ -146,6 +151,17 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 
 	if aParams.Xml {
 		aParams.Json = false
+	}
+
+	specVersion, _ := cmd.Flags().GetString("outputSpecVersion")
+	aParams.OutputSpecVersion = specVersion
+
+	cdx, _ := cmd.Flags().GetBool("outputSpecCdx")
+
+	if cdx {
+		aParams.OutputSpec = "cyclonedx"
+	} else {
+		aParams.OutputSpec = "spdx"
 	}
 
 	for _, arg := range args {

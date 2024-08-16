@@ -17,6 +17,7 @@ package cdx
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -97,8 +98,10 @@ type app struct {
 }
 
 type output struct {
-	FileFormat string
-	File       string
+	FileFormat  string
+	Spec        string
+	SpecVersion string
+	File        string
 }
 
 type input struct {
@@ -127,6 +130,14 @@ func Merge(ms *MergeSettings) error {
 
 	merger.loadBoms()
 	merger.initOutBom()
+
+	if len(ms.Output.Spec) > 0 && ms.Output.Spec != "cyclonedx" {
+		return errors.New("invalid output spec")
+	}
+
+	if len(ms.Output.SpecVersion) > 0 && !validSpecVersion(ms.Output.SpecVersion) {
+		return errors.New("invalid CycloneDX spec version")
+	}
 
 	if ms.Assemble.FlatMerge {
 		return merger.flatMerge()

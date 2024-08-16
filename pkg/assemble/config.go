@@ -32,6 +32,7 @@ import (
 )
 
 const DEFAULT_OUTPUT_SPEC = "cyclonedx"
+const DEFAULT_OUTPUT_SPEC_VERSION = "1.6"
 const DEFAULT_OUTPUT_FILE_FORMAT = "json"
 const DEFAULT_OUTPUT_LICENSE = "CC0-1.0"
 
@@ -71,9 +72,10 @@ type app struct {
 }
 
 type output struct {
-	Spec       string `yaml:"spec"`
-	FileFormat string `yaml:"file_format"`
-	file       string
+	Spec        string `yaml:"spec"`
+	SpecVersion string `yaml:"spec_version"`
+	FileFormat  string `yaml:"file_format"`
+	file        string
 }
 
 type input struct {
@@ -121,8 +123,9 @@ var defaultConfig = config{
 		Copyright: "[OPTIONAL]",
 	},
 	Output: output{
-		Spec:       DEFAULT_OUTPUT_SPEC,
-		FileFormat: DEFAULT_OUTPUT_FILE_FORMAT,
+		Spec:        DEFAULT_OUTPUT_SPEC,
+		SpecVersion: DEFAULT_OUTPUT_SPEC_VERSION,
+		FileFormat:  DEFAULT_OUTPUT_FILE_FORMAT,
 	},
 	Assemble: assemble{
 		FlatMerge:                  false,
@@ -145,8 +148,9 @@ func DefaultConfig() {
 func newConfig() *config {
 	return &config{
 		Output: output{
-			Spec:       DEFAULT_OUTPUT_SPEC,
-			FileFormat: DEFAULT_OUTPUT_FILE_FORMAT,
+			Spec:        DEFAULT_OUTPUT_SPEC,
+			SpecVersion: DEFAULT_OUTPUT_SPEC_VERSION,
+			FileFormat:  DEFAULT_OUTPUT_FILE_FORMAT,
 		},
 		Assemble: assemble{
 			FlatMerge:                  false,
@@ -197,6 +201,15 @@ func (c *config) readAndMerge(p *Params) error {
 	if p.Xml {
 		c.Output.FileFormat = "xml"
 	}
+
+	if p.OutputSpec != "" {
+		c.Output.Spec = strings.Trim(p.OutputSpec, " ")
+	}
+
+	if p.OutputSpecVersion != "" {
+		c.Output.SpecVersion = strings.Trim(p.OutputSpecVersion, " ")
+	}
+
 	return nil
 }
 
@@ -242,6 +255,7 @@ func (c *config) validate() error {
 	c.App.CPE = sanitize(c.App.CPE)
 	c.App.Copyright = sanitize(c.App.Copyright)
 	c.Output.Spec = sanitize(c.Output.Spec)
+	c.Output.SpecVersion = sanitize(c.Output.SpecVersion)
 	c.Output.FileFormat = sanitize(c.Output.FileFormat)
 
 	for i := range c.App.Author {
@@ -268,8 +282,9 @@ func (c *config) validate() error {
 		}
 	}
 
-	if c.Output.Spec == "" {
-		c.Output.Spec = DEFAULT_OUTPUT_SPEC
+	if c.Output.Spec == "" && c.Output.SpecVersion == "" {
+		c.Output.Spec = ""
+		c.Output.SpecVersion = ""
 	}
 
 	if c.Output.FileFormat == "" {
