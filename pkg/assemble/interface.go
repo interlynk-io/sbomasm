@@ -36,6 +36,9 @@ type Params struct {
 
 	Xml  bool
 	Json bool
+
+	OutputSpec        string
+	OutputSpecVersion string
 }
 
 func NewParams() *Params {

@@ -379,8 +379,17 @@ func (m *merge) writeSBOM() error {
 
 	encoder.SetPretty(true)
 	encoder.SetEscapeHTML(true)
-	if err := encoder.Encode(m.out); err != nil {
-		return err
+
+	if m.settings.Output.SpecVersion == "" {
+		if err := encoder.Encode(m.out); err != nil {
+			return err
+		}
+	} else {
+		outputVersion := specVersionMap[m.settings.Output.SpecVersion]
+
+		if err := encoder.EncodeVersion(m.out, outputVersion); err != nil {
+			return err
+		}
 	}
 
 	return nil

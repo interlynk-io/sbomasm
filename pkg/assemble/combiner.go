@@ -100,6 +100,8 @@ func toCDXMergerSettings(c *config) *cdx.MergeSettings {
 
 	ms.Output.File = c.Output.file
 	ms.Output.FileFormat = c.Output.FileFormat
+	ms.Output.Spec = c.Output.Spec
+	ms.Output.SpecVersion = c.Output.SpecVersion
 
 	ms.App.Name = c.App.Name
 	ms.App.Version = c.App.Version

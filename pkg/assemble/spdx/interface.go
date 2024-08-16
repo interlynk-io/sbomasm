@@ -18,6 +18,7 @@ package spdx
 
 import (
 	"context"
+	"errors"
 
 	"github.com/spdx/tools-golang/spdx"
 )
@@ -88,8 +89,10 @@ type app struct {
 }
 
 type output struct {
-	FileFormat string
-	File       string
+	FileFormat  string
+	Spec        string
+	SpecVersion string
+	File        string
 }
 
 type input struct {
@@ -114,6 +117,15 @@ type MergeSettings struct {
 }
 
 func Merge(ms *MergeSettings) error {
+
+	if len(ms.Output.Spec) > 0 && ms.Output.Spec != "spdx" {
+		return errors.New("invalid output spec")
+	}
+
+	if len(ms.Output.SpecVersion) > 0 && !validSpecVersion(ms.Output.SpecVersion) {
+		return errors.New("invalid CycloneDX spec version")
+	}
+
 	merger := newMerge(ms)
 	merger.loadBoms()
 	return merger.combinedMerge()

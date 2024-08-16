@@ -31,6 +31,17 @@ import (
 	"sigs.k8s.io/release-utils/version"
 )
 
+var specVersionMap = map[string]cydx.SpecVersion{
+	"1.4": cydx.SpecVersion1_4,
+	"1.5": cydx.SpecVersion1_5,
+	"1.6": cydx.SpecVersion1_6,
+}
+
+func validSpecVersion(specVersion string) bool {
+	_, ok := specVersionMap[specVersion]
+	return ok
+}
+
 func newSerialNumber() string {
 	u := uuid.New().String()
 

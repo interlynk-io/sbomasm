@@ -47,6 +47,15 @@ import (
 
 const NOA = "NOASSERTION"
 
+var specVersionMap = map[string]string{
+	"2.3": v2_3.Version,
+}
+
+func validSpecVersion(specVersion string) bool {
+	_, ok := specVersionMap[specVersion]
+	return ok
+}
+
 func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 	log := logger.FromContext(ctx)
 
