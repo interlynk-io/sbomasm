@@ -427,16 +427,22 @@ func (d *spdxEditDoc) description() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
-		return errNotSupported
-	}
-
 	if d.c.onMissing() {
-		if d.pkg.PackageDescription == "" {
-			d.pkg.PackageDescription = d.c.description
+		if d.c.search.subject == "document" {
+			if d.bom.DocumentComment == "" {
+				d.bom.DocumentComment = d.c.description
+			}
+		} else {
+			if d.pkg.PackageDescription == "" {
+				d.pkg.PackageDescription = d.c.description
+			}
 		}
 	} else {
-		d.pkg.PackageDescription = d.c.description
+		if d.c.search.subject == "document" {
+			d.bom.DocumentComment = d.c.description
+		} else {
+			d.pkg.PackageDescription = d.c.description
+		}
 	}
 
 	return nil

@@ -23,7 +23,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
 ![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
-`sbomasm` is your primary tool to assemble SBOMs, for easy management and distribution.
+`sbomasm` is your primary tool to assemble and edit SBOMs, for easy management and distribution.
 
 ```sh
 go install github.com/interlynk-io/sbomasm@latest
@@ -35,11 +35,13 @@ other installation [options](#installation).
 )](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
 
 # Usage
+
+### Assemle SBOMs
+```sh
 `SPDX` assemble multiple SBOMs
 ```sh
 sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json
 ```
-
 `CDX` assemble multiple SBOMs
 ```sh
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
@@ -57,10 +59,32 @@ docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "ass
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -e 1.4 -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 
+### Edit SBOMs
+Change the name and version of the primary component.
+```sh
+sbomasm edit --subject "primary-component" --name "cool-app" --version "v1.0.0" --type "application" --output cool-app-mod.spdx.json cool-app.spdx.json
+```
+
+Add supplier information & timestamp to the document, if missing.
+```sh
+sbomasm edit --missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" in-sbom-cdx.json
+```
+
+Append a new author to the primary component.
+```sh
+sbomasm edit --append --subject primary-component --author "abc (abc@gmail.com)" in-sbom-2.json
+```
+
+Find a component by name & version and add update its purl
+```sh
+ sbomasm edit --subject component-name-version --search "abc (v1.0.0)" --purl "pkg:deb/debian/abc@1.0.0" in-sbom-3.json
+```
+
 # Features
 - SBOM format agnostic
-- Supports Hierarchial and Flat merging
+- Supports Hierarchial/Flat and Assemble merging
 - Configurable primary component/package
+- Edit metadata for SBOMs
 - Blazing fast :rocket:
 
 # Why should we assemble SBOMs?
@@ -212,6 +236,21 @@ To get more details in case of issues or just information, run the above command
 ```
 
 The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this.
+
+
+# Edit
+The edit command allows you to modify an existing Software Bill of Materials (SBOM) by filling in gaps or adding information that may have been missed during the generation process. This command operates by first locating the entity to edit and then adding the required information. The goal of edit is not to provide a full editing experience but to help fill in filling in missing information useful for compliance and security purposes
+
+The edit command is spec and format agnostic.
+
+## Output
+
+## Fields
+| Spec  | Input SBOM Formats | Output SBOM formats | Output SBOM spec version |
+|----------|----------|----------| -----------------------------|
+| SPDX   | json, yaml, rdf, tag-value   | json, xml   | 2.3 |
+
+
 
 # Installation
 
