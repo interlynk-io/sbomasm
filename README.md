@@ -245,16 +245,16 @@ The edit command allows you to modify an existing Software Bill of Materials (SB
 The edit command works based on locating entities and then modifying their metadata.
 
 We support locating the following entities.
-- Document: This is the SBOM itself.
-- Primary Component: The primary component described by the SBOM.
-- Any Component via search : Any component or package described by the SBOM, which can be located by name & version.
+- *Document*: This is the SBOM itself.
+- *Primary Component*: The primary component described by the SBOM.
+- *Any Component via search*: Any component or package described by the SBOM, which can be located by name & version.
 
 We support the following modifications operations
-- Overwrite (default): This operation replaces the existing value with the new value or array with a new array of values
-- Append: This operation appends the new value to the existing value or array of values, or concats strings.
-- Missing: This operation is only applied if the field is missing.
+- *Overwrite (default)*: This operation replaces the existing value.
+- *Append*: This operation appends the new value to the existing value.
+- *Missing*: This operation is only applied if the field or value is missing.
 
-Fields we support by locations
+## Fields supported
 
 `Document`
 | Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
@@ -272,7 +272,7 @@ Fields we support by locations
 | cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | -  | - |
 | purl| "pkg:github/apache/tomcat@9.0.0" | -  | - |
 | hash | "MD5 (1234567890)" | -   | - |
-| license | "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" | Metadata->Licenses   | DataLicense |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Metadata->Licenses   | DataLicense |
 | timestamp | "2023-05-03T04:49:33.378-0700" | Metadata->timestamp  | CreationInfo->Created |
 
 
@@ -292,11 +292,11 @@ Fields we support by locations
 | cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | Comp->cpe  | Pkg->ExternalReferences->Security |
 | purl| "pkg:github/apache/tomcat@9.0.0" | Comp->purl  | Pkg->ExternalReferences->PackageManager |
 | hash | "MD5 (1234567890)" | Comp->hashes   | Pkg->Checksums |
-| license | "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" | Comp->Licenses   | Pkg->ConcludedLicense |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Comp->Licenses   | Pkg->ConcludedLicense |
 | timestamp | "2023-05-03T04:49:33.378-0700" | -  | - |
 
 
-### Searching for a component
+## Searching for a component
 
 Edit allows you to search for a component to edit. Currently you can only search for a component by its name & version.
 
@@ -307,34 +307,34 @@ sbomasm edit --subject component-name-version --search "apache tomcat (9.0.0)" -
 In the above command, the subject indicate the type of search to use, and the search parameter is the format of the search string. The format is
 `name (version)`. The name and version are required fields.
 
-### Things to know
+## Things to know
 - Edit never modifies the original SBOM, it creates a new SBOM with the modifications.
 - Every edit operation changes the serial number in CDX spec.
 - Edit attempts to write out the SBOM in the same format it was read in. Only SPDX rdf & xml cannot be serialized out.
 
-### Example
+## Example
 The primary use-case this was build for is to augment recently merged sboms or fix sboms which have know bad metadata. In your CICD pipeline
 once you merge two sboms using sbomasm, you would like to provide more metadata to its primary component to meet compliance
 standards. e.g you would like to add supplier, author, license data.
 
-Step 1: Merge the sboms
+`Step 1`: Merge the sboms
 ```sh
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 
-Step 2: Edit the document metadata add in 2 authors, a supplier, a tool, a license, a repository, and update the timestamp and write out the final sbom to a new sbom.
+`Step 2`: Edit the document metadata add in 2 authors, a supplier, a tool, a license, a repository, and update the timestamp and write out the final sbom to a new sbom.
 
 ```sh
 sbomasm edit --subject document --author "fred (fred@c.com)" --author "jane (jane@c.com)" --supplier "interlynk.io (https://interlynk.io)" --tool "sbomasm edit (v1.0.0)" --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" --repository "github.com/interlynk/cool-app" --timestamp" -o final-mod-product.json final-product.cdx.json
 ```
 
-Step 3: Edit the primary component, set its version to be the one provided by ENV, and also update its PURL as the sbom-generate wrote out a malformed one.
+`Step 3`: Edit the primary component, set its version to be the one provided by ENV, and also update its PURL as the sbom-generate wrote out a malformed one.
 
 ```sh
 sbomasm edit --subject primary-component --purl "pkg:golang/interlynk/cool-app@1.0.0" --version "$PRODUCT_VERSION" -o final-mod-primary-product.json final-mod-product.json
 ```
 
-Step 4: Edit some components which are missing license data, which we know it should be Apache-2.0
+`Step 4`: Edit some components which are missing license data, which we know it should be Apache-2.0
 
 ```bash
 edit_components() {
@@ -347,6 +347,12 @@ edit_components() {
 
 components=("demo-lib, v1.0.0" "third-party-lib, v2.1.3" "local-lib, v0.9.2")
 edit_components "${components[@]}"
+```
+
+`Step 5`: Upload the final-mod-primary-product.json to your artifact for vuln scanning and compliance checks to Interlynk Platform.
+
+```bash
+python3 ${{ env.PYLYNK_TEMP_DIR }}/pylynk.py --verbose upload --prod ${{env.TOOL_NAME}} --env ${{ env.SBOM_ENV }} --sbom final-mod-pimary-product.json --token ${{ secrets.INTERLYNK_SECURITY_TOKEN }}
 ```
 
 # Installation
