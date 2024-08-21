@@ -89,7 +89,6 @@ func init() {
 	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
 	assembleCmd.MarkFlagsMutuallyExclusive("xml", "json")
 
-	assembleCmd.PersistentFlags().BoolP("debug", "d", false, "debug output")
 }
 
 func validatePath(path string) error {

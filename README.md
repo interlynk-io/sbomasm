@@ -23,7 +23,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
 ![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
-`sbomasm` is your primary tool to assemble SBOMs, for easy management and distribution.
+`sbomasm` is your primary tool to assemble and edit SBOMs, for easy management and distribution.
 
 ```sh
 go install github.com/interlynk-io/sbomasm@latest
@@ -35,11 +35,13 @@ other installation [options](#installation).
 )](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
 
 # Usage
+
+### Assemle SBOMs
+```sh
 `SPDX` assemble multiple SBOMs
 ```sh
 sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json
 ```
-
 `CDX` assemble multiple SBOMs
 ```sh
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
@@ -57,10 +59,32 @@ docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "ass
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -e 1.4 -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 
+### Edit SBOMs
+Change the name and version of the primary component.
+```sh
+sbomasm edit --subject primary-component --name "cool-app" --version "v1.0.0" --type "application" --output cool-app-mod.spdx.json cool-app.spdx.json
+```
+
+Add supplier information & timestamp to the document, if missing.
+```sh
+sbomasm edit --missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" in-sbom-cdx.json
+```
+
+Append a new author to the primary component.
+```sh
+sbomasm edit --append --subject primary-component --author "abc (abc@gmail.com)" in-sbom-2.json
+```
+
+Find a component by name & version and add update its purl
+```sh
+ sbomasm edit --subject component-name-version --search "abc (v1.0.0)" --purl "pkg:deb/debian/abc@1.0.0" in-sbom-3.json
+```
+
 # Features
 - SBOM format agnostic
-- Supports Hierarchial and Flat merging
+- Supports Hierarchial/Flat and Assemble merging
 - Configurable primary component/package
+- Edit metadata for SBOMs
 - Blazing fast :rocket:
 
 # Why should we assemble SBOMs?
@@ -212,6 +236,124 @@ To get more details in case of issues or just information, run the above command
 ```
 
 The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this.
+
+
+# Edit
+The edit command allows you to modify an existing Software Bill of Materials (SBOM) by filling in gaps or adding information that may have been missed during the generation process. This command operates by first locating the entity to edit and then adding the required information. The goal of edit is not to provide a full editing experience but to help fill in filling in missing information useful for compliance and security purposes
+
+## How it works
+The edit command works based on locating entities and then modifying their metadata.
+
+We support locating the following entities.
+- *Document*: This is the SBOM itself.
+- *Primary Component*: The primary component described by the SBOM.
+- *Any Component via search*: Any component or package described by the SBOM, which can be located by name & version.
+
+We support the following modifications operations
+- *Overwrite (default)*: This operation replaces the existing value.
+- *Append*: This operation appends the new value to the existing value.
+- *Missing*: This operation is only applied if the field or value is missing.
+
+## Fields supported
+
+`Document`
+| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
+|----------|----------|----------| -----------------------------|
+| author   | "name (email)"   |  Metadata->authors   | CreationInfo->Creator->Person|
+| supplier | "name (url)"   |  Metadata->Supplier   | CreationInfo->Creator->Comment |
+| tool | "name (version)"   |  Metadata->Tools   | CreationInfo->Creator->Tool |
+| lifecycle | "build" | Metadata->lifecycles->phase   | - |
+| type | "application" | -  | - |
+| name | "name" |  -   | - |
+| version | "1.0.0" |  -   | - |
+| description | "description" |  -   | DocumentComment |
+| copyright| "abc @2023" | -   | - |
+| repository | "github.com/interlynk/sbomasm"| bom->externalreferences | - |
+| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | -  | - |
+| purl| "pkg:github/apache/tomcat@9.0.0" | -  | - |
+| hash | "MD5 (1234567890)" | -   | - |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Metadata->Licenses   | DataLicense |
+| timestamp | "2023-05-03T04:49:33.378-0700" | Metadata->timestamp  | CreationInfo->Created |
+
+
+`Primary Component & Component Name Version`
+| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
+|----------|----------|----------| -----------------------------|
+| author   | "name (email)"   |  Comp->authors or author  | - |
+| supplier | "name (url)"   |  Comp->Supplier   | Pkg->Supplier |
+| tool | "name (version)"   |  -   | - |
+| lifecycle | "build" | - | - |
+| type | "application" | Comp->Type  | Pkg->PrimaryPackagePurpose |
+| name | "name" |  Comp->name   | Pkg->PackageName |
+| version | "1.0.0" |  Comp->version   | Pkg->PackageVersion |
+| description | "description" |  Comp->Description   | Pkg->PackageDescription |
+| copyright| "abc @2023" | Comp->copyright  | pkg->copyright |
+| repository | "github.com/interlynk/sbomasm"| Comp->externalreferences | Pkg->PackageDownloadLocation |
+| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | Comp->cpe  | Pkg->ExternalReferences->Security |
+| purl| "pkg:github/apache/tomcat@9.0.0" | Comp->purl  | Pkg->ExternalReferences->PackageManager |
+| hash | "MD5 (1234567890)" | Comp->hashes   | Pkg->Checksums |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Comp->Licenses   | Pkg->ConcludedLicense |
+| timestamp | "2023-05-03T04:49:33.378-0700" | -  | - |
+
+
+## Searching for a component
+
+Edit allows you to search for a component to edit. Currently you can only search for a component by its name & version.
+
+```sh
+sbomasm edit --subject component-name-version --search "apache tomcat (9.0.0)" --name "apache tomcat" --version "9.0.0" --author "apache" --license "Apache-2.0" --supplier "apache.org" --repository "github.com/apache/tomcat" --cpe "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" --purl "pkg:github/apache/tomcat@9.0.0" --hash "MD5 (1234567890)" in-cdx.json
+```
+
+In the above command, the subject indicate the type of search to use, and the search parameter is the format of the search string. The format is
+`name (version)`. The name and version are required fields.
+
+## Things to know
+- Edit never modifies the original SBOM, it creates a new SBOM with the modifications.
+- Every edit operation changes the serial number in CDX spec.
+- Edit attempts to write out the SBOM in the same format it was read in. Only SPDX rdf & xml cannot be serialized out.
+
+## Example
+The primary use-case this was build for is to augment recently merged sboms or fix sboms which have know bad metadata. In your CICD pipeline
+once you merge two sboms using sbomasm, you would like to provide more metadata to its primary component to meet compliance
+standards. e.g you would like to add supplier, author, license data.
+
+`Step 1`: Merge the sboms
+```sh
+sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
+```
+
+`Step 2`: Edit the document metadata add in 2 authors, a supplier, a tool, a license, a repository, and update the timestamp and write out the final sbom to a new sbom.
+
+```sh
+sbomasm edit --subject document --author "fred (fred@c.com)" --author "jane (jane@c.com)" --supplier "interlynk.io (https://interlynk.io)" --tool "sbomasm edit (v1.0.0)" --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" --repository "github.com/interlynk/cool-app" --timestamp" -o final-mod-product.json final-product.cdx.json
+```
+
+`Step 3`: Edit the primary component, set its version to be the one provided by ENV, and also update its PURL as the sbom-generate wrote out a malformed one.
+
+```sh
+sbomasm edit --subject primary-component --purl "pkg:golang/interlynk/cool-app@1.0.0" --version "$PRODUCT_VERSION" -o final-mod-primary-product.json final-mod-product.json
+```
+
+`Step 4`: Edit some components which are missing license data, which we know it should be Apache-2.0
+
+```bash
+edit_components() {
+    for component in "$@"; do
+        name=$(echo "$component" | cut -d',' -f1)
+        version=$(echo "$component" | cut -d',' -f2 | sed 's/\s//g')
+        sbomasm edit --subject component-name-version --search "$name ($version)" --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" -o final-mod-primary-product.json final-mod-primary-product.json
+    done
+}
+
+components=("demo-lib, v1.0.0" "third-party-lib, v2.1.3" "local-lib, v0.9.2")
+edit_components "${components[@]}"
+```
+
+`Step 5`: Upload the final-mod-primary-product.json to your artifact for vuln scanning and compliance checks to Interlynk Platform.
+
+```bash
+python3 ${{ env.PYLYNK_TEMP_DIR }}/pylynk.py --verbose upload --prod ${{env.TOOL_NAME}} --env ${{ env.SBOM_ENV }} --sbom final-mod-pimary-product.json --token ${{ secrets.INTERLYNK_SECURITY_TOKEN }}
+```
 
 # Installation
 
