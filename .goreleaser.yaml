@@ -31,6 +31,26 @@ builds:
     env: 
       - CGO_ENABLED=0
 
+nfpms:
+  - id: sbomasm
+    package_name: sbomasm
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Interlynk
+    homepage: https://interlynk.io
+    maintainer: Interlynk Authors hello@interlynk.io
+    builds:
+      - binaries
+    description: SBOM Assembler - A tool to edit SBOM or assemble multiple sboms into a single sbom.
+    license: "Apache License 2.0"
+    formats:
+      - apk
+      - deb
+      - rpm
+    contents:
+      - src: /usr/bin/sbomasm-{{ .Os }}-{{ .Arch }}
+        dst: /usr/bin/sbomasm
+        type: "symlink"
+
 archives:
 - format: binary
   name_template: "{{ .Binary }}"
