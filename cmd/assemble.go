@@ -60,7 +60,13 @@ Advanced Example:
 		}
 
 		assembleParams.Ctx = &ctx
-		return assemble.Assemble(assembleParams)
+
+		// Populate the config object
+		config, err := assemble.PopulateConfig(assembleParams)
+		if err != nil {
+			fmt.Println("Error populating config:", err)
+		}
+		return assemble.Assemble(config)
 	},
 }
 
@@ -88,12 +94,10 @@ func init() {
 	assembleCmd.Flags().BoolP("xml", "x", false, "output in xml format")
 	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
 	assembleCmd.MarkFlagsMutuallyExclusive("xml", "json")
-
 }
 
 func validatePath(path string) error {
 	stat, err := os.Stat(path)
-
 	if err != nil {
 		return err
 	}

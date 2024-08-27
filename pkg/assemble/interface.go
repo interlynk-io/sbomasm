@@ -18,6 +18,7 @@ package assemble
 
 import (
 	"context"
+	"fmt"
 )
 
 type Params struct {
@@ -45,15 +46,10 @@ func NewParams() *Params {
 	return &Params{}
 }
 
-func Assemble(aParams *Params) error {
-	config := newConfig()
+func Assemble(config *config) error {
+	fmt.Println("Config1: ", *config)
 
-	err := config.readAndMerge(aParams)
-	if err != nil {
-		return err
-	}
-
-	err = config.validate()
+	err := config.validate()
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ package assemble
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -31,10 +32,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const DEFAULT_OUTPUT_SPEC = "cyclonedx"
-const DEFAULT_OUTPUT_SPEC_VERSION = "1.6"
-const DEFAULT_OUTPUT_FILE_FORMAT = "json"
-const DEFAULT_OUTPUT_LICENSE = "CC0-1.0"
+const (
+	DEFAULT_OUTPUT_SPEC         = "cyclonedx"
+	DEFAULT_OUTPUT_SPEC_VERSION = "1.6"
+	DEFAULT_OUTPUT_FILE_FORMAT  = "json"
+	DEFAULT_OUTPUT_LICENSE      = "CC0-1.0"
+)
 
 type author struct {
 	Name  string `yaml:"name"`
@@ -145,7 +148,8 @@ func DefaultConfig() {
 	fmt.Println(string(data))
 }
 
-func newConfig() *config {
+// NewConfig: Creating a new configuration instance with default values.
+func NewConfig() *config {
 	return &config{
 		Output: output{
 			Spec:        DEFAULT_OUTPUT_SPEC,
@@ -162,6 +166,22 @@ func newConfig() *config {
 	}
 }
 
+// Function to populate the config object
+func PopulateConfig(aParams *Params) (*config, error) {
+	if aParams.Ctx == nil {
+		return nil, errors.New("context is not initialized")
+	}
+	config := NewConfig()
+	if err := config.readAndMerge(aParams); err != nil {
+		return nil, err
+	}
+	if err := config.validate(); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+// readAndMerge: Merging user-specified parameters into the configuration.
 func (c *config) readAndMerge(p *Params) error {
 	if p.ConfigPath != "" {
 
@@ -184,8 +204,11 @@ func (c *config) readAndMerge(p *Params) error {
 	c.input.files = p.Input
 	c.Output.file = p.Output
 	c.ctx = p.Ctx
+	if c.ctx == nil {
+		return errors.New("config context is not initialized")
+	}
 
-	//override default config with params
+	// override default config with params
 	if p.Name != "" {
 		c.App.Name = strings.Trim(p.Name, " ")
 	}
@@ -213,12 +236,16 @@ func (c *config) readAndMerge(p *Params) error {
 	return nil
 }
 
+// Validation: Ensuring the configuration is valid before proceeding.
 func (c *config) validate() error {
 	if c == nil {
 		return fmt.Errorf("config is not set")
 	}
 
 	log := logger.FromContext(*c.ctx)
+	if log == nil {
+		return errors.New("logger is not initialized")
+	}
 
 	validValue := func(v string) bool {
 		vl := strings.ToLower(v)
