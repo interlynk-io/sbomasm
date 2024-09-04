@@ -94,35 +94,6 @@ func init() {
 	assembleCmd.Flags().BoolP("xml", "x", false, "output in xml format")
 	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
 	assembleCmd.MarkFlagsMutuallyExclusive("xml", "json")
-
-	// Add dt as a sub-command of assemble
-	assembleCmd.AddCommand(dtCmd)
-
-	dtCmd.Flags().StringP("url", "u", "", "dependency track url https://localhost:8080/")
-	dtCmd.Flags().StringP("api-key", "k", "", "dependency track api key, requires VIEW_PORTFOLIO for scoring and PORTFOLIO_MANAGEMENT for tagging")
-	dtCmd.MarkFlagsRequiredTogether("url", "api-key")
-
-	dtCmd.Flags().StringP("output", "o", "", "path to assembled sbom, defaults to stdout")
-
-	dtCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
-	dtCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")
-	dtCmd.Flags().StringP("type", "t", "", "product type of the assembled sbom (application, framework, library, container, device, firmware)")
-	dtCmd.MarkFlagsRequiredTogether("name", "version", "type")
-
-	dtCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
-	dtCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
-	dtCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge")
-	dtCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge")
-
-	dtCmd.Flags().BoolP("outputSpecCdx", "g", true, "output in cdx format")
-	dtCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in spdx format")
-	dtCmd.MarkFlagsMutuallyExclusive("outputSpecCdx", "outputSpecSpdx")
-
-	dtCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom")
-
-	dtCmd.Flags().BoolP("xml", "x", false, "output in xml format")
-	dtCmd.Flags().BoolP("json", "j", true, "output in json format")
-	dtCmd.MarkFlagsMutuallyExclusive("xml", "json")
 }
 
 func validatePath(path string) error {
