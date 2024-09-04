@@ -58,7 +58,7 @@ Basic Example:
 		dtParams.Ctx = &ctx
 
 		// retrieve Input Files
-		dt.PopulateInputField(ctx, dtParams)
+		dtParams.PopulateInputField(ctx)
 		fmt.Println("dtAssembleParams.Input: ", dtParams.Input)
 
 		assembleParams, err := extractArgsFromDTtoAssemble(dtParams)
