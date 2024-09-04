@@ -11,13 +11,15 @@ import (
 )
 
 type Params struct {
-	Url        string
-	ApiKey     string
-	ProjectIds []uuid.UUID
+	Url             string
+	ApiKey          string
+	ProjectIds      []uuid.UUID
+	UploadProjectID uuid.UUID
 
 	Ctx    *context.Context
 	Input  []string
 	Output string
+	Upload bool
 
 	Name    string
 	Version string
@@ -48,7 +50,6 @@ func (dtP *Params) PopulateInputField(ctx context.Context) {
 	if err != nil {
 		log.Fatalf("Failed to create Dependency-Track client: %s", err)
 	}
-	fmt.Println("dtP.ProjectIds: ", dtP.ProjectIds)
 
 	for _, pid := range dtP.ProjectIds {
 		log.Debugf("Processing project %s", pid)
@@ -64,7 +65,6 @@ func (dtP *Params) PopulateInputField(ctx context.Context) {
 		if err != nil {
 			log.Fatalf("Failed to export project: %s", err)
 		}
-		fmt.Println("bom: ", bom)
 
 		fname := fmt.Sprintf("tmpfile-%s", pid)
 		f, err := os.CreateTemp("", fname)
@@ -72,8 +72,6 @@ func (dtP *Params) PopulateInputField(ctx context.Context) {
 			log.Fatal(err)
 		}
 		defer f.Close()
-		// defer os.Remove(f.Name())
-		fmt.Println("f.Name(): ", f.Name())
 
 		f.WriteString(bom)
 		dtP.Input = append(dtP.Input, f.Name())

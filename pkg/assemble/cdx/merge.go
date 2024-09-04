@@ -17,10 +17,15 @@
 package cdx
 
 import (
+	"encoding/base64"
+	"fmt"
 	"io"
+	"log"
 	"os"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	dtrack "github.com/DependencyTrack/client-go"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/samber/lo"
 )
@@ -187,12 +192,12 @@ func (m *merge) flatMerge() error {
 	}
 	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
 
-	//Add the primary component to the list of components
+	// Add the primary component to the list of components
 	for _, c := range priComps {
 		comps = append(comps, *c)
 	}
 
-	//Add depedencies between new primary component and old primary components
+	// Add depedencies between new primary component and old primary components
 	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {
 		return c.BOMRef
 	})
@@ -211,7 +216,6 @@ func (m *merge) flatMerge() error {
 	}
 
 	return m.writeSBOM()
-
 }
 
 func (m *merge) assemblyMerge() error {
@@ -331,7 +335,7 @@ func (m *merge) hierarchicalMerge() error {
 	}
 	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
 
-	//Add depedencies between new primary component and old primary components
+	// Add depedencies between new primary component and old primary components
 	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {
 		return c.BOMRef
 	})
@@ -351,8 +355,75 @@ func (m *merge) hierarchicalMerge() error {
 	if m.settings.Assemble.IncludeDependencyGraph {
 		m.out.Dependencies = &deps
 	}
+	if m.settings.Output.Upload {
+		m.uploadSBOM()
+	}
 
 	return m.writeSBOM()
+}
+
+func (m *merge) uploadSBOM() error {
+	fmt.Println("Inside uploadSBOM fn")
+	defer fmt.Println("Exit uploadSBOM fn")
+	dTrackClient, err := dtrack.NewClient(m.settings.Output.Url,
+		dtrack.WithAPIKey(m.settings.Output.ApiKey), dtrack.WithDebug(false))
+	if err != nil {
+		log.Fatalf("Failed to create Dependency-Track client: %s", err)
+	}
+
+	var sb strings.Builder
+	var encoder cydx.BOMEncoder
+
+	switch m.settings.Output.FileFormat {
+	case "xml":
+		encoder = cydx.NewBOMEncoder(&sb, cydx.BOMFileFormatXML)
+	default:
+		encoder = cydx.NewBOMEncoder(&sb, cydx.BOMFileFormatJSON)
+	}
+
+	encoder.SetPretty(true)
+	encoder.SetEscapeHTML(true)
+
+	if m.settings.Output.SpecVersion == "" {
+		if err := encoder.Encode(m.out); err != nil {
+			return err
+		}
+	} else {
+		outputVersion := specVersionMap[m.settings.Output.SpecVersion]
+		if err := encoder.EncodeVersion(m.out, outputVersion); err != nil {
+			return err
+		}
+	}
+
+	// // Read the local SBOM file
+	// sbomFilePath := "sbomqs-fossa-dt.cyclonedx.json"
+	// sbomData, err := os.ReadFile(sbomFilePath)
+	// if err != nil {
+	// 	log.Fatalf("Failed to read SBOM file: %s", err)
+	// 	return err
+	// }
+	// // Encode the SBOM data to Base64
+	// encodedBOM := base64.StdEncoding.EncodeToString(sbomData)
+
+	dtUpload := dtrack.BOMUploadRequest{
+		ProjectUUID: &m.settings.Output.UploadProjectID,
+		BOM:         sb.String(),
+	}
+	encodedBOM := base64.StdEncoding.EncodeToString([]byte(dtUpload.BOM))
+
+	var token dtrack.BOMUploadToken
+	bomUploadRequest := dtrack.BOMUploadRequest{
+		ProjectUUID: &m.settings.Output.UploadProjectID,
+		BOM:         encodedBOM,
+	}
+
+	if token, err = dTrackClient.BOM.Upload(*m.settings.Ctx, bomUploadRequest); err != nil {
+		log.Fatalf("Failed to upload BOM: %s", err)
+		return err
+	}
+	fmt.Println(" BOMUploadToken: ", token)
+
+	return err
 }
 
 func (m *merge) writeSBOM() error {

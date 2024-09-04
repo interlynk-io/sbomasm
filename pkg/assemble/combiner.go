@@ -99,6 +99,10 @@ func toCDXMergerSettings(c *config) *cdx.MergeSettings {
 	ms.Input.Files = append(ms.Input.Files, c.input.files...)
 
 	ms.Output.File = c.Output.file
+	ms.Output.Upload = c.Output.Upload
+	ms.Output.UploadProjectID = c.Output.UploadProjectID
+	ms.Output.Url = c.Output.Url
+	ms.Output.ApiKey = c.Output.ApiKey
 	ms.Output.FileFormat = c.Output.FileFormat
 	ms.Output.Spec = c.Output.Spec
 	ms.Output.SpecVersion = c.Output.SpecVersion

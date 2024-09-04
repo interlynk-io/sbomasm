@@ -19,6 +19,8 @@ package assemble
 import (
 	"context"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 type Params struct {
@@ -26,6 +28,12 @@ type Params struct {
 	Input      []string
 	Output     string
 	ConfigPath string
+
+	// upload requirement
+	Url             string
+	ApiKey          string
+	Upload          bool
+	UploadProjectID uuid.UUID
 
 	Name    string
 	Version string

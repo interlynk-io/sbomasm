@@ -26,6 +26,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/assemble/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/samber/lo"
@@ -75,10 +76,14 @@ type app struct {
 }
 
 type output struct {
-	Spec        string `yaml:"spec"`
-	SpecVersion string `yaml:"spec_version"`
-	FileFormat  string `yaml:"file_format"`
-	file        string
+	Spec            string `yaml:"spec"`
+	SpecVersion     string `yaml:"spec_version"`
+	FileFormat      string `yaml:"file_format"`
+	file            string
+	Upload          bool
+	UploadProjectID uuid.UUID
+	Url             string
+	ApiKey          string
 }
 
 type input struct {
@@ -203,6 +208,10 @@ func (c *config) readAndMerge(p *Params) error {
 
 	c.input.files = p.Input
 	c.Output.file = p.Output
+	c.Output.Upload = p.Upload
+	c.Output.UploadProjectID = p.UploadProjectID
+	c.Output.Url = p.Url
+	c.Output.ApiKey = p.ApiKey
 	c.ctx = p.Ctx
 	if c.ctx == nil {
 		return errors.New("config context is not initialized")

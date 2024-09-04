@@ -80,6 +80,10 @@ func extractArgsFromDTtoAssemble(dtParams *dt.Params) (*assemble.Params, error) 
 	aParams := assemble.NewParams()
 
 	aParams.Output = dtParams.Output
+	aParams.Upload = dtParams.Upload
+	aParams.UploadProjectID = dtParams.UploadProjectID
+	aParams.Url = dtParams.Url
+	aParams.ApiKey = dtParams.ApiKey
 
 	aParams.Name = dtParams.Name
 	aParams.Version = dtParams.Version
@@ -115,12 +119,6 @@ func extractDtArgs(cmd *cobra.Command, args []string) (*dt.Params, error) {
 	}
 	aParams.Url = url
 	aParams.ApiKey = apiKey
-
-	output, err := cmd.Flags().GetString("output")
-	if err != nil {
-		return nil, err
-	}
-	aParams.Output = output
 
 	name, _ := cmd.Flags().GetString("name")
 	version, _ := cmd.Flags().GetString("version")
@@ -159,6 +157,22 @@ func extractDtArgs(cmd *cobra.Command, args []string) (*dt.Params, error) {
 		aParams.OutputSpec = "spdx"
 	}
 
+	output, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return nil, err
+	}
+	// Check if the output is a valid UUID, i.e. project ID
+	if _, err := uuid.Parse(output); err == nil {
+		aParams.Upload = true
+		aParams.UploadProjectID = uuid.MustParse(output)
+		fmt.Printf("Upload: %v and SBOM to Project ID: %v \n", aParams.Upload, aParams.UploadProjectID)
+	} else {
+		// Assume it's a file path
+		aParams.Output = output
+		aParams.Upload = false
+		fmt.Printf("Upload: %v and SBOM to Project ID: %v \n", aParams.Upload, aParams.Output)
+	}
+
 	for _, arg := range args {
 		// Check if the argument is a file
 		if _, err := os.Stat(arg); err == nil {
@@ -186,7 +200,7 @@ func init() {
 	dtCmd.Flags().StringP("api-key", "k", "", "dependency track api key, requires VIEW_PORTFOLIO for scoring and PORTFOLIO_MANAGEMENT for tagging")
 	dtCmd.MarkFlagsRequiredTogether("url", "api-key")
 
-	dtCmd.Flags().StringP("output", "o", "", "path to assembled sbom, defaults to stdout")
+	dtCmd.Flags().StringP("output", "o", "", "path to file or project id for newly assembled sbom, defaults to stdout")
 
 	dtCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
 	dtCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")

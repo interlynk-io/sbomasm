@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
@@ -98,10 +99,14 @@ type app struct {
 }
 
 type output struct {
-	FileFormat  string
-	Spec        string
-	SpecVersion string
-	File        string
+	FileFormat      string
+	Spec            string
+	SpecVersion     string
+	File            string
+	Upload          bool
+	UploadProjectID uuid.UUID
+	Url             string
+	ApiKey          string
 }
 
 type input struct {
