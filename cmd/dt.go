@@ -18,6 +18,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/assemble"
@@ -59,9 +60,9 @@ Basic Example:
 
 		// retrieve Input Files
 		dtParams.PopulateInputField(ctx)
-		fmt.Println("dtAssembleParams.Input: ", dtParams.Input)
 
 		assembleParams, err := extractArgsFromDTtoAssemble(dtParams)
+		fmt.Println("assemble.Input: ", assembleParams.Input)
 		if err != nil {
 			return err
 		}
@@ -158,12 +159,17 @@ func extractDtArgs(cmd *cobra.Command, args []string) (*dt.Params, error) {
 		aParams.OutputSpec = "spdx"
 	}
 
-	fmt.Println("args: ", args)
 	for _, arg := range args {
-		fmt.Println("arg: ", arg)
-		argID, err := uuid.Parse(arg)
-		fmt.Println("argID: ", argID)
+		// Check if the argument is a file
+		if _, err := os.Stat(arg); err == nil {
+			if err := validatePath(arg); err != nil {
+				return nil, err
+			}
+			aParams.Input = append(aParams.Input, arg)
+			continue
+		}
 
+		argID, err := uuid.Parse(arg)
 		if err != nil {
 			return nil, err
 		}

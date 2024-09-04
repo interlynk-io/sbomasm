@@ -22,10 +22,11 @@ Usage
     
 Basic Example:
     # Edit an sbom to add app-name and version to the primary component 
-    $ sbomasm edit dt -u "http://localhost:8080/" -k "odt_gwiwooi29i1N5Hewkkddkkeiwi3ii" --subject primary-component --name "my-cool-app" --version "1.0.0" 11903ba9-a585-4dfb-9a0c-f348345a5473 34103ba2-rt63-2fga-3a8b-t625261g6262
+    $ sbomasm edit dt -u "http://localhost:8080/" -k "odt_gwiwooi29i1N5Hewkkiddkkeiwi3ii" --subject primary-component --name "my-cool-app" --version "1.0.0" 11903ba9-a585-4dfb-9a0c-f348345a5473 34103ba2-rt63-2fga-3a8b-t625261g6262
+	$ sbomasm edit dt -u "http://localhost:8080/" -k "odt_gEB8881Nhhhkkk5HewiZkkkUUhsgk7"   --subject document --author "fred (fred@c.com)" --author "jane (jane@c.com)" --supplier "interlynk.io (https://interlynk.io)" --tool "sbomasm edit (v1.0.0)" --license "CC0-1.0" --repository "github.com/interlynk/cool-app" --timestamp  --output  dt-new-final-product.spdx.json 11903ba9-a585-4dfb-9a0c-f348345a5473
 
     # Edit an sbom to add created-at timestamp and supplier information only for missing fields
-    $ sbomasm edit dt  -u "http://localhost:8080/" -k "odt_gwiwooi29i1N5Hewkkddkkeiwi3ii"--missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" 11903ba9-a585-4dfb-9a0c-f348345a5473 34103ba2-rt63-2fga-3a8b-t625261g6262
+    $ sbomasm edit dt  -u "http://localhost:8080/" -k "odt_gwiwooi29i1N5Hewkkddkkueiwi3ii"--missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" 11903ba9-a585-4dfb-9a0c-f348345a5473 34103ba2-rt63-2fga-3a8b-t625261g6262
     `,
 	SilenceUsage: true,
 	Args:         cobra.ExactArgs(1),
