@@ -18,9 +18,7 @@ package cdx
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -363,8 +361,7 @@ func (m *merge) hierarchicalMerge() error {
 }
 
 func (m *merge) uploadSBOM() error {
-	fmt.Println("Inside uploadSBOM fn")
-	defer fmt.Println("Exit uploadSBOM fn")
+	log := logger.FromContext(*m.settings.Ctx)
 	dTrackClient, err := dtrack.NewClient(m.settings.Output.Url,
 		dtrack.WithAPIKey(m.settings.Output.ApiKey), dtrack.WithDebug(false))
 	if err != nil {
@@ -395,19 +392,8 @@ func (m *merge) uploadSBOM() error {
 		}
 	}
 
-	// // Read the local SBOM file
-	// sbomFilePath := "sbomqs-fossa-dt.cyclonedx.json"
-	// sbomData, err := os.ReadFile(sbomFilePath)
-	// if err != nil {
-	// 	log.Fatalf("Failed to read SBOM file: %s", err)
-	// 	return err
-	// }
-	// // Encode the SBOM data to Base64
-	// encodedBOM := base64.StdEncoding.EncodeToString(sbomData)
-
 	dtUpload := dtrack.BOMUploadRequest{
-		ProjectUUID: &m.settings.Output.UploadProjectID,
-		BOM:         sb.String(),
+		BOM: sb.String(),
 	}
 	encodedBOM := base64.StdEncoding.EncodeToString([]byte(dtUpload.BOM))
 
@@ -421,7 +407,7 @@ func (m *merge) uploadSBOM() error {
 		log.Fatalf("Failed to upload BOM: %s", err)
 		return err
 	}
-	fmt.Println(" BOMUploadToken: ", token)
+	log.Debugf("bom upload token: %v", token)
 
 	return err
 }
