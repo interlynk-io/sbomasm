@@ -63,8 +63,3 @@ release:
   prerelease: allow 
   draft: true 
 
-sboms:
-  -
-    artifacts: binary
-    documents:
-      - "${artifact}.spdx.sbom"  
