@@ -54,7 +54,6 @@ Advanced Example:
 		ctx := logger.WithLogger(context.Background())
 
 		editParams, err := extractEditArgs(cmd, args)
-
 		if err != nil {
 			return err
 		}
