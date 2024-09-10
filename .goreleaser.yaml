@@ -1,5 +1,7 @@
 project_name: sbomasm
 
+version: 2
+
 env:
   - GO111MODULE=on
 
@@ -63,8 +65,3 @@ release:
   prerelease: allow 
   draft: true 
 
-sboms:
-  -
-    artifacts: binary
-    documents:
-      - "${artifact}.spdx.sbom"  
