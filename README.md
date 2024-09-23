@@ -30,6 +30,11 @@ go install github.com/interlynk-io/sbomasm@latest
 ```
 other installation [options](#installation).
 
+# SBOM Platform - Free Tier
+
+Our SBOM Automation Platform has a new free tier that provides a comprehensive solution to manage SBOMs (Software Bill of Materials) effortlessly. From centralized SBOM storage, built-in SBOM editor, continuous vulnerability mapping and assessment, and support for organizational policies, all while ensuring compliance and enhancing software supply chain security using integrated SBOM quality scores. The free tier is ideal for small teams. [Sign up](https://app.interlynk.io/)
+
+
 # SBOM Card
 [![SBOMCard](https://api.interlynk.io/api/v1/badges?type=hcard&project_group_id=c706ae8e-56dc-4386-9c8e-11c2401c0e94
 )](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
