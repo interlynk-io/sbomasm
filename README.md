@@ -64,6 +64,20 @@ docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "ass
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -e 1.4 -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 
+#### Dependency Track Integration 
+
+Assemble 2 projects from DT into a flat merged assembled sbom, and save the file to local disk.
+```sh
+sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fuyKELt5dbCUb" -n "mega-app" -v "1.0.0
+" -t "application" -f -o merged_sbom.json  08c2777b-bc4f-4b98-be54-e3f901736d71 9d94d566-a20c-4b65-b1b8-18dc4e238a55
+```
+
+Assemble 2 projects from DT using flat merge and push the assembled sbom to another project 
+```sh 
+./build/sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fuyKELt5dbCUb" -n "mega-app" -v "1.0.0
+" -t "application"  -f -o 1379d800-abb0-498b-a6e5-533318670e40  08c2777b-bc4f-4b98-be54-e3f901736d71 9d94d566-a20c-4b65-b1b8-18dc4e238a55
+```
+
 ### Edit SBOMs
 Change the name and version of the primary component.
 ```sh
@@ -160,14 +174,14 @@ for input and output formats
 ## Merge Algorithm
 The default merge algorithm is `Hierarchical` merge.
 
-| Algo  | SBOM Spec | Notes |
-|----------|----------|----------|
-| Hierarchical   | CycloneDX  | For each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM. |
-| Flat  | CycloneDX   | Provides a flat list of components, duplicates are not removed. |
-| Assembly | CycloneDX | Similar to Hierarchical merge, but treats each sbom as not dependent, so no relationships are created with primary.  |
-| Hierarchical   | SPDX  | It maintains relationships among all the merged documents. Contains relationship is using to express dependencies. No duplicate components are removed.|
-| Flat  | SPDX   | It creates a flat list of all packages and files. It removes all relationships except the describes relationship|
-| Assembly | SPDX | Similar to Hierarchical, except the contains relationship is omitted |
+| Algo  | SBOM Spec| Duplicates | Notes |
+|----------|----------|------|----------|
+| Hierarchical   | CycloneDX  | Not Removed | For each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM|
+| Flat  | CycloneDX   | Removed | Provides a flat list of components |
+| Assembly | CycloneDX | Removed | Similar to Hierarchical merge, but treats each sbom as not dependent, so no relationships are created with primary.  |
+| Hierarchical   | SPDX  | Not Removed | It maintains relationships among all the merged documents. Contains relationship is using to express dependencies. No duplicate components are removed.|
+| Flat  | SPDX   | Not Removed | It creates a flat list of all packages and files. It removes all relationships except the describes relationship|
+| Assembly | SPDX | Not Removed | Similar to Hierarchical, except the contains relationship is omitted |
 
 # A complete example/use-case
 Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.

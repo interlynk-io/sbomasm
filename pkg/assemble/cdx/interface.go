@@ -131,11 +131,6 @@ type MergeSettings struct {
 }
 
 func Merge(ms *MergeSettings) error {
-	merger := newMerge(ms)
-
-	merger.loadBoms()
-	merger.initOutBom()
-
 	if len(ms.Output.Spec) > 0 && ms.Output.Spec != "cyclonedx" {
 		return errors.New("invalid output spec")
 	}
@@ -144,13 +139,6 @@ func Merge(ms *MergeSettings) error {
 		return errors.New("invalid CycloneDX spec version")
 	}
 
-	if ms.Assemble.FlatMerge {
-		return merger.flatMerge()
-	} else if ms.Assemble.HierarchicalMerge {
-		return merger.hierarchicalMerge()
-	} else if ms.Assemble.AssemblyMerge {
-		return merger.assemblyMerge()
-	}
-
-	return merger.hierarchicalMerge()
+	merger := newMerge(ms)
+	return merger.combinedMerge()
 }

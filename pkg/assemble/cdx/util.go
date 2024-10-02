@@ -18,16 +18,17 @@ package cdx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/hashstructure/v2"
+	"github.com/samber/lo"
 	"sigs.k8s.io/release-utils/version"
 )
 
@@ -48,22 +49,95 @@ func newSerialNumber() string {
 	return fmt.Sprintf("urn:uuid:%s", u)
 }
 
-func newBomRef(obj interface{}) string {
-	f, _ := hashstructure.Hash(obj, hashstructure.FormatV2, &hashstructure.HashOptions{
-		ZeroNil:      true,
-		SlicesAsSets: true,
-	})
+func newBomRef() string {
+	u := uuid.New().String()
 
-	return fmt.Sprintf("%x", f)
+	return fmt.Sprintf("lynk:%s", u)
 }
 
 func cloneComp(c *cydx.Component) (*cydx.Component, error) {
-	compCopy, err := copystructure.Copy(c)
+	var newComp cydx.Component
+
+	// Marshal the original component to JSON
+	b, err := json.Marshal(c)
 	if err != nil {
 		return nil, err
 	}
 
-	return compCopy.(*cydx.Component), nil
+	// Unmarshal into a map[string]interface{} to perform cleanup
+	var tempMap map[string]interface{}
+	if err := json.Unmarshal(b, &tempMap); err != nil {
+		return nil, err
+	}
+
+	// Remove empty fields recursively
+	cleanedUpMap := removeEmptyFields(tempMap)
+
+	// Marshal the cleaned-up map back to JSON
+	cleanedUpBytes, err := json.Marshal(cleanedUpMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the cleaned-up JSON back into a cydx.Component struct
+	if err := json.Unmarshal(cleanedUpBytes, &newComp); err != nil {
+		return nil, err
+	}
+
+	return &newComp, nil
+}
+
+func cloneService(s *cydx.Service) (*cydx.Service, error) {
+	var newService cydx.Service
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(b, &newService)
+	return &newService, nil
+}
+
+// Recursive function to remove empty fields, including empty objects and arrays
+func removeEmptyFields(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Loop through map and remove empty fields
+		for key, value := range v {
+			v[key] = removeEmptyFields(value)
+			// Remove empty maps and slices
+			if isEmptyValue(v[key]) {
+				delete(v, key)
+			}
+		}
+	case []interface{}:
+		// Process arrays
+		var newArray []interface{}
+		for _, item := range v {
+			item = removeEmptyFields(item)
+			if !isEmptyValue(item) {
+				newArray = append(newArray, item)
+			}
+		}
+		return newArray
+	}
+	return data
+}
+
+// Helper function to determine if a value is considered "empty"
+func isEmptyValue(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	val := reflect.ValueOf(v)
+	switch val.Kind() {
+	case reflect.Array, reflect.Slice, reflect.Map:
+		return val.Len() == 0
+	case reflect.Struct:
+		return reflect.DeepEqual(v, reflect.Zero(val.Type()).Interface())
+	case reflect.String:
+		return v == ""
+	}
+	return false
 }
 
 func loadBom(ctx context.Context, path string) (*cydx.BOM, error) {
@@ -111,44 +185,119 @@ func utcNowTime() string {
 	return locationTime.Format(time.RFC3339)
 }
 
-func getAllTools(boms []*cydx.BOM) []cydx.Component {
-	tools := []cydx.Component{}
+func buildToolList(in []*cydx.BOM) *cydx.ToolsChoice {
+	tools := cydx.ToolsChoice{}
 
-	tools = append(tools, *toolInfo("sbomasm", version.GetVersionInfo().GitVersion, "Assembler for your sboms", "Interlynk", "https://interlynk.io", "support@interlynk.io", "Apache-2.0"))
+	tools.Services = &[]cydx.Service{}
+	tools.Components = &[]cydx.Component{}
 
-	for _, bom := range boms {
+	*tools.Components = append(*tools.Components, cydx.Component{
+		Type:        cydx.ComponentTypeApplication,
+		Name:        "sbomasm",
+		Version:     version.GetVersionInfo().GitVersion,
+		Description: "Assembler & Editor for your sboms",
+		Supplier: &cydx.OrganizationalEntity{
+			Name:    "Interlynk",
+			URL:     &[]string{"https://interlynk.io"},
+			Contact: &[]cydx.OrganizationalContact{{Email: "support@interlynk.io"}},
+		},
+		Licenses: &cydx.Licenses{
+			{
+				License: &cydx.License{
+					ID: "Apache-2.0",
+				},
+			},
+		},
+	})
+
+	for _, bom := range in {
 		if bom.Metadata != nil && bom.Metadata.Tools != nil {
 			for _, tool := range *bom.Metadata.Tools.Tools {
-				tools = append(tools, *toolInfo(tool.Name, tool.Version, "", tool.Vendor, "", "", ""))
+				*tools.Components = append(*tools.Components, cydx.Component{
+					Type:    cydx.ComponentTypeApplication,
+					Name:    tool.Name,
+					Version: tool.Version,
+					Supplier: &cydx.OrganizationalEntity{
+						Name: tool.Vendor,
+					},
+				})
 			}
 		}
 
 		if bom.Metadata != nil && bom.Metadata.Tools != nil && bom.Metadata.Tools.Components != nil {
 			for _, tool := range *bom.Metadata.Tools.Components {
-				tools = append(tools, *toolInfo(tool.Name, tool.Version, "", "", "", "", ""))
+				comp, _ := cloneComp(&tool)
+				*tools.Components = append(*tools.Components, *comp)
+			}
+		}
+
+		if bom.Metadata != nil && bom.Metadata.Tools != nil && bom.Metadata.Tools.Services != nil {
+			for _, service := range *bom.Metadata.Tools.Services {
+				serv, _ := cloneService(&service)
+				*tools.Services = append(*tools.Services, *serv)
 			}
 		}
 	}
-	return tools
+
+	uniqTools := lo.UniqBy(*tools.Components, func(c cydx.Component) string {
+		return fmt.Sprintf("%s-%s", c.Name, c.Version)
+	})
+
+	uniqServices := lo.UniqBy(*tools.Services, func(s cydx.Service) string {
+		return fmt.Sprintf("%s-%s", s.Name, s.Version)
+	})
+
+	tools.Components = &uniqTools
+	tools.Services = &uniqServices
+
+	return &tools
 }
 
-func toolInfo(name, version, desc, sName, sUrl, sEmail, sLicense string) *cydx.Component {
-	return &cydx.Component{
-		Type:        cydx.ComponentTypeApplication,
-		Name:        name,
-		Version:     version,
-		Description: desc,
-		Supplier: &cydx.OrganizationalEntity{
-			Name:    sName,
-			URL:     &[]string{sUrl},
-			Contact: &[]cydx.OrganizationalContact{{Email: sEmail}},
-		},
-		Licenses: &cydx.Licenses{
-			{
-				License: &cydx.License{
-					ID: sLicense,
-				},
-			},
-		},
+func buildComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Component {
+	finalList := []cydx.Component{}
+
+	for _, bom := range in {
+		for _, comp := range lo.FromPtr(bom.Components) {
+			newComp, duplicate := cs.StoreAndCloneWithNewID(&comp)
+			if !duplicate {
+				finalList = append(finalList, *newComp)
+			}
+		}
 	}
+	return finalList
+}
+
+func buildPrimaryComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Component {
+	return lo.Map(in, func(bom *cydx.BOM, _ int) cydx.Component {
+		if bom.Metadata != nil && bom.Metadata.Component != nil {
+			newComp, duplicate := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
+			if !duplicate {
+				return *newComp
+			}
+		}
+		return cydx.Component{}
+	})
+}
+
+func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Dependency {
+	return lo.Flatten(lo.Map(in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
+		newDeps := []cydx.Dependency{}
+		for _, dep := range lo.FromPtr(bom.Dependencies) {
+			nd := cydx.Dependency{}
+			ref, found := cs.ResolveDepID(dep.Ref)
+			if !found {
+				continue
+			}
+
+			if len(*dep.Dependencies) == 0 {
+				continue
+			}
+
+			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
+			nd.Ref = ref
+			nd.Dependencies = &deps
+			newDeps = append(newDeps, nd)
+		}
+		return newDeps
+	}))
 }

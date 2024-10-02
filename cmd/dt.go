@@ -62,7 +62,6 @@ Basic Example:
 		dtParams.PopulateInputField(ctx)
 
 		assembleParams, err := extractArgsFromDTtoAssemble(dtParams)
-		fmt.Println("assemble.Input: ", assembleParams.Input)
 		if err != nil {
 			return err
 		}
@@ -165,12 +164,10 @@ func extractDtArgs(cmd *cobra.Command, args []string) (*dt.Params, error) {
 	if _, err := uuid.Parse(output); err == nil {
 		aParams.Upload = true
 		aParams.UploadProjectID = uuid.MustParse(output)
-		fmt.Printf("Upload: %v and SBOM to Project ID: %v \n", aParams.Upload, aParams.UploadProjectID)
 	} else {
 		// Assume it's a file path
 		aParams.Output = output
 		aParams.Upload = false
-		fmt.Printf("Upload: %v and SBOM to Project ID: %v \n", aParams.Upload, aParams.Output)
 	}
 
 	for _, arg := range args {

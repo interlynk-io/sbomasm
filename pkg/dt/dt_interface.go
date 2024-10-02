@@ -56,14 +56,14 @@ func (dtP *Params) PopulateInputField(ctx context.Context) {
 
 		prj, err := dTrackClient.Project.Get(ctx, pid)
 		if err != nil {
+			log.Infof("Failed to get project, Check projectID or API port or Hostname.")
 			log.Fatalf("Failed to get project: %s", err)
 		}
-		fmt.Printf("ID: %s, Name: %s, Version: %s", prj.UUID, prj.Name, prj.Version)
-		fmt.Println()
+		log.Debugf("ID: %s, Name: %s, Version: %s", prj.UUID, prj.Name, prj.Version)
 
 		bom, err := dTrackClient.BOM.ExportProject(ctx, pid, dtrack.BOMFormatJSON, dtrack.BOMVariantInventory)
 		if err != nil {
-			log.Fatalf("Failed to export project: %s", err)
+			log.Fatalln("Failed to export project: %s", err)
 		}
 
 		fname := fmt.Sprintf("tmpfile-%s", pid)
