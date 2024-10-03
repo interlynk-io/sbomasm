@@ -146,11 +146,10 @@ var defaultConfig = config{
 }
 
 func DefaultConfig() {
-	data, err := yaml.Marshal(&defaultConfig)
+	_, err := yaml.Marshal(&defaultConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(data))
 }
 
 // NewConfig: Creating a new configuration instance with default values.

@@ -18,7 +18,6 @@ package assemble
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 )
@@ -55,8 +54,6 @@ func NewParams() *Params {
 }
 
 func Assemble(config *config) error {
-	fmt.Println("Config1: ", *config)
-
 	err := config.validate()
 	if err != nil {
 		return err

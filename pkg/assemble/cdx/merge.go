@@ -52,8 +52,122 @@ func (m *merge) loadBoms() {
 	}
 }
 
+func (m *merge) combinedMerge() error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	log.Debug("loading sboms")
+	m.loadBoms()
+
+	log.Debugf("initialize component service")
+	//cs := newComponentService(*m.settings.Ctx)
+	cs := newUniqueComponentService(*m.settings.Ctx)
+
+	// Build primary component list from each sbom
+	priCompList := buildPrimaryComponentList(m.in, cs)
+	log.Debugf("build primary component list for each sbom found %d", len(priCompList))
+
+	// Build a flat list of components from each sbom
+	compList := buildComponentList(m.in, cs)
+	log.Debugf("build a flat list of components from each sbom found %d", len(compList))
+
+	// Build a flat list of dependencies from each sbom
+	depList := buildDependencyList(m.in, cs)
+	log.Debugf("build a flat list of dependencies from each sbom found %d", len(depList))
+
+	// build a list of tools from each sbom
+	toolsList := buildToolList(m.in)
+	log.Debugf("build a list of tools from each sbom found comps: %d, service: %d", len(*toolsList.Components), len(*toolsList.Services))
+
+	//Build the final sbom
+	log.Debugf("generating output sbom")
+	m.initOutBom()
+
+	log.Debugf("generating primary component")
+	m.out.Metadata.Component = m.setupPrimaryComp()
+
+	log.Debugf("assign tools to metadata")
+	m.out.Metadata.Tools = toolsList
+
+	if m.settings.Assemble.FlatMerge {
+		finalCompList := []cydx.Component{}
+		finalCompList = append(finalCompList, priCompList...)
+		finalCompList = append(finalCompList, compList...)
+		log.Debugf("flat merge: final component list: %d", len(finalCompList))
+		m.out.Components = &finalCompList
+
+		priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
+			return c.BOMRef
+		})
+		depList = append(depList, cydx.Dependency{
+			Ref:          m.out.Metadata.Component.BOMRef,
+			Dependencies: &priCompIds,
+		})
+		log.Debugf("flat merge: final dependency list: %d", len(depList))
+		m.out.Dependencies = &depList
+	} else if m.settings.Assemble.AssemblyMerge {
+		// Add the sbom primary components to the new primary component
+		m.out.Metadata.Component.Components = &priCompList
+		m.out.Components = &compList
+		m.out.Dependencies = &depList
+
+		log.Debugf("assembly merge: final component list: %d", len(compList))
+		log.Debugf("assembly merge: final dependency list: %d", len(depList))
+	} else {
+		for _, b := range m.in {
+			var oldPc *cydx.Component
+			var newPc int
+
+			if b.Metadata != nil && b.Metadata.Component != nil {
+				oldPc = b.Metadata.Component
+			}
+
+			newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
+
+			for i, pc := range priCompList {
+				if pc.BOMRef == newPcId {
+					newPc = i
+					break
+				}
+			}
+
+			//Initialize the components list for the primary component
+			priCompList[newPc].Components = &[]cydx.Component{}
+
+			for _, oldComp := range lo.FromPtr(b.Components) {
+				newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
+				for _, comp := range compList {
+					if comp.BOMRef == newCompId {
+						*priCompList[newPc].Components = append(*priCompList[newPc].Components, comp)
+						break
+					}
+				}
+			}
+
+			log.Debugf("hierarchical merge: primary component %s has %d components", priCompList[newPc].BOMRef, len(*priCompList[newPc].Components))
+		}
+
+		m.out.Components = &priCompList
+
+		priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
+			return c.BOMRef
+		})
+		depList = append(depList, cydx.Dependency{
+			Ref:          m.out.Metadata.Component.BOMRef,
+			Dependencies: &priCompIds,
+		})
+		m.out.Dependencies = &depList
+		log.Debugf("hierarchical merge: final dependency list: %d", len(depList))
+	}
+
+	// Writes sbom to file or uploads
+	log.Debugf("writing sbom")
+	return m.processSBOM()
+}
+
 func (m *merge) initOutBom() {
+	//log := logger.FromContext(*m.settings.Ctx)
 	m.out.SerialNumber = newSerialNumber()
+
 	m.out.Metadata = &cydx.Metadata{}
 	m.out.Metadata.Timestamp = utcNowTime()
 
@@ -67,8 +181,11 @@ func (m *merge) initOutBom() {
 		}
 	}
 
+	// Always add data sharing license.
 	m.out.Metadata.Licenses = &cydx.Licenses{
-		{License: &cydx.License{ID: "CC-BY-1.0"}},
+		{
+			License: &cydx.License{ID: "CC-BY-1.0"},
+		},
 	}
 
 	if len(m.settings.App.Authors) > 0 {
@@ -83,7 +200,6 @@ func (m *merge) initOutBom() {
 }
 
 func (m *merge) setupPrimaryComp() *cydx.Component {
-	log := logger.FromContext(*m.settings.Ctx)
 	pc := cydx.Component{}
 
 	pc.Name = m.settings.App.Name
@@ -101,9 +217,7 @@ func (m *merge) setupPrimaryComp() *cydx.Component {
 		pc.Licenses = &cydx.Licenses{
 			{License: &cydx.License{ID: m.settings.App.License.Id}},
 		}
-	}
-
-	if m.settings.App.License.Expression != "" {
+	} else if m.settings.App.License.Expression != "" {
 		pc.Licenses = &cydx.Licenses{
 			{Expression: m.settings.App.License.Expression},
 		}
@@ -132,322 +246,86 @@ func (m *merge) setupPrimaryComp() *cydx.Component {
 		}
 	}
 
-	pc.BOMRef = newBomRef(pc)
-	log.Debugf("Primary component: %s", pc.BOMRef)
-
+	pc.BOMRef = newBomRef()
 	return &pc
 }
 
-/*
-Gatheres all the artifacts of the input BOMs into a single BOM.
-as a flat list of components.
-*/
-func (m *merge) flatMerge() error {
-	log := logger.FromContext(*m.settings.Ctx)
-	cs := newComponentService(*m.settings.Ctx)
-
-	log.Debug("Merging BOMs into a flat list")
-
-	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
-		if bom.Metadata != nil && bom.Metadata.Component != nil {
-			return cs.StoreAndCloneWithNewID(bom.Metadata.Component)
-		}
-		return &cydx.Component{}
-	})
-
-	comps := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Component {
-		newComps := []cydx.Component{}
-		for _, comp := range lo.FromPtr(bom.Components) {
-			newComps = append(newComps, *cs.StoreAndCloneWithNewID(&comp))
-		}
-		return newComps
-	}))
-
-	deps := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
-		newDeps := []cydx.Dependency{}
-		for _, dep := range lo.FromPtr(bom.Dependencies) {
-			nd := cydx.Dependency{}
-			ref, found := cs.ResolveDepID(dep.Ref)
-			if !found {
-				log.Warnf("dependency %s not found", dep.Ref)
-				continue
-			}
-
-			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
-
-			nd.Ref = ref
-			nd.Dependencies = &deps
-			newDeps = append(newDeps, nd)
-		}
-		return newDeps
-	}))
-
-	m.out.Metadata.Component = m.setupPrimaryComp()
-
-	tools := getAllTools(m.in)
-	m.out.Metadata.Tools = &cydx.ToolsChoice{
-		Components: &[]cydx.Component{},
-	}
-	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
-
-	// Add the primary component to the list of components
-	for _, c := range priComps {
-		comps = append(comps, *c)
-	}
-
-	// Add depedencies between new primary component and old primary components
-	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {
-		return c.BOMRef
-	})
-
-	deps = append(deps, cydx.Dependency{
-		Ref:          m.out.Metadata.Component.BOMRef,
-		Dependencies: &priIds,
-	})
-
-	if m.settings.Assemble.IncludeComponents {
-		m.out.Components = &comps
-	}
-
-	if m.settings.Assemble.IncludeDependencyGraph {
-		m.out.Dependencies = &deps
-	}
-
-	return m.writeSBOM()
-}
-
-func (m *merge) assemblyMerge() error {
-	log := logger.FromContext(*m.settings.Ctx)
-	cs := newComponentService(*m.settings.Ctx)
-
-	log.Debug("Merging BOMs as an assembly")
-
-	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
-		if bom.Metadata != nil && bom.Metadata.Component != nil {
-			pc := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
-
-			if pc.Components == nil {
-				pc.Components = &[]cydx.Component{}
-			}
-
-			for _, c := range lo.FromPtr(bom.Components) {
-				*pc.Components = append(*pc.Components, *cs.StoreAndCloneWithNewID(&c))
-			}
-			return pc
-		}
-		return &cydx.Component{}
-	})
-
-	deps := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
-		newDeps := []cydx.Dependency{}
-		for _, dep := range lo.FromPtr(bom.Dependencies) {
-			nd := cydx.Dependency{}
-			ref, found := cs.ResolveDepID(dep.Ref)
-			if !found {
-				log.Warnf("dependency %s not found", dep.Ref)
-				continue
-			}
-
-			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
-
-			nd.Ref = ref
-			nd.Dependencies = &deps
-			newDeps = append(newDeps, nd)
-		}
-		return newDeps
-	}))
-
-	m.out.Metadata.Component = m.setupPrimaryComp()
-
-	m.out.Metadata.Component.Components = &[]cydx.Component{}
-	for _, c := range priComps {
-		*m.out.Metadata.Component.Components = append(*m.out.Metadata.Component.Components, *c)
-	}
-
-	tools := getAllTools(m.in)
-	m.out.Metadata.Tools = &cydx.ToolsChoice{
-		Components: &[]cydx.Component{},
-	}
-	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
-
-	if m.settings.Assemble.IncludeComponents {
-		m.out.Components = &[]cydx.Component{}
-		for _, c := range priComps {
-			*m.out.Components = append(*m.out.Components, *c)
-		}
-	}
-
-	if m.settings.Assemble.IncludeDependencyGraph {
-		m.out.Dependencies = &deps
-	}
-
-	return m.writeSBOM()
-}
-
-func (m *merge) hierarchicalMerge() error {
-	log := logger.FromContext(*m.settings.Ctx)
-	cs := newComponentService(*m.settings.Ctx)
-
-	log.Debug("Merging BOMs hierarchically")
-
-	priComps := lo.Map(m.in, func(bom *cydx.BOM, _ int) *cydx.Component {
-		if bom.Metadata != nil && bom.Metadata.Component != nil {
-			pc := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
-
-			if pc.Components == nil {
-				pc.Components = &[]cydx.Component{}
-			}
-
-			for _, c := range lo.FromPtr(bom.Components) {
-				*pc.Components = append(*pc.Components, *cs.StoreAndCloneWithNewID(&c))
-			}
-			return pc
-		}
-		return &cydx.Component{}
-	})
-
-	deps := lo.Flatten(lo.Map(m.in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
-		newDeps := []cydx.Dependency{}
-		for _, dep := range lo.FromPtr(bom.Dependencies) {
-			nd := cydx.Dependency{}
-			ref, found := cs.ResolveDepID(dep.Ref)
-			if !found {
-				log.Warnf("dependency %s not found", dep.Ref)
-				continue
-			}
-
-			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
-
-			nd.Ref = ref
-			nd.Dependencies = &deps
-			newDeps = append(newDeps, nd)
-		}
-		return newDeps
-	}))
-
-	m.out.Metadata.Component = m.setupPrimaryComp()
-
-	tools := getAllTools(m.in)
-	m.out.Metadata.Tools = &cydx.ToolsChoice{
-		Components: &[]cydx.Component{},
-	}
-	*m.out.Metadata.Tools.Components = append(*m.out.Metadata.Tools.Components, tools...)
-
-	// Add depedencies between new primary component and old primary components
-	priIds := lo.Map(priComps, func(c *cydx.Component, _ int) string {
-		return c.BOMRef
-	})
-
-	deps = append(deps, cydx.Dependency{
-		Ref:          m.out.Metadata.Component.BOMRef,
-		Dependencies: &priIds,
-	})
-
-	if m.settings.Assemble.IncludeComponents {
-		m.out.Components = &[]cydx.Component{}
-		for _, c := range priComps {
-			*m.out.Components = append(*m.out.Components, *c)
-		}
-	}
-
-	if m.settings.Assemble.IncludeDependencyGraph {
-		m.out.Dependencies = &deps
-	}
-	if m.settings.Output.Upload {
-		m.uploadSBOM()
-	}
-
-	return m.writeSBOM()
-}
-
-func (m *merge) uploadSBOM() error {
-	log := logger.FromContext(*m.settings.Ctx)
-	dTrackClient, err := dtrack.NewClient(m.settings.Output.Url,
-		dtrack.WithAPIKey(m.settings.Output.ApiKey), dtrack.WithDebug(false))
-	if err != nil {
-		log.Fatalf("Failed to create Dependency-Track client: %s", err)
-	}
-
+func (m *merge) processSBOM() error {
+	var output io.Writer
 	var sb strings.Builder
-	var encoder cydx.BOMEncoder
 
+	log := logger.FromContext(*m.settings.Ctx)
+
+	if m.settings.Output.Upload {
+		output = &sb
+	} else if m.settings.Output.File == "" {
+		output = os.Stdout
+	} else {
+		f, err := os.Create(m.settings.Output.File)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		output = f
+	}
+
+	var encoder cydx.BOMEncoder
 	switch m.settings.Output.FileFormat {
 	case "xml":
-		encoder = cydx.NewBOMEncoder(&sb, cydx.BOMFileFormatXML)
+		log.Debugf("writing sbom in xml format")
+		encoder = cydx.NewBOMEncoder(output, cydx.BOMFileFormatXML)
 	default:
-		encoder = cydx.NewBOMEncoder(&sb, cydx.BOMFileFormatJSON)
+		log.Debugf("writing sbom in json format")
+		encoder = cydx.NewBOMEncoder(output, cydx.BOMFileFormatJSON)
 	}
 
 	encoder.SetPretty(true)
 	encoder.SetEscapeHTML(true)
 
+	var err error
 	if m.settings.Output.SpecVersion == "" {
-		if err := encoder.Encode(m.out); err != nil {
-			return err
-		}
+		err = encoder.Encode(m.out)
 	} else {
+		log.Debugf("writing sbom in version %s", m.settings.Output.SpecVersion)
 		outputVersion := specVersionMap[m.settings.Output.SpecVersion]
-		if err := encoder.EncodeVersion(m.out, outputVersion); err != nil {
-			return err
-		}
+		err = encoder.EncodeVersion(m.out, outputVersion)
 	}
 
-	dtUpload := dtrack.BOMUploadRequest{
-		BOM: sb.String(),
+	if err != nil {
+		return err
 	}
-	encodedBOM := base64.StdEncoding.EncodeToString([]byte(dtUpload.BOM))
 
-	var token dtrack.BOMUploadToken
+	if m.settings.Output.Upload {
+		return m.uploadToServer(sb.String())
+	}
+
+	return nil
+}
+
+func (m *merge) uploadToServer(bomContent string) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	log.Debugf("uploading sbom to %s", m.settings.Output.Url)
+
+	dTrackClient, err := dtrack.NewClient(m.settings.Output.Url,
+		dtrack.WithAPIKey(m.settings.Output.ApiKey), dtrack.WithDebug(false))
+	if err != nil {
+		log.Fatalf("Failed to create Dependency-Track client: %s", err)
+		return err
+	}
+
+	encodedBOM := base64.StdEncoding.EncodeToString([]byte(bomContent))
 	bomUploadRequest := dtrack.BOMUploadRequest{
 		ProjectUUID: &m.settings.Output.UploadProjectID,
 		BOM:         encodedBOM,
 	}
 
-	if token, err = dTrackClient.BOM.Upload(*m.settings.Ctx, bomUploadRequest); err != nil {
+	token, err := dTrackClient.BOM.Upload(*m.settings.Ctx, bomUploadRequest)
+	if err != nil {
 		log.Fatalf("Failed to upload BOM: %s", err)
 		return err
 	}
+
 	log.Debugf("bom upload token: %v", token)
-
-	return err
-}
-
-func (m *merge) writeSBOM() error {
-	var f io.Writer
-
-	if m.settings.Output.File == "" {
-		f = os.Stdout
-	} else {
-		var err error
-		f, err = os.Create(m.settings.Output.File)
-		if err != nil {
-			return err
-		}
-	}
-
-	var encoder cydx.BOMEncoder
-
-	switch m.settings.Output.FileFormat {
-	case "xml":
-		encoder = cydx.NewBOMEncoder(f, cydx.BOMFileFormatXML)
-	default:
-		encoder = cydx.NewBOMEncoder(f, cydx.BOMFileFormatJSON)
-	}
-
-	encoder.SetPretty(true)
-	encoder.SetEscapeHTML(true)
-
-	if m.settings.Output.SpecVersion == "" {
-		if err := encoder.Encode(m.out); err != nil {
-			return err
-		}
-	} else {
-		outputVersion := specVersionMap[m.settings.Output.SpecVersion]
-
-		if err := encoder.EncodeVersion(m.out, outputVersion); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
