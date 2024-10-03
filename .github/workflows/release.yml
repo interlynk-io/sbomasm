@@ -3,7 +3,7 @@ name: Release | Build Binary
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 env:
@@ -13,12 +13,10 @@ env:
   SUPPLIER_URL: https://interlynk.io
   PYLYNK_TEMP_DIR: $RUNNER_TEMP/pylynk
   SBOM_TEMP_DIR: $RUNNER_TEMP/sbom
-  SBOM_ENV: development
   SBOM_FILE_PATH: $RUNNER_TEMP/sbom/_manifest/spdx_2.2/manifest.spdx.json
   MS_SBOM_TOOL_URL: https://github.com/microsoft/sbom-tool/releases/latest/download/sbom-tool-linux-x64
   MS_SBOM_TOOL_EXCLUDE_DIRS: "**/samples/**"
 
-  
 jobs:
   releaser:
     runs-on: ubuntu-latest
@@ -26,30 +24,30 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v3 
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - run: git fetch --force --tags 
+      - run: git fetch --force --tags
       - uses: actions/setup-go@v3
         with:
-          go-version: '>=1.20'
+          go-version: ">=1.20"
           check-latest: true
           cache: true
-      
+
       - name: Get Tag
         id: get_tag
         run: echo "LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.1')" >> $GITHUB_ENV
-      
+
       - name: Goreleaser
         uses: goreleaser/goreleaser-action@v4
         with:
           install-only: true
 
       - run: go version
-      - run: goreleaser -v 
-      
+      - run: goreleaser -v
+
       - name: Releaser
-        run: make release 
+        run: make release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -60,10 +58,8 @@ jobs:
           mkdir -p ${{ env.SBOM_TEMP_DIR}}
           curl -Lo $RUNNER_TEMP/sbom-tool ${{ env.MS_SBOM_TOOL_URL }}
           chmod +x $RUNNER_TEMP/sbom-tool
-          SANITIZED_REF=$(echo "${{ github.ref_name}}" | sed -e 's/[^a-zA-Z0-9.-]/-/g' -e 's/^[^a-zA-Z0-9]*//g')
-          VERSION= ${{ env.LATEST_TAG }}-$SANITIZED_REF          
-          $RUNNER_TEMP/sbom-tool generate -b ${{ env.SBOM_TEMP_DIR }} -bc . -pn ${{ env.TOOL_NAME }} -pv $VERSION -ps ${{ env.SUPPLIER_NAME}} -nsb ${{ env.SUPPLIER_URL }} -cd "--DirectoryExclusionList ${{ env.MS_SBOM_TOOL_EXCLUDE_DIRS }}"
-      
+          $RUNNER_TEMP/sbom-tool generate -b ${{ env.SBOM_TEMP_DIR }} -bc . -pn ${{ env.TOOL_NAME }} -pv  ${{ env.LATEST_TAG }} -ps ${{ env.SUPPLIER_NAME}} -nsb ${{ env.SUPPLIER_URL }} -cd "--DirectoryExclusionList ${{ env.MS_SBOM_TOOL_EXCLUDE_DIRS }}"
+
       - name: Upload SBOM as Release Asset
         uses: actions/upload-release-asset@v1
         with:
