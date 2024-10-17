@@ -364,9 +364,11 @@ func (d *spdxEditDoc) tools() error {
 	tools := []spdx.Creator{}
 
 	for _, tool := range d.c.tools {
+		parts := []string{tool.name, tool.value}
+
 		tools = append(tools, spdx.Creator{
 			CreatorType: "Tool",
-			Creator:     fmt.Sprintf("%s (%s)", tool.name, tool.value),
+			Creator:     strings.Join(lo.Compact(parts), "-"),
 		})
 	}
 
