@@ -30,7 +30,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -39,7 +39,7 @@ jobs:
         run: echo "LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.1')" >> $GITHUB_ENV
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x" # Specify the Python version needed
 
@@ -65,7 +65,7 @@ jobs:
           curl -Lo $RUNNER_TEMP/sbom-tool ${{ env.MS_SBOM_TOOL_URL }}
           chmod +x $RUNNER_TEMP/sbom-tool
           SANITIZED_REF=$(echo "${{ github.ref_name}}" | sed -e 's/[^a-zA-Z0-9.-]/-/g' -e 's/^[^a-zA-Z0-9]*//g')
-          VERSION=${{ env.LATEST_TAG }}-$SANITIZED_REF          
+          VERSION=${{ env.LATEST_TAG }}-$SANITIZED_REF
           $RUNNER_TEMP/sbom-tool generate -b ${{ env.SBOM_TEMP_DIR }} -bc . -pn ${{ env.TOOL_NAME }} -pv $VERSION -ps ${{ env.SUPPLIER_NAME}} -nsb ${{ env.SUPPLIER_URL }} -cd "--DirectoryExclusionList ${{ env.MS_SBOM_TOOL_EXCLUDE_DIRS }}"
 
       - name: Upload SBOM
