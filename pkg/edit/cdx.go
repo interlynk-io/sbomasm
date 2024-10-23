@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -180,20 +181,32 @@ func cdxFindComponent(b *cydx.BOM, c *configParams) *cydx.Component {
 func cdxConstructTools(b *cydx.BOM, c *configParams) *cydx.ToolsChoice {
 	choice := cydx.ToolsChoice{}
 
+	if b.SpecVersion > cydx.SpecVersion1_4 {
+		choice.Components = new([]cydx.Component)
+	} else {
+		choice.Tools = new([]cydx.Tool)
+	}
+
+	uniqTools := make(map[string]string)
+
 	for _, tool := range c.tools {
-		if b.SpecVersion > cydx.SpecVersion1_4 {
-			choice.Components = new([]cydx.Component)
-			*choice.Components = append(*choice.Components, cydx.Component{
-				Type:    cydx.ComponentTypeApplication,
-				Name:    tool.name,
-				Version: tool.value,
-			})
-		} else {
-			choice.Tools = new([]cydx.Tool)
-			*choice.Tools = append(*choice.Tools, cydx.Tool{
-				Name:    tool.name,
-				Version: tool.value,
-			})
+		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.name), strings.ToLower(tool.value))
+
+		if _, ok := uniqTools[key]; !ok {
+			if b.SpecVersion > cydx.SpecVersion1_4 {
+				*choice.Components = append(*choice.Components, cydx.Component{
+					Type:    cydx.ComponentTypeApplication,
+					Name:    tool.name,
+					Version: tool.value,
+				})
+			} else {
+				*choice.Tools = append(*choice.Tools, cydx.Tool{
+					Name:    tool.name,
+					Version: tool.value,
+				})
+			}
+
+			uniqTools[key] = key
 		}
 	}
 
