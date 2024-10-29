@@ -285,18 +285,7 @@ func (d *cdxEditDoc) tools() error {
 		}
 	} else if d.c.onAppend() {
 		if d.bom.Metadata.Tools != nil {
-			if d.bom.SpecVersion > cydx.SpecVersion1_4 {
-				if d.bom.Metadata.Tools.Components == nil {
-					d.bom.Metadata.Tools.Components = &[]cydx.Component{}
-				}
-
-				*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, *choice.Components...)
-			} else {
-				if d.bom.Metadata.Tools.Tools == nil {
-					d.bom.Metadata.Tools.Tools = &[]cydx.Tool{}
-				}
-				*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, *choice.Tools...)
-			}
+			d.bom.Metadata.Tools = cdxUniqTools(d.bom.Metadata.Tools, choice)
 		} else {
 			d.bom.Metadata.Tools = choice
 		}

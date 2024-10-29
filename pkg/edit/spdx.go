@@ -3,6 +3,7 @@ package edit
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/spdx/tools-golang/spdx"
 
+	"github.com/samber/lo"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx/common"
@@ -203,4 +205,39 @@ func spdxConstructHashes(_ *spdx.Document, c *configParams) []spdx.Checksum {
 	}
 
 	return hashes
+}
+
+func spdxConstructTools(_ *spdx.Document, c *configParams) []spdx.Creator {
+	tools := []spdx.Creator{}
+	uniqTools := make(map[string]bool)
+
+	for _, tool := range c.tools {
+		parts := []string{tool.name, tool.value}
+		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.name), strings.ToLower(tool.value))
+
+		if _, ok := uniqTools[key]; !ok {
+			tools = append(tools, spdx.Creator{
+				CreatorType: "Tool",
+				Creator:     strings.Join(lo.Compact(parts), "-"),
+			})
+
+			uniqTools[key] = true
+		}
+	}
+	return tools
+}
+
+func spdxUniqueTools(a []spdx.Creator, b []spdx.Creator) []spdx.Creator {
+	tools := a
+	uniqTools := make(map[string]bool)
+
+	for _, tool := range b {
+		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.CreatorType), strings.ToLower(tool.Creator))
+
+		if _, ok := uniqTools[key]; !ok {
+			tools = append(tools, tool)
+			uniqTools[key] = true
+		}
+	}
+	return tools
 }
