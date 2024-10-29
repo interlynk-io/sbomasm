@@ -361,22 +361,7 @@ func (d *spdxEditDoc) tools() error {
 		return errNotSupported
 	}
 
-	tools := []spdx.Creator{}
-	uniqTools := make(map[string]bool)
-
-	for _, tool := range d.c.tools {
-		parts := []string{tool.name, tool.value}
-		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.name), strings.ToLower(tool.value))
-
-		if _, ok := uniqTools[key]; !ok {
-			tools = append(tools, spdx.Creator{
-				CreatorType: "Tool",
-				Creator:     strings.Join(lo.Compact(parts), "-"),
-			})
-
-			uniqTools[key] = true
-		}
-	}
+	tools := spdxConstructTools(d.bom, d.c)
 
 	if d.c.onMissing() {
 		if d.bom.CreationInfo == nil {
@@ -396,7 +381,8 @@ func (d *spdxEditDoc) tools() error {
 		} else if d.bom.CreationInfo.Creators == nil {
 			d.bom.CreationInfo.Creators = tools
 		} else {
-			d.bom.CreationInfo.Creators = append(d.bom.CreationInfo.Creators, tools...)
+			//d.bom.CreationInfo.Creators = append(d.bom.CreationInfo.Creators, tools...)
+			d.bom.CreationInfo.Creators = spdxUniqueTools(d.bom.CreationInfo.Creators, tools)
 		}
 	} else {
 		if d.bom.CreationInfo == nil {

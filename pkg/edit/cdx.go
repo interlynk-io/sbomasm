@@ -178,6 +178,93 @@ func cdxFindComponent(b *cydx.BOM, c *configParams) *cydx.Component {
 	return nil
 }
 
+func cdxUniqTools(a *cydx.ToolsChoice, b *cydx.ToolsChoice) *cydx.ToolsChoice {
+	choices := cydx.ToolsChoice{}
+
+	if a == nil && b == nil {
+		return &choices
+	}
+
+	if a == nil && b != nil {
+		return b
+	}
+
+	if a != nil && b == nil {
+		return a
+	}
+
+	if a.Tools != nil && b.Tools != nil {
+		choices.Tools = new([]cydx.Tool)
+		uniqTools := make(map[string]string)
+
+		for _, tool := range *a.Tools {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Tools = append(*choices.Tools, tool)
+				uniqTools[key] = key
+			}
+		}
+
+		for _, tool := range *b.Tools {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Tools = append(*choices.Tools, tool)
+				uniqTools[key] = key
+			}
+		}
+	}
+
+	if a.Components != nil && b.Components != nil {
+		choices.Components = new([]cydx.Component)
+		uniqTools := make(map[string]string)
+
+		for _, tool := range *a.Components {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Components = append(*choices.Components, tool)
+				uniqTools[key] = key
+			}
+		}
+
+		for _, tool := range *b.Components {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Components = append(*choices.Components, tool)
+				uniqTools[key] = key
+			}
+		}
+	}
+
+	if a.Services != nil && b.Services != nil {
+		choices.Services = new([]cydx.Service)
+		uniqTools := make(map[string]string)
+
+		for _, tool := range *a.Services {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Services = append(*choices.Services, tool)
+				uniqTools[key] = key
+			}
+		}
+
+		for _, tool := range *b.Services {
+			key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
+
+			if _, ok := uniqTools[key]; !ok {
+				*choices.Services = append(*choices.Services, tool)
+				uniqTools[key] = key
+			}
+		}
+	}
+
+	return &choices
+}
+
 func cdxConstructTools(b *cydx.BOM, c *configParams) *cydx.ToolsChoice {
 	choice := cydx.ToolsChoice{}
 
@@ -226,7 +313,7 @@ func cdxConstructHashes(_ *cydx.BOM, c *configParams) *[]cydx.Hash {
 	return &hashes
 }
 
-func cdxConstructLicenses(b *cydx.BOM, c *configParams) cydx.Licenses {
+func cdxConstructLicenses(_ *cydx.BOM, c *configParams) cydx.Licenses {
 	licenses := cydx.Licenses{}
 
 	for _, license := range c.licenses {
