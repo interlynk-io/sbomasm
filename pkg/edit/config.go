@@ -20,8 +20,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-
-	"sigs.k8s.io/release-utils/version"
 )
 
 var supportedSubjects map[string]bool = map[string]bool{
@@ -244,12 +242,6 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 			value: version,
 		})
 	}
-
-	// Always add SBOMASM to the tool list
-	p.tools = append(p.tools, paramTuple{
-		name:  "sbomasm",
-		value: version.GetVersionInfo().GitVersion,
-	})
 
 	p.copyright = eParams.CopyRight
 	p.lifecycles = eParams.Lifecycles
