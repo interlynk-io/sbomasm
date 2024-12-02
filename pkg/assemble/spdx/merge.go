@@ -17,6 +17,8 @@
 package spdx
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/spdx/tools-golang/spdx"
@@ -98,14 +100,21 @@ func (m *merge) combinedMerge() error {
 
 	describedPkgs := getDescribedPkgs(m)
 
-	//Add Packages to document
+	// Add Packages to document
 	doc.Packages = append(doc.Packages, primaryPkg)
 	doc.Packages = append(doc.Packages, pkgs...)
 
-	//Add Files to document
+	doc.Packages = removeDuplicates(doc.Packages)
+
+	for _, p := range doc.Packages {
+		fmt.Println("DOC PACKAGE NAME: ", p.PackageName)
+		fmt.Println("DOC VERSION NAME: ", p.PackageVersion)
+	}
+
+	// Add Files to document
 	doc.Files = append(doc.Files, files...)
 
-	//Add OtherLicenses to document
+	// Add OtherLicenses to document
 	doc.OtherLicenses = append(doc.OtherLicenses, otherLicenses...)
 
 	topLevelRels := []*spdx.Relationship{}
@@ -140,13 +149,13 @@ func (m *merge) combinedMerge() error {
 		}
 	}
 
-	//Add Relationships to document
+	// Add Relationships to document
 	doc.Relationships = append(doc.Relationships, topLevelRels...)
 	if len(rels) > 0 {
 		doc.Relationships = append(doc.Relationships, rels...)
 	}
 
-	//Write the SBOM
+	// Write the SBOM
 	err = writeSBOM(doc, m)
 
 	return err

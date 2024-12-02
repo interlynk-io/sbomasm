@@ -39,6 +39,7 @@ import (
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
+	spdx_common "github.com/spdx/tools-golang/spdx/v2/common"
 	"github.com/spdx/tools-golang/spdx/v2/v2_3"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
@@ -160,7 +161,7 @@ func externalDocumentRefs(docs []*v2_3.Document) []v2_3.ExternalDocumentRef {
 
 func getAllCreators(docs []*v2_3.Document, authors []Author) []common.Creator {
 	var creators []common.Creator
-	var uniqCreator = make(map[string]common.Creator)
+	uniqCreator := make(map[string]common.Creator)
 
 	for _, doc := range docs {
 		if doc.CreationInfo != nil {
@@ -291,7 +292,7 @@ func genSpdxDocument(ms *merge) (*v2_3.Document, error) {
 func genCreationInfo(ms *merge) (*v2_3.CreationInfo, error) {
 	ci := v2_3.CreationInfo{}
 
-	//set UTC time
+	// set UTC time
 	ci.Created = utcNowTime()
 	ci.CreatorComment = getCreatorComments(ms.in)
 	lVersions := getLicenseListVersion(ms.in)
@@ -311,10 +312,10 @@ func genPrimaryPackage(ms *merge) (*v2_3.Package, error) {
 	pkg.PackageDescription = ms.settings.App.Description
 	pkg.PackageSPDXIdentifier = common.ElementID(fmt.Sprintf("RootPackage-%s", ms.rootPackageID))
 	pkg.PackageDownloadLocation = NOA
-	//This is set to true since we are analyzing the merged sboms files
+	// This is set to true since we are analyzing the merged sboms files
 	pkg.FilesAnalyzed = true
 
-	//Add Supplier
+	// Add Supplier
 	if ms.settings.App.Supplier.Name != "" {
 		pkg.PackageSupplier = &common.Supplier{}
 		pkg.PackageSupplier.SupplierType = "Organization"
@@ -326,7 +327,7 @@ func genPrimaryPackage(ms *merge) (*v2_3.Package, error) {
 		}
 	}
 
-	//Add checksums if provided.
+	// Add checksums if provided.
 	if len(ms.settings.App.Checksums) > 0 {
 		pkg.PackageChecksums = []common.Checksum{}
 		for _, c := range ms.settings.App.Checksums {
@@ -389,7 +390,7 @@ func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
 
 	for _, doc := range ms.in {
 		for _, pkg := range doc.Packages {
-			//Clone the package
+			// Clone the package
 			clone, err := clonePkg(pkg)
 			if err != nil {
 				return nil, nil, err
@@ -402,7 +403,7 @@ func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
 
 			clone.PackageSPDXIdentifier = newSpdxId
 
-			//Fixes
+			// Fixes
 			// if filesanalyzed is false, nil our verification code
 			if !clone.FilesAnalyzed {
 				clone.PackageVerificationCode = nil
@@ -415,7 +416,7 @@ func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
 
 			clone.Files = nil
 
-			//Add the package to the list
+			// Add the package to the list
 			pkgs = append(pkgs, clone)
 		}
 	}
@@ -423,14 +424,63 @@ func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
 	return pkgs, mapper, nil
 }
 
+// remove duplicates from doc.Packages
+func removeDuplicates(packages []*spdx.Package) []*spdx.Package {
+	uniquePackages := []*spdx.Package{}
+	seen := make(map[string]bool)
+
+	for _, pkg := range packages {
+
+		key := createPackageKey(pkg)
+		fmt.Println("KEY: ", key)
+		if !seen[key] {
+			uniquePackages = append(uniquePackages, pkg)
+			seen[key] = true
+		}
+	}
+
+	return uniquePackages
+}
+
+// unique package key, which will help to determine the duplicacy of packages
+func createPackageKey(pkg *spdx.Package) string {
+	if len(pkg.PackageExternalReferences) > 0 {
+		for _, ref := range pkg.PackageExternalReferences {
+			if strings.ToLower(ref.RefType) == spdx_common.TypePackageManagerPURL {
+				return "purl:" + ref.Locator
+			}
+		}
+	}
+
+	if len(pkg.PackageExternalReferences) > 0 {
+		for _, ref := range pkg.PackageExternalReferences {
+			if ref.RefType == spdx_common.TypeSecurityCPE23Type || ref.RefType == spdx_common.TypeSecurityCPE22Type {
+				return "cpe:" + ref.Locator
+			}
+		}
+	}
+
+	if pkg.PackageName != "" && pkg.PackageVersion != "" {
+		return "name-version:" + pkg.PackageName + ":" + pkg.PackageVersion
+	}
+
+	if len(pkg.PackageChecksums) > 0 {
+		for _, checksum := range pkg.PackageChecksums {
+			return "checksum:" + checksum.Value
+		}
+	}
+
+	return "spdx-id:" + string(pkg.PackageSPDXIdentifier)
+}
+
 func genFileList(ms *merge) ([]*v2_3.File, map[string]string, error) {
 	var files []*v2_3.File
 	mapper := make(map[string]string)
 
 	for _, doc := range ms.in {
-		//Add the files from the document
+		// Add the files from the document
 		for _, file := range doc.Files {
-			//Clone the file
+			// Clone the file
 			clone, err := cloneFile(file)
 			if err != nil {
 				return nil, nil, err
@@ -442,14 +492,14 @@ func genFileList(ms *merge) ([]*v2_3.File, map[string]string, error) {
 			mapper[oldSpdxId] = string(newSpdxId)
 			clone.FileSPDXIdentifier = newSpdxId
 
-			//Add the file to the list
+			// Add the file to the list
 			files = append(files, clone)
 		}
 
-		//Add the files from the packages
+		// Add the files from the packages
 		for _, pkg := range doc.Packages {
 			for _, file := range pkg.Files {
-				//Clone the file
+				// Clone the file
 				clone, err := cloneFile(file)
 				if err != nil {
 					return nil, nil, err
@@ -461,7 +511,7 @@ func genFileList(ms *merge) ([]*v2_3.File, map[string]string, error) {
 				mapper[oldSpdxId] = string(newSpdxId)
 				clone.FileSPDXIdentifier = newSpdxId
 
-				//Add the file to the list
+				// Add the file to the list
 				files = append(files, clone)
 			}
 		}
@@ -483,7 +533,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 				continue
 			}
 
-			//Clone the relationship
+			// Clone the relationship
 			clone, err := cloneRelationship(rel)
 			if err != nil {
 				return nil, err
@@ -507,7 +557,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 				}
 			}
 
-			//Update ElementId RefA and RefB
+			// Update ElementId RefA and RefB
 			if rel.RefA.ElementRefID != "" {
 				namespace := ""
 				if rel.RefA.DocumentRefID != "" {
@@ -545,7 +595,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 				}
 			}
 
-			//Add the relationship to the list
+			// Add the relationship to the list
 			relationships = append(relationships, clone)
 		}
 	}
