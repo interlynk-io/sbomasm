@@ -51,7 +51,7 @@ var spdx_strings_to_types = map[string]string{
 }
 
 func spdxEdit(c *configParams) error {
-	//log := logger.FromContext(*c.ctx)
+	// log := logger.FromContext(*c.ctx)
 
 	bom, err := loadSpdxSbom(*c.ctx, c.inputFilePath)
 	if err != nil {
