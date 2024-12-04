@@ -17,8 +17,6 @@
 package spdx
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/spdx/tools-golang/spdx"
@@ -103,13 +101,6 @@ func (m *merge) combinedMerge() error {
 	// Add Packages to document
 	doc.Packages = append(doc.Packages, primaryPkg)
 	doc.Packages = append(doc.Packages, pkgs...)
-
-	doc.Packages = removeDuplicates(doc.Packages)
-
-	for _, p := range doc.Packages {
-		fmt.Println("DOC PACKAGE NAME: ", p.PackageName)
-		fmt.Println("DOC VERSION NAME: ", p.PackageVersion)
-	}
 
 	// Add Files to document
 	doc.Files = append(doc.Files, files...)

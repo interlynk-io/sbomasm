@@ -27,10 +27,10 @@ import (
 
 type uniqueComponentService struct {
 	ctx context.Context
-	//unique list of new components
+	// unique list of new components
 	compMap map[string]*cydx.Component
 
-	//mapping from old component id to new component id
+	// mapping from old component id to new component id
 	idMap map[string]string
 }
 

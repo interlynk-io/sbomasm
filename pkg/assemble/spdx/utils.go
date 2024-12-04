@@ -39,7 +39,6 @@ import (
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
-	spdx_common "github.com/spdx/tools-golang/spdx/v2/common"
 	"github.com/spdx/tools-golang/spdx/v2/v2_3"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
@@ -387,90 +386,44 @@ func createLookupKey(docName, spdxId string) string {
 func genPackageList(ms *merge) ([]*v2_3.Package, map[string]string, error) {
 	var pkgs []*v2_3.Package
 	mapper := make(map[string]string)
+	seen := make(map[string]string)
 
 	for _, doc := range ms.in {
 		for _, pkg := range doc.Packages {
-			// Clone the package
+			key := fmt.Sprintf("%s-%s", strings.ToLower(pkg.PackageName), strings.ToLower(pkg.PackageVersion))
+
+			// if already seen, map the old SPDXID to the new SPDXID
+			if newID, exists := seen[key]; exists {
+				oldSpdxId := createLookupKey(doc.DocumentNamespace, string(pkg.PackageSPDXIdentifier))
+				mapper[oldSpdxId] = newID
+				continue
+			}
+
 			clone, err := clonePkg(pkg)
 			if err != nil {
 				return nil, nil, err
 			}
-
 			newSpdxId := common.ElementID(fmt.Sprintf("Package-%s", uuid.New().String()))
 			oldSpdxId := createLookupKey(doc.DocumentNamespace, string(pkg.PackageSPDXIdentifier))
 
 			mapper[oldSpdxId] = string(newSpdxId)
-
+			seen[key] = string(newSpdxId)
 			clone.PackageSPDXIdentifier = newSpdxId
 
-			// Fixes
-			// if filesanalyzed is false, nil our verification code
 			if !clone.FilesAnalyzed {
 				clone.PackageVerificationCode = nil
 			}
-
 			if clone.PackageVerificationCode != nil && clone.PackageVerificationCode.Value == "" {
 				clone.PackageVerificationCode = nil
 				clone.FilesAnalyzed = false
 			}
-
 			clone.Files = nil
 
-			// Add the package to the list
 			pkgs = append(pkgs, clone)
 		}
 	}
 
 	return pkgs, mapper, nil
-}
-
-// remove duplicates from doc.Packages
-func removeDuplicates(packages []*spdx.Package) []*spdx.Package {
-	uniquePackages := []*spdx.Package{}
-	seen := make(map[string]bool)
-
-	for _, pkg := range packages {
-
-		key := createPackageKey(pkg)
-		fmt.Println("KEY: ", key)
-		if !seen[key] {
-			uniquePackages = append(uniquePackages, pkg)
-			seen[key] = true
-		}
-	}
-
-	return uniquePackages
-}
-
-// unique package key, which will help to determine the duplicacy of packages
-func createPackageKey(pkg *spdx.Package) string {
-	if len(pkg.PackageExternalReferences) > 0 {
-		for _, ref := range pkg.PackageExternalReferences {
-			if strings.ToLower(ref.RefType) == spdx_common.TypePackageManagerPURL {
-				return "purl:" + ref.Locator
-			}
-		}
-	}
-
-	if len(pkg.PackageExternalReferences) > 0 {
-		for _, ref := range pkg.PackageExternalReferences {
-			if ref.RefType == spdx_common.TypeSecurityCPE23Type || ref.RefType == spdx_common.TypeSecurityCPE22Type {
-				return "cpe:" + ref.Locator
-			}
-		}
-	}
-
-	if pkg.PackageName != "" && pkg.PackageVersion != "" {
-		return "name-version:" + pkg.PackageName + ":" + pkg.PackageVersion
-	}
-
-	if len(pkg.PackageChecksums) > 0 {
-		for _, checksum := range pkg.PackageChecksums {
-			return "checksum:" + checksum.Value
-		}
-	}
-
-	return "spdx-id:" + string(pkg.PackageSPDXIdentifier)
 }
 
 func genFileList(ms *merge) ([]*v2_3.File, map[string]string, error) {
@@ -557,39 +510,33 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 				}
 			}
 
-			// Update ElementId RefA and RefB
 			if rel.RefA.ElementRefID != "" {
-				namespace := ""
+				namespace := doc.DocumentNamespace
 				if rel.RefA.DocumentRefID != "" {
 					namespace = getDocumentNamespace(rel.RefA.DocumentRefID, ms)
-				} else {
-					namespace = doc.DocumentNamespace
 				}
 
 				key := createLookupKey(namespace, string(rel.RefA.ElementRefID))
-
-				if _, ok := pkgMapper[key]; ok {
-					clone.RefA.ElementRefID = common.ElementID(pkgMapper[key])
-				} else if _, ok := fileMapper[key]; ok {
-					clone.RefA.ElementRefID = common.ElementID(fileMapper[key])
+				if newID, ok := pkgMapper[key]; ok {
+					clone.RefA.ElementRefID = common.ElementID(newID)
+				} else if newID, ok := fileMapper[key]; ok {
+					clone.RefA.ElementRefID = common.ElementID(newID)
 				} else {
 					log.Warn(fmt.Sprintf("RefA: Could not find element %s in the merge set", key))
 				}
 			}
 
 			if rel.RefB.ElementRefID != "" {
-				namespace := ""
+				namespace := doc.DocumentNamespace
 				if rel.RefB.DocumentRefID != "" {
 					namespace = getDocumentNamespace(rel.RefB.DocumentRefID, ms)
-				} else {
-					namespace = doc.DocumentNamespace
 				}
 
 				key := createLookupKey(namespace, string(rel.RefB.ElementRefID))
-				if _, ok := pkgMapper[key]; ok {
-					clone.RefB.ElementRefID = common.ElementID(pkgMapper[key])
-				} else if _, ok := fileMapper[key]; ok {
-					clone.RefB.ElementRefID = common.ElementID(fileMapper[key])
+				if newID, ok := pkgMapper[key]; ok {
+					clone.RefB.ElementRefID = common.ElementID(newID)
+				} else if newID, ok := fileMapper[key]; ok {
+					clone.RefB.ElementRefID = common.ElementID(newID)
 				} else {
 					log.Warn(fmt.Sprintf("RefB: Could not find element %s in the merge set", key))
 				}
