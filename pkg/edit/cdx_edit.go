@@ -67,22 +67,7 @@ func (d *cdxEditDoc) update() {
 }
 
 func (d *cdxEditDoc) timeStamp() error {
-	if !d.c.shouldTimeStamp() {
-		return errNoConfiguration
-	}
-
-	if d.c.search.subject != "document" {
-		return errNotSupported
-	}
-
-	if d.c.onMissing() {
-		if d.bom.Metadata.Timestamp == "" {
-			d.bom.Metadata.Timestamp = utcNowTime()
-		}
-	} else {
-		d.bom.Metadata.Timestamp = utcNowTime()
-	}
-
+	d.bom.Metadata.Timestamp = utcNowTime()
 	return nil
 }
 
@@ -366,24 +351,12 @@ func (d *cdxEditDoc) detectExplicitComponent(components *[]cydx.Component, sboma
 // handle missing case for tools.tools and tools.components case
 func (d *cdxEditDoc) addMissingToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
 	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
-		if newTools.Components != nil {
-			for _, component := range *newTools.Components {
-				if !componentExists(d.bom.Metadata.Tools.Components, component) {
-					*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, component)
-				}
-			}
-		}
+		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
 		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
 			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
 		}
 	} else {
-		if newTools.Tools != nil {
-			for _, tool := range *newTools.Tools {
-				if !toolExists(d.bom.Metadata.Tools.Tools, tool) {
-					*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, tool)
-				}
-			}
-		}
+		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
 		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
 			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
 		}
@@ -443,32 +416,6 @@ func componentExists(components *[]cydx.Component, component cydx.Component) boo
 		}
 	}
 	return false
-}
-
-func cdxUniqToolsByTool(tools []cydx.Tool) *[]cydx.Tool {
-	uniqMap := make(map[string]cydx.Tool)
-	for _, tool := range tools {
-		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.Name), strings.ToLower(tool.Version))
-		uniqMap[key] = tool
-	}
-	uniqTools := []cydx.Tool{}
-	for _, tool := range uniqMap {
-		uniqTools = append(uniqTools, tool)
-	}
-	return &uniqTools
-}
-
-func cdxUniqComponentsByComponent(components []cydx.Component) *[]cydx.Component {
-	uniqMap := make(map[string]cydx.Component)
-	for _, component := range components {
-		key := fmt.Sprintf("%s-%s", strings.ToLower(component.Name), strings.ToLower(component.Version))
-		uniqMap[key] = component
-	}
-	uniqComponents := []cydx.Component{}
-	for _, component := range uniqMap {
-		uniqComponents = append(uniqComponents, component)
-	}
-	return &uniqComponents
 }
 
 func cdxUniqueTools(existing, newTools []cydx.Tool) *[]cydx.Tool {
