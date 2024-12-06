@@ -67,7 +67,21 @@ func (d *cdxEditDoc) update() {
 }
 
 func (d *cdxEditDoc) timeStamp() error {
-	d.bom.Metadata.Timestamp = utcNowTime()
+	if !d.c.shouldTimeStamp() {
+		return errNoConfiguration
+	}
+
+	if d.c.search.subject != "document" {
+		return errNotSupported
+	}
+
+	if d.c.onMissing() {
+		if d.bom.Metadata.Timestamp == "" {
+			d.bom.Metadata.Timestamp = utcNowTime()
+		}
+	} else {
+		d.bom.Metadata.Timestamp = utcNowTime()
+	}
 	return nil
 }
 

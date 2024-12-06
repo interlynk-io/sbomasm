@@ -543,12 +543,29 @@ func (d *spdxEditDoc) typ() error {
 }
 
 func (d *spdxEditDoc) timeStamp() error {
-	if d.bom.CreationInfo == nil {
-		d.bom.CreationInfo = &spdx.CreationInfo{}
+	if !d.c.shouldTimeStamp() {
+		return errNoConfiguration
 	}
 
-	d.bom.CreationInfo.Created = utcNowTime()
+	if d.c.search.subject != "document" {
+		return errNotSupported
+	}
 
+	if d.c.onMissing() {
+		if d.bom.CreationInfo == nil {
+			d.bom.CreationInfo = &spdx.CreationInfo{}
+		}
+
+		if d.bom.CreationInfo.Created == "" {
+			d.bom.CreationInfo.Created = utcNowTime()
+		}
+	} else {
+		if d.bom.CreationInfo == nil {
+			d.bom.CreationInfo = &spdx.CreationInfo{}
+		}
+
+		d.bom.CreationInfo.Created = utcNowTime()
+	}
 	return nil
 }
 
