@@ -2,6 +2,7 @@ package edit
 
 import (
 	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -63,7 +64,6 @@ func (d *cdxEditDoc) update() {
 			}
 		}
 	}
-
 }
 
 func (d *cdxEditDoc) timeStamp() error {
@@ -82,7 +82,6 @@ func (d *cdxEditDoc) timeStamp() error {
 	} else {
 		d.bom.Metadata.Timestamp = utcNowTime()
 	}
-
 	return nil
 }
 
@@ -269,31 +268,234 @@ func (d *cdxEditDoc) copyright() error {
 }
 
 func (d *cdxEditDoc) tools() error {
-	if !d.c.shouldTools() {
-		return errNoConfiguration
+	// default sbomasm tool for tools.tools
+	sbomasmTool := cydx.Tool{
+		Name:    SBOMASM,
+		Version: SBOMASM_VERSION,
 	}
 
-	if d.c.search.subject != "document" {
-		return errNotSupported
+	// default sbomasm tool for tools.components
+	sbomasmComponent := cydx.Component{
+		Type:    cydx.ComponentTypeApplication,
+		Name:    SBOMASM,
+		Version: SBOMASM_VERSION,
 	}
 
-	choice := cdxConstructTools(d.bom, d.c)
+	// initialize the tool to cover case when tool section is not present
+	// in that we still need to add sbomasm as a tool
+	d.initializeMetadataTools()
+
+	// get all tools explicity specified by the user via flag `--tool`
+	newTools := cdxConstructTools(d.bom, d.c)
+
+	// detect whether sbomasm is explicity specified by the user via flag `--tool` or not
+	// if present then replace default sbomasm tool by provided sbomasm tool with version
+	explicitSbomasm := d.detectExplicitTool(newTools.Tools, SBOMASM, &sbomasmTool)
+	explicitSbomasmComponent := d.detectExplicitComponent(newTools.Components, SBOMASM, &sbomasmComponent)
+
+	if explicitSbomasm {
+		d.bom.Metadata.Tools.Tools = removeTool(d.bom.Metadata.Tools.Tools, SBOMASM)
+	}
+	if explicitSbomasmComponent {
+		d.bom.Metadata.Tools.Components = removeComponent(d.bom.Metadata.Tools.Components, SBOMASM)
+	}
 
 	if d.c.onMissing() {
-		if d.bom.Metadata.Tools == nil {
-			d.bom.Metadata.Tools = choice
-		}
-	} else if d.c.onAppend() {
-		if d.bom.Metadata.Tools != nil {
-			d.bom.Metadata.Tools = cdxUniqTools(d.bom.Metadata.Tools, choice)
-		} else {
-			d.bom.Metadata.Tools = choice
-		}
-	} else {
-		d.bom.Metadata.Tools = choice
+		d.addMissingToolsOrComponents(newTools, sbomasmTool, sbomasmComponent)
+		return nil
 	}
 
+	if d.c.onAppend() {
+		d.appendToolsOrComponents(newTools, sbomasmTool, sbomasmComponent)
+		return nil
+	}
+
+	// neither missing nor append case
+	d.mergeToolsOrComponents(newTools, sbomasmTool, sbomasmComponent)
+
 	return nil
+}
+
+func (d *cdxEditDoc) initializeMetadataTools() {
+	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+		if d.bom.Metadata.Tools == nil {
+			d.bom.Metadata.Tools = &cydx.ToolsChoice{
+				Components: new([]cydx.Component),
+			}
+		}
+		if d.bom.Metadata.Tools.Components == nil {
+			d.bom.Metadata.Tools.Components = new([]cydx.Component)
+		}
+	} else {
+		if d.bom.Metadata.Tools == nil {
+			d.bom.Metadata.Tools = &cydx.ToolsChoice{
+				Tools: new([]cydx.Tool),
+			}
+		}
+		if d.bom.Metadata.Tools.Tools == nil {
+			d.bom.Metadata.Tools.Tools = new([]cydx.Tool)
+		}
+	}
+}
+
+func (d *cdxEditDoc) detectExplicitTool(tools *[]cydx.Tool, sbomasmName string, sbomasmTool *cydx.Tool) bool {
+	if tools != nil {
+		for _, tool := range *tools {
+			if tool.Name == sbomasmName {
+				*sbomasmTool = tool
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (d *cdxEditDoc) detectExplicitComponent(components *[]cydx.Component, sbomasmName string, sbomasmComponent *cydx.Component) bool {
+	if components != nil {
+		for _, component := range *components {
+			if component.Name == sbomasmName {
+				*sbomasmComponent = component
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handle missing case for tools.tools and tools.components case
+func (d *cdxEditDoc) addMissingToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
+	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
+		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
+			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
+		}
+	} else {
+		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
+		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
+			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
+		}
+	}
+}
+
+// handle append case for tools.tools and tools.components case
+func (d *cdxEditDoc) appendToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
+	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
+		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
+			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
+		}
+	} else {
+		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
+		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
+			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
+		}
+	}
+}
+
+// handle default case for tools.tools and tools.components case
+func (d *cdxEditDoc) mergeToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
+	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
+		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
+			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
+		}
+	} else {
+		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
+		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
+			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
+		}
+	}
+}
+
+func toolExists(tools *[]cydx.Tool, tool cydx.Tool) bool {
+	if tools == nil {
+		return false
+	}
+	for _, t := range *tools {
+		if t.Name == tool.Name && t.Version == tool.Version {
+			return true
+		}
+	}
+	return false
+}
+
+// Check if a component exists
+func componentExists(components *[]cydx.Component, component cydx.Component) bool {
+	if components == nil {
+		return false
+	}
+	for _, c := range *components {
+		if c.Name == component.Name && c.Version == component.Version {
+			return true
+		}
+	}
+	return false
+}
+
+func cdxUniqueTools(existing, newTools []cydx.Tool) *[]cydx.Tool {
+	toolSet := make(map[string]struct{})
+	uniqueTools := []cydx.Tool{}
+
+	for _, t := range existing {
+		key := fmt.Sprintf("%s-%s", strings.ToLower(t.Name), strings.ToLower(t.Version))
+		toolSet[key] = struct{}{}
+		uniqueTools = append(uniqueTools, t)
+	}
+
+	for _, t := range newTools {
+		key := fmt.Sprintf("%s-%s", strings.ToLower(t.Name), strings.ToLower(t.Version))
+		if _, exists := toolSet[key]; !exists {
+			uniqueTools = append(uniqueTools, t)
+		}
+	}
+
+	return &uniqueTools
+}
+
+func cdxUniqueComponents(existing, newComponents []cydx.Component) *[]cydx.Component {
+	componentSet := make(map[string]struct{})
+	uniqueComponents := []cydx.Component{}
+
+	for _, c := range existing {
+		key := fmt.Sprintf("%s-%s", strings.ToLower(c.Name), strings.ToLower(c.Version))
+		componentSet[key] = struct{}{}
+		uniqueComponents = append(uniqueComponents, c)
+	}
+
+	for _, c := range newComponents {
+		key := fmt.Sprintf("%s-%s", strings.ToLower(c.Name), strings.ToLower(c.Version))
+		if _, exists := componentSet[key]; !exists {
+			uniqueComponents = append(uniqueComponents, c)
+		}
+	}
+
+	return &uniqueComponents
+}
+
+func removeTool(tools *[]cydx.Tool, name string) *[]cydx.Tool {
+	if tools == nil {
+		return nil
+	}
+	filtered := []cydx.Tool{}
+	for _, t := range *tools {
+		if t.Name != name {
+			filtered = append(filtered, t)
+		}
+	}
+	return &filtered
+}
+
+func removeComponent(components *[]cydx.Component, name string) *[]cydx.Component {
+	if components == nil {
+		return nil
+	}
+	filtered := []cydx.Component{}
+	for _, c := range *components {
+		if c.Name != name {
+			filtered = append(filtered, c)
+		}
+	}
+	return &filtered
 }
 
 func (d *cdxEditDoc) hashes() error {

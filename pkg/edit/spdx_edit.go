@@ -9,6 +9,11 @@ import (
 	"github.com/spdx/tools-golang/spdx"
 )
 
+const (
+	SBOMASM         = "sbomasm"
+	SBOMASM_VERSION = "0.1.9"
+)
+
 type spdxEditDoc struct {
 	bom *spdx.Document
 	pkg *spdx.Package
@@ -353,47 +358,96 @@ func (d *spdxEditDoc) hashes() error {
 }
 
 func (d *spdxEditDoc) tools() error {
-	if !d.c.shouldTools() {
-		return errNoConfiguration
+	// default sbomasm tool
+	sbomasmTool := spdx.Creator{
+		Creator:     fmt.Sprintf("%s-%s", SBOMASM, SBOMASM_VERSION),
+		CreatorType: "Tool",
 	}
 
-	if d.c.search.subject != "document" {
-		return errNotSupported
+	if d.bom.CreationInfo == nil {
+		d.bom.CreationInfo = &spdx.CreationInfo{}
 	}
 
-	tools := spdxConstructTools(d.bom, d.c)
+	if d.bom.CreationInfo.Creators == nil {
+		d.bom.CreationInfo.Creators = []spdx.Creator{}
+	}
+
+	newTools := spdxConstructTools(d.bom, d.c)
+
+	explicitSbomasm := false
+	for _, tool := range newTools {
+		if strings.HasPrefix(tool.Creator, SBOMASM) {
+			sbomasmTool = tool
+			explicitSbomasm = true
+			break
+		}
+	}
+
+	if explicitSbomasm {
+		d.bom.CreationInfo.Creators = removeCreator(d.bom.CreationInfo.Creators, SBOMASM)
+	}
 
 	if d.c.onMissing() {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{
-				Creators: tools,
+		for _, tool := range newTools {
+			if !creatorExists(d.bom.CreationInfo.Creators, tool) {
+				d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, []spdx.Creator{tool})
 			}
-		} else if d.bom.CreationInfo.Creators == nil {
-			d.bom.CreationInfo.Creators = tools
-		} else {
-			d.bom.CreationInfo.Creators = append(d.bom.CreationInfo.Creators, tools...)
 		}
-	} else if d.c.onAppend() {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{
-				Creators: tools,
-			}
-		} else if d.bom.CreationInfo.Creators == nil {
-			d.bom.CreationInfo.Creators = tools
-		} else {
-			//d.bom.CreationInfo.Creators = append(d.bom.CreationInfo.Creators, tools...)
-			d.bom.CreationInfo.Creators = spdxUniqueTools(d.bom.CreationInfo.Creators, tools)
+		if !creatorExists(d.bom.CreationInfo.Creators, sbomasmTool) {
+			d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, []spdx.Creator{sbomasmTool})
 		}
-	} else {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{
-				Creators: tools,
-			}
-		} else {
-			d.bom.CreationInfo.Creators = tools
+		return nil
+	}
+
+	if d.c.onAppend() {
+		d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, newTools)
+		if !creatorExists(d.bom.CreationInfo.Creators, sbomasmTool) {
+			d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, []spdx.Creator{sbomasmTool})
+		}
+		return nil
+	}
+
+	d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, newTools)
+	if !creatorExists(d.bom.CreationInfo.Creators, sbomasmTool) {
+		d.bom.CreationInfo.Creators = spdxUniqueCreators(d.bom.CreationInfo.Creators, []spdx.Creator{sbomasmTool})
+	}
+
+	return nil
+}
+
+// remove a creator by name
+func removeCreator(creators []spdx.Creator, creatorName string) []spdx.Creator {
+	result := []spdx.Creator{}
+	for _, c := range creators {
+		if !strings.HasPrefix(c.Creator, creatorName) {
+			result = append(result, c)
 		}
 	}
-	return nil
+	return result
+}
+
+// ensure no duplicate creator
+func creatorExists(creators []spdx.Creator, creator spdx.Creator) bool {
+	for _, c := range creators {
+		if c.Creator == creator.Creator && c.CreatorType == creator.CreatorType {
+			return true
+		}
+	}
+	return false
+}
+
+// ensure unique creators
+func spdxUniqueCreators(existing, newCreators []spdx.Creator) []spdx.Creator {
+	creatorSet := make(map[string]struct{})
+	for _, c := range existing {
+		creatorSet[c.Creator] = struct{}{}
+	}
+	for _, c := range newCreators {
+		if _, exists := creatorSet[c.Creator]; !exists {
+			existing = append(existing, c)
+		}
+	}
+	return existing
 }
 
 func (d *spdxEditDoc) copyright() error {
