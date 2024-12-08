@@ -1,0 +1,8 @@
+# Run the sbomasm edit command
+exec sbomasm edit --missing --subject document --tool 'trivy (0.56.1)' --tool 'parlay (0.5.1)' --tool 'bomctl (v0.4.1)' photon-lite.spdx.json --output photon-missing.spdx.json
+
+# Check that the output file exists
+exists photon-missing.spdx.json
+
+# Validate the output content matches the expected result
+cmp photon-missing.spdx.json expected-output-lite.spdx.json
