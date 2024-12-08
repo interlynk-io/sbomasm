@@ -211,7 +211,7 @@ func buildToolList(in []*cydx.BOM) *cydx.ToolsChoice {
 	})
 
 	for _, bom := range in {
-		if bom.Metadata != nil && bom.Metadata.Tools != nil {
+		if bom.Metadata != nil && bom.Metadata.Tools != nil && bom.Metadata.Tools.Tools != nil {
 			for _, tool := range *bom.Metadata.Tools.Tools {
 				*tools.Components = append(*tools.Components, cydx.Component{
 					Type:    cydx.ComponentTypeApplication,
