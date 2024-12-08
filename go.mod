@@ -22,6 +22,8 @@ require (
 
 require golang.org/x/mod v0.22.0 // indirect
 
+require golang.org/x/tools v0.22.0 // indirect
+
 require (
 	github.com/DependencyTrack/client-go v0.14.0
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
@@ -31,7 +33,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/rogpeppe/go-internal v1.12.0 // indirect
+	github.com/rogpeppe/go-internal v1.13.1
 	github.com/spdx/gordf v0.0.0-20221230105357-b735bd5aac89 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
