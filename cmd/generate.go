@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/interlynk-io/sbomasm/pkg/assemble"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +34,7 @@ Please fill in all the fields that are known. Unknown fields can be left blank.`
 	Args:         cobra.NoArgs,
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		assemble.DefaultConfig()
+		fmt.Printf("%s", assemble.DefaultConfigYaml())
 	},
 }
 

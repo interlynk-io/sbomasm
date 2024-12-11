@@ -145,11 +145,14 @@ var defaultConfig = config{
 	},
 }
 
-func DefaultConfig() {
-	_, err := yaml.Marshal(&defaultConfig)
+// DefaultConfigYaml: Creates a yaml output of the default config.
+func DefaultConfigYaml() []byte {
+	yamlBytes, err := yaml.Marshal(&defaultConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	return yamlBytes
 }
 
 // NewConfig: Creating a new configuration instance with default values.
