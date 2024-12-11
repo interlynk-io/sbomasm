@@ -121,6 +121,11 @@ func (m *merge) combinedMerge() error {
 				oldPc = b.Metadata.Component
 			}
 
+			if oldPc == nil {
+				log.Error("hierarchical merge: old product does not have any component.")
+				oldPc = &cydx.Component{}
+			}
+
 			newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
 
 			for i, pc := range priCompList {
