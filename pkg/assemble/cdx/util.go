@@ -289,7 +289,7 @@ func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Depe
 				continue
 			}
 
-			if len(*dep.Dependencies) == 0 {
+			if len(lo.FromPtr(dep.Dependencies)) == 0 {
 				continue
 			}
 
