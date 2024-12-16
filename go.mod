@@ -5,7 +5,7 @@ go 1.23
 toolchain go1.23.1
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.9.1
+	github.com/CycloneDX/cyclonedx-go v0.9.2
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/github/go-spdx/v2 v2.3.2
 	github.com/google/go-github/v52 v52.0.0
