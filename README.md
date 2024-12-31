@@ -53,7 +53,7 @@ sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.
 ```
 `sbomasm` in an AirGapped Environment
 ```sh
-INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
+INTERLYNK_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 `sbomasm` via containers
 ```sh

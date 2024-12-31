@@ -22,7 +22,4 @@ LABEL org.opencontainers.image.licenses=Apache-2.0
 # Copy our static executable
 COPY --from=builder /app/build/sbomasm /app/sbomasm
 
-# Disable version check
-ENV INTERLYNK_DISABLE_VERSION_CHECK=true
-
 ENTRYPOINT [ "/app/sbomasm" ]
