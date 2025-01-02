@@ -26,8 +26,10 @@ import (
 	"os"
 	"strings"
 
+	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/interlynk-io/sbomasm/pkg/assemble/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
@@ -201,6 +203,59 @@ func (c *config) readAndMerge(p *Params) error {
 		if err != nil {
 			return err
 		}
+	} else if p.PrimaryCompFile != "" {
+
+		path := p.PrimaryCompFile
+
+		var err error
+		var bom *cydx.BOM
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		spec, format, err := detect.Detect(f)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("loading primary component file bom:%s spec:%s format:%s", path, spec, format)
+
+		switch format {
+		case detect.FileFormatJSON:
+			bom = new(cydx.BOM)
+			decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatJSON)
+			if err = decoder.Decode(bom); err != nil {
+				return err
+			}
+		case detect.FileFormatXML:
+			bom = new(cydx.BOM)
+			decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatXML)
+			if err = decoder.Decode(bom); err != nil {
+				return err
+			}
+		default:
+			panic("unsupported file format") // TODO: return error instead of panic
+		}
+
+		if bom.Metadata.Component.Name != "" {
+			c.App.Name = bom.Metadata.Component.Name
+		}
+
+		if bom.Metadata.Component.Type != "" {
+			c.App.PrimaryPurpose = string(bom.Metadata.Component.Type)
+		}
+
+		if bom.Metadata.Component.Version != "" {
+			c.App.Version = *&bom.Metadata.Component.Version
+		}
+
+		if c.App.Name == "" || c.App.PrimaryPurpose == "" || c.App.Version == "" {
+			fmt.Print("Primary Component SBOM file doesn't contains all group detail i.e. name, version and type")
+		}
+
 	} else {
 
 		c.Assemble.FlatMerge = p.FlatMerge

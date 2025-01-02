@@ -23,10 +23,11 @@ import (
 )
 
 type Params struct {
-	Ctx        *context.Context
-	Input      []string
-	Output     string
-	ConfigPath string
+	Ctx             *context.Context
+	Input           []string
+	Output          string
+	ConfigPath      string
+	PrimaryCompFile string
 
 	// upload requirement
 	Url             string
