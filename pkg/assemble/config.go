@@ -89,7 +89,8 @@ type output struct {
 }
 
 type input struct {
-	files []string
+	files           []string
+	PrimaryCompFile string
 }
 
 type assemble struct {
@@ -204,6 +205,7 @@ func (c *config) readAndMerge(p *Params) error {
 			return err
 		}
 	} else if p.PrimaryCompFile != "" {
+		c.input.PrimaryCompFile = p.PrimaryCompFile
 
 		path := p.PrimaryCompFile
 
@@ -216,12 +218,10 @@ func (c *config) readAndMerge(p *Params) error {
 		}
 		defer f.Close()
 
-		spec, format, err := detect.Detect(f)
+		_, format, err := detect.Detect(f)
 		if err != nil {
 			return err
 		}
-
-		log.Printf("loading primary component file bom:%s spec:%s format:%s", path, spec, format)
 
 		switch format {
 		case detect.FileFormatJSON:
@@ -389,7 +389,9 @@ func (c *config) validate() error {
 	}
 
 	if len(c.input.files) <= 1 {
-		return fmt.Errorf("assembly requires more than one sbom file")
+		if c.input.PrimaryCompFile == "" {
+			return fmt.Errorf("assembly requires more than one sbom file")
+		}
 	}
 
 	err := c.validateInputContent()

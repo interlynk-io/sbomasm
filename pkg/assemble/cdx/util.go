@@ -264,8 +264,6 @@ func buildComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Compo
 			}
 		}
 	}
-	fmt.Println("Len(finalList): ", len(finalList))
-	fmt.Println("finalList: ", finalList)
 	return finalList
 }
 

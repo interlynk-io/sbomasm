@@ -132,7 +132,10 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 
 	if primCompFile != "" {
 		aParams.PrimaryCompFile = primCompFile
-		aParams.Input = append(aParams.Input, aParams.PrimaryCompFile)
+		aParams.Input = append(aParams.Input, primCompFile)
+		if err := validatePath(primCompFile); err != nil {
+			return nil, err
+		}
 	}
 
 	output, err := cmd.Flags().GetString("output")
@@ -184,6 +187,5 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 		}
 		aParams.Input = append(aParams.Input, arg)
 	}
-	fmt.Println("aParams.Input: ", aParams.Input)
 	return aParams, nil
 }

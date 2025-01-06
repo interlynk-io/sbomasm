@@ -97,6 +97,7 @@ func toCDXMergerSettings(c *config) *cdx.MergeSettings {
 
 	ms.Input.Files = []string{}
 	ms.Input.Files = append(ms.Input.Files, c.input.files...)
+	ms.Input.PrimaryCompFile = c.input.PrimaryCompFile
 
 	ms.Output.File = c.Output.file
 	ms.Output.Upload = c.Output.Upload
