@@ -53,6 +53,7 @@ func (m *merge) loadBoms() {
 	}
 }
 
+// filterOutFinalSbomPC: filter out final sbom primary component from primaryCompList
 func (m *merge) filterOutFinalSbomPC(priCompList []cydx.Component, cs *uniqueComponentService) ([]cydx.Component, error) {
 	log := logger.FromContext(*m.settings.Ctx)
 
