@@ -53,6 +53,9 @@ func (m *merge) loadBoms() {
 	}
 }
 
+// func (m *merge) filterOutFinalDependency( depList []cydx.Dependency ){
+
+// }
 // filterOutFinalSbomPC: filter out final sbom primary component from primaryCompList
 func (m *merge) filterOutFinalSbomPC(priCompList []cydx.Component, cs *uniqueComponentService) ([]cydx.Component, error) {
 	log := logger.FromContext(*m.settings.Ctx)
@@ -259,8 +262,43 @@ func (m *merge) handlePrimaryCompFileHierarchicalMerge(priCompList, compList []c
 		Dependencies: &priCompIds,
 	})
 
+	// Step: 3
+	// Remove dependency of input SBOM i.e. primaryCompFile
+
+	var newDepList []cydx.Dependency
+	var newDeps []string
+
+	for _, b := range m.in {
+		var oldPc *cydx.Component
+
+		if b.Metadata != nil && b.Metadata.Component != nil {
+			oldPc = b.Metadata.Component
+		}
+
+		if oldPc == nil {
+			log.Error("flat merge: old product does not have any component.")
+			oldPc = &cydx.Component{}
+		}
+		if primaryCompNameWithVersion == oldPc.Name+oldPc.Version {
+			newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
+			for _, dep := range depList {
+				if dep.Ref == newPcId {
+					newDeps = append(newDeps, *dep.Dependencies...)
+					continue
+				}
+				newDepList = append(newDepList, dep)
+			}
+		}
+	}
+
+	for i, dep := range newDepList {
+		if dep.Ref == primaryComp.BOMRef {
+			*newDepList[i].Dependencies = append(*newDepList[i].Dependencies, newDeps...)
+		}
+	}
+
 	m.out.Components = &finalComponents
-	m.out.Dependencies = &depList
+	m.out.Dependencies = &newDepList
 	return nil
 }
 
