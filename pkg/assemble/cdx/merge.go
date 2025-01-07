@@ -53,6 +53,272 @@ func (m *merge) loadBoms() {
 	}
 }
 
+func (m *merge) filterOutFinalSbomPC(priCompList []cydx.Component, cs *uniqueComponentService) ([]cydx.Component, error) {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	primaryComp := m.out.Metadata.Component
+	if primaryComp == nil {
+		return nil, fmt.Errorf("primaryCompFile is missing a primary component")
+	}
+
+	primaryCompNameWithVersion := primaryComp.Name + primaryComp.Version
+	var newPrimaryCompList []cydx.Component
+
+	for _, b := range m.in {
+		var oldPc *cydx.Component
+
+		if b.Metadata != nil && b.Metadata.Component != nil {
+			oldPc = b.Metadata.Component
+		}
+
+		if oldPc == nil {
+			log.Error("flat merge: old product does not have any component.")
+			oldPc = &cydx.Component{}
+		}
+
+		newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
+
+		for _, pc := range priCompList {
+			if pc.BOMRef == newPcId {
+				if primaryCompNameWithVersion == pc.Name+pc.Version {
+					continue
+				}
+				newPrimaryCompList = append(newPrimaryCompList, pc)
+			}
+		}
+	}
+
+	return newPrimaryCompList, nil
+}
+
+func (m *merge) handleFlatMerge(priCompList, compList []cydx.Component, depList []cydx.Dependency, cs *uniqueComponentService) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	finalCompList := []cydx.Component{}
+
+	if m.settings.Input.PrimaryCompFile != "" {
+		log.Debugf("handling flat merge for PrimaryCompFile")
+
+		// filter out final sbom primary comp element from primaryCompList --
+		newPrimaryCompList, err := m.filterOutFinalSbomPC(priCompList, cs)
+		if err != nil {
+			return err
+		}
+
+		// -- to avoid final sbom primary comp writting itself to it's components section
+		finalCompList = append(finalCompList, newPrimaryCompList...)
+	} else {
+		finalCompList = append(finalCompList, priCompList...)
+	}
+
+	// add all other components to the final sbom components section
+	finalCompList = append(finalCompList, compList...)
+	log.Debugf("flat merge: final component list: %d", len(finalCompList))
+
+	m.out.Components = &finalCompList
+	m.addDependencies(priCompList, depList)
+	return m.processSBOM()
+}
+
+func (m *merge) handleAssemblyMerge(priCompList, compList []cydx.Component, depList []cydx.Dependency, cs *uniqueComponentService) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	if m.settings.Input.PrimaryCompFile != "" {
+		log.Debugf("handling assembly merge for PrimaryCompFile")
+
+		// filter out final sbom primary comp element from primaryCompList --
+		newPrimaryCompList, err := m.filterOutFinalSbomPC(priCompList, cs)
+		if err != nil {
+			return err
+		}
+
+		// -- to avoid final sbom primary comp writting itself under metadata.component.components section
+		m.out.Metadata.Component.Components = &newPrimaryCompList
+	} else {
+		m.out.Metadata.Component.Components = &priCompList
+	}
+
+	m.out.Components = &compList
+	m.out.Dependencies = &depList
+
+	log.Debugf("assembly merge: final component list: %d", len(compList))
+	return m.processSBOM()
+}
+
+func (m *merge) addDependencies(priCompList []cydx.Component, depList []cydx.Dependency) {
+	priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
+		return c.BOMRef
+	})
+	depList = append(depList, cydx.Dependency{
+		Ref:          m.out.Metadata.Component.BOMRef,
+		Dependencies: &priCompIds,
+	})
+	m.out.Dependencies = &depList
+}
+
+func (m *merge) handleHierarchicalMerge(priCompList, compList []cydx.Component, depList []cydx.Dependency, cs *uniqueComponentService) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	if m.settings.Input.PrimaryCompFile != "" {
+		log.Debugf("handling hierarchical merge for PrimaryCompFile")
+		return m.handlePrimaryCompFileHierarchicalMerge(priCompList, compList, depList, cs)
+	} else {
+		log.Debugf("handling standard hierarchical merge")
+		return m.handleStandardHierarchicalMerge(priCompList, compList, depList, cs)
+	}
+}
+
+// handle hierarchical merge for PrimaryCompFile
+func (m *merge) handlePrimaryCompFileHierarchicalMerge(priCompList, compList []cydx.Component, depList []cydx.Dependency, cs *uniqueComponentService) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	primaryComp := m.out.Metadata.Component
+	if primaryComp == nil {
+		return fmt.Errorf("primaryCompFile is missing a primary component")
+	}
+	primaryCompNameWithVersion := primaryComp.Name + primaryComp.Version
+
+	finalComponents := []cydx.Component{}
+	priCompIds := []string{}
+
+	var primarCompFileRef string
+
+	// Step 1: Identify the primary comp of final sbom and
+	// get it's all components from corresponding sbom and
+	// all those components in a flat manner.
+	// similar to flat structure...
+	for _, b := range m.in {
+		var oldPc *cydx.Component
+
+		if b.Metadata != nil && b.Metadata.Component != nil {
+			oldPc = b.Metadata.Component
+		}
+
+		if oldPc == nil {
+			log.Error("hierarchical merge: old product does not have any component.")
+			continue
+		}
+
+		newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
+
+		found := false
+		for _, pc := range priCompList {
+			if pc.BOMRef == newPcId {
+				if primaryCompNameWithVersion == pc.Name+pc.Version {
+					found = true
+					primarCompFileRef = b.Metadata.Component.BOMRef
+					break
+				}
+			}
+		}
+
+		// get all it's components and add it in a flat manner in the final sbom components section
+		if found {
+			for _, oldComp := range lo.FromPtr(b.Components) {
+				newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
+				for _, comp := range compList {
+					if comp.BOMRef == newCompId {
+						finalComponents = append(finalComponents, comp)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Step 2: Process remaining input SBOMs
+	// And add input SBOMs components under their primary element.
+	// And finally add the input SBOMs primary comp under the final SBOMs components section.
+	// similar to hierarchy structure...
+	for _, bom := range m.in {
+		if bom.Metadata.Component.BOMRef == primarCompFileRef {
+			continue
+		}
+
+		if bom.Metadata == nil || bom.Metadata.Component == nil {
+			log.Error("input SBOM missing primary component.")
+			continue
+		}
+
+		inputPrimaryComp := bom.Metadata.Component
+		clonedPrimaryComp, _ := cs.StoreAndCloneWithNewID(inputPrimaryComp)
+		priCompIds = append(priCompIds, clonedPrimaryComp.BOMRef)
+
+		clonedPrimaryComp.Components = &[]cydx.Component{}
+		for _, comp := range lo.FromPtr(bom.Components) {
+			clonedSubComp, _ := cs.StoreAndCloneWithNewID(&comp)
+			*clonedPrimaryComp.Components = append(*clonedPrimaryComp.Components, *clonedSubComp)
+		}
+
+		finalComponents = append(finalComponents, *clonedPrimaryComp)
+	}
+
+	depList = append(depList, cydx.Dependency{
+		Ref:          primaryComp.BOMRef,
+		Dependencies: &priCompIds,
+	})
+
+	m.out.Components = &finalComponents
+	m.out.Dependencies = &depList
+	return nil
+}
+
+// handle standard hierarchical merge (without PrimaryCompFile)
+func (m *merge) handleStandardHierarchicalMerge(priCompList, compList []cydx.Component, depList []cydx.Dependency, cs *uniqueComponentService) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	for _, b := range m.in {
+		var oldPc *cydx.Component
+		var newPc int
+
+		if b.Metadata != nil && b.Metadata.Component != nil {
+			oldPc = b.Metadata.Component
+		}
+
+		if oldPc == nil {
+			log.Error("hierarchical merge: old product does not have any component.")
+			oldPc = &cydx.Component{}
+		}
+
+		newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
+
+		for i, pc := range priCompList {
+			if pc.BOMRef == newPcId {
+				newPc = i
+				break
+			}
+		}
+
+		// Initialize the components list for the primary component
+		priCompList[newPc].Components = &[]cydx.Component{}
+
+		for _, oldComp := range lo.FromPtr(b.Components) {
+			newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
+			for _, comp := range compList {
+				if comp.BOMRef == newCompId {
+					*priCompList[newPc].Components = append(*priCompList[newPc].Components, comp)
+					break
+				}
+			}
+		}
+
+		log.Debugf("hierarchical merge: primary component %s has %d components", priCompList[newPc].BOMRef, len(*priCompList[newPc].Components))
+	}
+
+	m.out.Components = &priCompList
+
+	priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
+		return c.BOMRef
+	})
+	depList = append(depList, cydx.Dependency{
+		Ref:          m.out.Metadata.Component.BOMRef,
+		Dependencies: &priCompIds,
+	})
+	m.out.Dependencies = &depList
+	log.Debugf("hierarchical merge: final dependency list: %d", len(depList))
+	return nil
+}
+
 func (m *merge) combinedMerge() error {
 	log := logger.FromContext(*m.settings.Ctx)
 
@@ -90,264 +356,11 @@ func (m *merge) combinedMerge() error {
 	m.out.Metadata.Tools = toolsList
 
 	if m.settings.Assemble.FlatMerge {
-		log.Debugf("handling flat merge for PrimaryCompFile")
-
-		if m.settings.Input.PrimaryCompFile != "" {
-			fmt.Println("Inside Flat Merge")
-
-			// filter out the primary component of the final SBOM
-			finalCompList := []cydx.Component{}
-
-			primaryComp := m.out.Metadata.Component
-			fmt.Println("primaryComp: ", primaryComp.BOMRef)
-			if primaryComp == nil {
-				return fmt.Errorf("primaryCompFile is missing a primary component")
-			}
-			primaryCompNameWithVersion := primaryComp.Name + primaryComp.Version
-
-			var newPrimaryCompList []cydx.Component
-
-			for _, b := range m.in {
-				var oldPc *cydx.Component
-
-				if b.Metadata != nil && b.Metadata.Component != nil {
-					oldPc = b.Metadata.Component
-				}
-
-				if oldPc == nil {
-					log.Error("hierarchical merge: old product does not have any component.")
-					oldPc = &cydx.Component{}
-				}
-
-				newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
-
-				for _, pc := range priCompList {
-					if pc.BOMRef == newPcId {
-						if primaryCompNameWithVersion == pc.Name+pc.Version {
-							continue
-						}
-						newPrimaryCompList = append(newPrimaryCompList, pc)
-					}
-				}
-			}
-
-			finalCompList = append(finalCompList, newPrimaryCompList...)
-
-			finalCompList = append(finalCompList, compList...)
-
-			log.Debugf("flat merge (PrimaryCompFile): final component list: %d", len(finalCompList))
-			m.out.Components = &finalCompList
-
-			// build dependencies for the primary components
-			priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
-				return c.BOMRef
-			})
-			depList = append(depList, cydx.Dependency{
-				Ref:          m.out.Metadata.Component.BOMRef,
-				Dependencies: &priCompIds,
-			})
-			log.Debugf("flat merge (PrimaryCompFile): final dependency list: %d", len(depList))
-			m.out.Dependencies = &depList
-
-		} else {
-			finalCompList := []cydx.Component{}
-			finalCompList = append(finalCompList, priCompList...)
-			finalCompList = append(finalCompList, compList...)
-			log.Debugf("flat merge: final component list: %d", len(finalCompList))
-			m.out.Components = &finalCompList
-
-			priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
-				return c.BOMRef
-			})
-			depList = append(depList, cydx.Dependency{
-				Ref:          m.out.Metadata.Component.BOMRef,
-				Dependencies: &priCompIds,
-			})
-			log.Debugf("flat merge: final dependency list: %d", len(depList))
-			m.out.Dependencies = &depList
-		}
+		m.handleFlatMerge(priCompList, compList, depList, cs)
 	} else if m.settings.Assemble.AssemblyMerge {
-		if m.settings.Input.PrimaryCompFile != "" {
-			primaryComp := m.out.Metadata.Component
-			fmt.Println("primaryComp: ", primaryComp.BOMRef)
-			if primaryComp == nil {
-				return fmt.Errorf("primaryCompFile is missing a primary component")
-			}
-			primaryCompNameWithVersion := primaryComp.Name + primaryComp.Version
-
-			var newPrimaryCompList []cydx.Component
-
-			for _, b := range m.in {
-				var oldPc *cydx.Component
-
-				if b.Metadata != nil && b.Metadata.Component != nil {
-					oldPc = b.Metadata.Component
-				}
-
-				if oldPc == nil {
-					log.Error("hierarchical merge: old product does not have any component.")
-					oldPc = &cydx.Component{}
-				}
-
-				newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
-
-				for _, pc := range priCompList {
-					if pc.BOMRef == newPcId {
-						if primaryCompNameWithVersion == pc.Name+pc.Version {
-							continue
-						}
-						newPrimaryCompList = append(newPrimaryCompList, pc)
-					}
-				}
-			}
-			m.out.Metadata.Component.Components = &newPrimaryCompList
-			m.out.Components = &compList
-			m.out.Dependencies = &depList
-			log.Debugf("assembly merge: final component list: %d", len(compList))
-			log.Debugf("assembly merge: final dependency list: %d", len(depList))
-
-		} else {
-			// Add the sbom primary components to the new primary component
-			m.out.Metadata.Component.Components = &priCompList
-			m.out.Components = &compList
-			m.out.Dependencies = &depList
-
-			log.Debugf("assembly merge: final component list: %d", len(compList))
-			log.Debugf("assembly merge: final dependency list: %d", len(depList))
-		}
+		m.handleAssemblyMerge(priCompList, compList, depList, cs)
 	} else {
-		if m.settings.Input.PrimaryCompFile != "" {
-			log.Debugf("handling hierarchical merge for primaryCompFile")
-
-			primaryComp := m.out.Metadata.Component
-			if primaryComp == nil {
-				return fmt.Errorf("primaryCompFile is missing a primary component")
-			}
-			primaryCompNameWithVersion := primaryComp.Name + primaryComp.Version
-
-			finalComponents := []cydx.Component{}
-			priCompIds := []string{}
-
-			var primarCompFileRef string
-
-			for _, b := range m.in {
-				var oldPc *cydx.Component
-
-				if b.Metadata != nil && b.Metadata.Component != nil {
-					oldPc = b.Metadata.Component
-				}
-
-				if oldPc == nil {
-					log.Error("hierarchical merge: old product does not have any component.")
-					oldPc = &cydx.Component{}
-				}
-
-				newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
-
-				matches := false
-				for _, pc := range priCompList {
-					if pc.BOMRef == newPcId {
-						if primaryCompNameWithVersion == pc.Name+pc.Version {
-							matches = true
-							primarCompFileRef = b.Metadata.Component.BOMRef
-							break
-						}
-					}
-				}
-				if matches {
-					for _, oldComp := range lo.FromPtr(b.Components) {
-						newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
-						for _, comp := range compList {
-							if comp.BOMRef == newCompId {
-								finalComponents = append(finalComponents, comp)
-								break
-							}
-						}
-					}
-				}
-			}
-
-			for _, bom := range m.in {
-				if bom.Metadata.Component.BOMRef == primarCompFileRef {
-					continue
-				}
-
-				if bom.Metadata == nil || bom.Metadata.Component == nil {
-					log.Error("input SBOM missing primary component.")
-					continue
-				}
-
-				inputPrimaryComp := bom.Metadata.Component
-				clonedPrimaryComp, _ := cs.StoreAndCloneWithNewID(inputPrimaryComp)
-				priCompIds = append(priCompIds, clonedPrimaryComp.BOMRef)
-
-				clonedPrimaryComp.Components = &[]cydx.Component{}
-				for _, comp := range lo.FromPtr(bom.Components) {
-					clonedSubComp, _ := cs.StoreAndCloneWithNewID(&comp)
-					*clonedPrimaryComp.Components = append(*clonedPrimaryComp.Components, *clonedSubComp)
-				}
-
-				finalComponents = append(finalComponents, *clonedPrimaryComp)
-			}
-
-			depList = append(depList, cydx.Dependency{
-				Ref:          primaryComp.BOMRef,
-				Dependencies: &priCompIds,
-			})
-
-			m.out.Components = &finalComponents
-			m.out.Dependencies = &depList
-		} else {
-			for _, b := range m.in {
-				var oldPc *cydx.Component
-				var newPc int
-
-				if b.Metadata != nil && b.Metadata.Component != nil {
-					oldPc = b.Metadata.Component
-				}
-
-				if oldPc == nil {
-					log.Error("hierarchical merge: old product does not have any component.")
-					oldPc = &cydx.Component{}
-				}
-
-				newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
-
-				for i, pc := range priCompList {
-					if pc.BOMRef == newPcId {
-						newPc = i
-						break
-					}
-				}
-
-				// Initialize the components list for the primary component
-				priCompList[newPc].Components = &[]cydx.Component{}
-
-				for _, oldComp := range lo.FromPtr(b.Components) {
-					newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
-					for _, comp := range compList {
-						if comp.BOMRef == newCompId {
-							*priCompList[newPc].Components = append(*priCompList[newPc].Components, comp)
-							break
-						}
-					}
-				}
-
-				log.Debugf("hierarchical merge: primary component %s has %d components", priCompList[newPc].BOMRef, len(*priCompList[newPc].Components))
-			}
-
-			m.out.Components = &priCompList
-
-			priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
-				return c.BOMRef
-			})
-			depList = append(depList, cydx.Dependency{
-				Ref:          m.out.Metadata.Component.BOMRef,
-				Dependencies: &priCompIds,
-			})
-			m.out.Dependencies = &depList
-			log.Debugf("hierarchical merge: final dependency list: %d", len(depList))
-		}
+		m.handleHierarchicalMerge(priCompList, compList, depList, cs)
 	}
 
 	// Writes sbom to file or uploads
