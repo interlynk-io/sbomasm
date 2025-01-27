@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pingcap/log v1.1.0
-	github.com/samber/lo v1.47.0
+	github.com/samber/lo v1.49.0
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
