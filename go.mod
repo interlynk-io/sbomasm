@@ -17,12 +17,12 @@ require (
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/release-utils v0.8.5
+	sigs.k8s.io/release-utils v0.11.0
 )
 
 require golang.org/x/mod v0.22.0 // indirect
 
-require golang.org/x/tools v0.22.0 // indirect
+require golang.org/x/tools v0.28.0 // indirect
 
 require (
 	github.com/DependencyTrack/client-go v0.14.0
