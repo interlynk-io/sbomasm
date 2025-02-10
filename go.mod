@@ -25,7 +25,7 @@ require golang.org/x/mod v0.22.0 // indirect
 require golang.org/x/tools v0.22.0 // indirect
 
 require (
-	github.com/DependencyTrack/client-go v0.14.0
+	github.com/DependencyTrack/client-go v0.15.0
 	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/anchore/go-struct-converter v0.0.0-20240925125616-a0883641c664 // indirect
 	github.com/cloudflare/circl v1.5.0 // indirect
