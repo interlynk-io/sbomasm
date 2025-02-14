@@ -110,7 +110,8 @@ type output struct {
 }
 
 type input struct {
-	Files []string
+	Files           []string
+	PrimaryCompFile string
 }
 
 type assemble struct {
