@@ -15,21 +15,27 @@ type cdxEditDoc struct {
 	c    *configParams
 }
 
-func NewCdxEditDoc(b *cydx.BOM, c *configParams) *cdxEditDoc {
+func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
 	doc := &cdxEditDoc{}
 
 	doc.bom = b
 	doc.c = c
 
 	if c.search.subject == "primary-component" {
+		if b.Metadata.Component == nil {
+			return nil, fmt.Errorf("primary component is missing")
+		}
 		doc.comp = b.Metadata.Component
 	}
 
 	if c.search.subject == "component-name-version" {
 		doc.comp = cdxFindComponent(b, c)
+		if doc.comp == nil {
+			return nil, fmt.Errorf("component is missing")
+		}
 	}
 
-	return doc
+	return doc, nil
 }
 
 func (d *cdxEditDoc) update() {

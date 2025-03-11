@@ -58,9 +58,9 @@ func spdxEdit(c *configParams) error {
 		return err
 	}
 
-	doc := NewSpdxEditDoc(bom, c)
+	doc, err := NewSpdxEditDoc(bom, c)
 	if doc == nil {
-		return errors.New("failed to create spdx edit document")
+		return fmt.Errorf("failed to edit spdx document: %w", err)
 	}
 
 	doc.update()

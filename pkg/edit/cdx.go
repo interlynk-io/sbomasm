@@ -60,9 +60,9 @@ func cdxEdit(c *configParams) error {
 		return err
 	}
 
-	doc := NewCdxEditDoc(bom, c)
+	doc, err := NewCdxEditDoc(bom, c)
 	if doc == nil {
-		return errors.New("failed to create edit document")
+		return fmt.Errorf("failed to edit cdx document: %w", err)
 	}
 
 	if c.shouldSearch() && doc.comp == nil {
@@ -120,7 +120,7 @@ func loadCdxBom(ctx context.Context, path string) (*cydx.BOM, error) {
 func writeCdxBom(bom *cydx.BOM, c *configParams) error {
 	var f io.Writer
 
-	//Always generate a new serial number on edit
+	// Always generate a new serial number on edit
 	bom.SerialNumber = newCdxSerialNumber()
 
 	if c.outputFilePath == "" {
