@@ -20,13 +20,16 @@ type spdxEditDoc struct {
 	c   *configParams
 }
 
-func NewSpdxEditDoc(bom *spdx.Document, c *configParams) *spdxEditDoc {
+func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 	doc := &spdxEditDoc{}
 
 	doc.bom = bom
 	doc.c = c
 
 	if c.search.subject == "primary-component" {
+		if doc.pkg == nil {
+			return nil, fmt.Errorf("primary package is missing")
+		}
 		pkg, err := spdxFindPkg(bom, c, true)
 		if err == nil {
 			doc.pkg = pkg
@@ -34,12 +37,16 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) *spdxEditDoc {
 	}
 
 	if c.search.subject == "component-name-version" {
+
 		pkg, err := spdxFindPkg(bom, c, false)
 		if err == nil {
 			doc.pkg = pkg
 		}
+		if doc.pkg == nil {
+			return nil, fmt.Errorf("package is missing")
+		}
 	}
-	return doc
+	return doc, nil
 }
 
 func (d *spdxEditDoc) update() {
