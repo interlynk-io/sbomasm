@@ -54,6 +54,18 @@ Advanced Example:
 
 		ctx := logger.WithLogger(context.Background())
 
+		configPath, _ := cmd.Flags().GetString("configPath")
+		name, _ := cmd.Flags().GetString("name")
+		version, _ := cmd.Flags().GetString("version")
+		typeValue, _ := cmd.Flags().GetString("type")
+
+		if configPath == "" {
+			// if no config file, all grouped flags are required
+			if name == "" || version == "" || typeValue == "" {
+				return fmt.Errorf("if no config file is provided, flags --name, --version, and --type must all be set")
+			}
+		}
+
 		assembleParams, err := extractArgs(cmd, args)
 		if err != nil {
 			return err
@@ -78,7 +90,6 @@ func init() {
 	assembleCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
 	assembleCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")
 	assembleCmd.Flags().StringP("type", "t", "", "product type of the assembled sbom (application, framework, library, container, device, firmware)")
-	assembleCmd.MarkFlagsRequiredTogether("name", "version", "type")
 
 	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
 	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
