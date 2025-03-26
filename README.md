@@ -27,8 +27,8 @@
 
 ```sh
 go install github.com/interlynk-io/sbomasm@latest
-
 ```
+
 other installation [options](#installation).
 
 # SBOM Platform - Free Tier
@@ -42,10 +42,10 @@ Our SBOM Automation Platform has a new free tier that provides a comprehensive s
 
 # Usage
 
-## Assemle SBOMs
+## Assemble SBOMs
 
-```sh
 `SPDX` assemble multiple SBOMs
+
 ```sh
 sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json
 ```
@@ -68,13 +68,13 @@ INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.
 docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "assemble cdx app" -v "v2.0.0" -t "application" -o /app/sboms/final-prod.cdx.json /app/sboms/one.cdx.json /app/sboms/two.cdx.json
 ```
 
-`CDX` assemble multiple SBOMs and limit output cyclonedx version
+`CDX` assemble multiple SBOMs and limit output CycloneDX version
 
 ```sh
 sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -e 1.4 -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
 ```
 
-#### Dependency Track Integration 
+### Dependency Track Integration
 
 Assemble 2 projects from DT into a flat merged assembled sbom, and save the file to local disk.
 
@@ -85,7 +85,7 @@ sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fu
 
 Assemble 2 projects from DT using flat merge and push the assembled sbom to another project
 
-```sh 
+```sh
 ./build/sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fuyKELt5dbCUb" -n "mega-app" -v "1.0.0
 " -t "application"  -f -o 1379d800-abb0-498b-a6e5-533318670e40  08c2777b-bc4f-4b98-be54-e3f901736d71 9d94d566-a20c-4b65-b1b8-18dc4e238a55
 ```
@@ -117,6 +117,7 @@ Find a component by name & version and add update its purl
 ```
 
 # Features
+
 - SBOM format agnostic
 - Supports Hierarchial/Flat and Assemble merging
 - Configurable primary component/package
@@ -134,7 +135,7 @@ Find a component by name & version and add update its purl
 
 An assembled SBOM encompasses all the components/packages, dependencies, files, licenses,  selected metadata of its included sbom. A new primary component/package is generated based on configuration, which is then associated with the included SBOMs primary components.
 
-```
+```text
 +-----------------------+   +-----------------------+   +-----------------------+
 |       Micro SBOM 1    |   |       Micro SBOM 2    |   |       Micro SBOM 3    |
 |-----------------------|   |-----------------------|   |-----------------------|
@@ -148,7 +149,7 @@ An assembled SBOM encompasses all the components/packages, dependencies, files, 
 |-----------------------|   |-----------------------|   |-----------------------|
 |          ↓            |   |          ↓            |   |          ↓            |
 +-----------------------+   +-----------------------+   +-----------------------+
-                                      ↓
+                                       ↓
                       +------------------------------------+
                       |           Mega SBOM                |
                       |------------------------------------|
@@ -177,7 +178,6 @@ An assembled SBOM encompasses all the components/packages, dependencies, files, 
                       |  Micro Sbom 2 - Primary Comp       |
                       |  Micro Sbom 3 - Primary Comp       |
                       +------------------------------------+
-
 ```
 
 The assembled SBOM spec format is guided by the input SBOMs e.g if the inputs are all SPDX, the output needs to be SPDX format.  Below is the support matrix
@@ -207,7 +207,7 @@ Interlynk produces a variety of closed-source tools that it offers to its custom
 
 The customer uses `sbomasm` to help assemble these SBOMs. The input SBOMs are the following
 
-```
+```text
 ├── sbom-tool
 │   ├── sbomex-spdx.json
 │   ├── sbomgr-spdx.json
@@ -220,7 +220,7 @@ To track all of these SBOMs, as a single unit, the first step will be to generat
 
 The config file is a yaml document, which needs to be filled out. All the [REQUIRED] files are necessary, the [OPTIONAL] can be left blank.
 
-```
+```yaml
 app:
   name: 'Interlynk combined set'
   version: 'v0.0.1'
@@ -258,7 +258,7 @@ The output is an assembled SBOM for all of interlynks binaries `interlynk.combin
 To get more details in case of issues or just information, run the above command with a debug flag
 `sbomasm assemble -d -c interlynk-config.yml -o interlynk.combined-sbom.spdx.json samples/spdx/sbom-tool/*`
 
-```
+```text
 2023-05-03T04:49:33.333-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomex-spdx.json : a0f1787b5f5b42861ec28f263be1e30c61782b7b0da1290403dedf64fffedb22
 2023-05-03T04:49:33.337-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomgr-spdx.json : d0a0e2243b3fcaa376d95a7844c015547b98aaa5582cf740939d3fd78991a1f9
 2023-05-03T04:49:33.342-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomqs-spdx.json : edf6fe76bb3836990d288b2a5c56d1d65aeb29b35b3f358d68ff0bd7833ce9d3
@@ -356,6 +356,7 @@ In the above command, the subject indicate the type of search to use, and the se
 - Edit attempts to write out the SBOM in the same format it was read in. Only SPDX rdf & xml cannot be serialized out.
 
 ## Example
+
 The primary use-case this was build for is to augment recently merged sboms or fix sboms which have know bad metadata. In your CICD pipeline
 once you merge two sboms using sbomasm, you would like to provide more metadata to its primary component to meet compliance
 standards. e.g you would like to add supplier, author, license data.
