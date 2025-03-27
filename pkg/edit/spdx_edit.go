@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/interlynk-io/sbomasm/internal/version"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/samber/lo"
 	"github.com/spdx/tools-golang/spdx"
 )
 
 const (
-	SBOMASM         = "sbomasm"
-	SBOMASM_VERSION = "0.1.9"
+	SBOMASM = "sbomasm"
 )
+
+var SBOMASM_VERSION = version.Version
 
 type spdxEditDoc struct {
 	bom *spdx.Document
