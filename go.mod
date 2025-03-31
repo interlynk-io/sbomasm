@@ -2,7 +2,7 @@ module github.com/interlynk-io/sbomasm
 
 go 1.23.0
 
-toolchain go1.23.1
+toolchain go1.24.1
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.9.2
@@ -17,12 +17,12 @@ require (
 	github.com/spf13/cobra v1.9.1
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/release-utils v0.11.0
+	sigs.k8s.io/release-utils v0.11.1
 )
 
 require golang.org/x/mod v0.24.0 // indirect
 
-require golang.org/x/tools v0.28.0 // indirect
+require golang.org/x/tools v0.30.0 // indirect
 
 require (
 	github.com/DependencyTrack/client-go v0.15.0
