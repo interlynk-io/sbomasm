@@ -74,6 +74,7 @@ func init() {
 	rootCmd.AddCommand(assembleCmd)
 	assembleCmd.Flags().StringP("output", "o", "", "path to assembled sbom, defaults to stdout")
 	assembleCmd.Flags().StringP("configPath", "c", "", "path to config file")
+	assembleCmd.Flags().StringP("primaryCompFile", "p", "", "path to primary component file")
 
 	assembleCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
 	assembleCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")
@@ -122,6 +123,19 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 			return nil, err
 		}
 		aParams.ConfigPath = configPath
+	}
+
+	primCompFile, err := cmd.Flags().GetString("primaryCompFile")
+	if err != nil {
+		return nil, err
+	}
+
+	if primCompFile != "" {
+		aParams.PrimaryCompFile = primCompFile
+		aParams.Input = append(aParams.Input, primCompFile)
+		if err := validatePath(primCompFile); err != nil {
+			return nil, err
+		}
 	}
 
 	output, err := cmd.Flags().GetString("output")
