@@ -23,7 +23,7 @@ require golang.org/x/mod v0.24.0 // indirect
 require golang.org/x/tools v0.32.0 // indirect
 
 require (
-	github.com/DependencyTrack/client-go v0.16.0
+	github.com/DependencyTrack/client-go v0.17.0
 	github.com/anchore/go-struct-converter v0.0.0-20250211213226-cce56d595160 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
