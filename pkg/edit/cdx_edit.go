@@ -73,7 +73,7 @@ func (d *cdxEditDoc) update() {
 }
 
 func (d *cdxEditDoc) timeStamp() error {
-	if !d.c.shouldTimeStamp() {
+	if d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
 

@@ -552,7 +552,7 @@ func (d *spdxEditDoc) typ() error {
 }
 
 func (d *spdxEditDoc) timeStamp() error {
-	if !d.c.shouldTimeStamp() {
+	if d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
 
