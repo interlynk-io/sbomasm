@@ -24,7 +24,7 @@ Basic Example:
 	# Edit's an sbom to add app-name and version to the primary component 
 	$ sbomasm edit --subject primary-component  --name "my-cool-app" --version "1.0.0"  in-sbom-2.json
 
-    # Edit's an sbom to add created-at timestamp and supplier information only for missing fields
+    # Edit's an sbom with an exiting created-at timestamp and supplier information only for missing fields
 	$ sbomasm edit --missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" in-sbom-1.json
 
 	# Edit's an sbom add a new author to the primary component preserving the existing authors in the doc 
