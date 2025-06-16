@@ -45,12 +45,12 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 	doc.c = c
 
 	if c.search.subject == "primary-component" {
-		if doc.pkg == nil {
-			return nil, fmt.Errorf("primary package is missing")
-		}
 		pkg, err := spdxFindPkg(bom, c, true)
 		if err == nil {
 			doc.pkg = pkg
+		}
+		if doc.pkg == nil {
+			return nil, fmt.Errorf("primary package is missing")
 		}
 	}
 
