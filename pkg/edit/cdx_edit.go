@@ -93,17 +93,7 @@ func (d *cdxEditDoc) timeStamp() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
-		return errNotSupported
-	}
-
-	if d.c.onMissing() {
-		if d.bom.Metadata.Timestamp == "" {
-			d.bom.Metadata.Timestamp = utcNowTime()
-		}
-	} else {
-		d.bom.Metadata.Timestamp = utcNowTime()
-	}
+	d.bom.Metadata.Timestamp = utcNowTime()
 	return nil
 }
 
