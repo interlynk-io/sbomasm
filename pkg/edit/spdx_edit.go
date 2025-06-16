@@ -572,25 +572,11 @@ func (d *spdxEditDoc) timeStamp() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
-		return errNotSupported
+	if d.bom.CreationInfo == nil {
+		d.bom.CreationInfo = &spdx.CreationInfo{}
 	}
+	d.bom.CreationInfo.Created = utcNowTime()
 
-	if d.c.onMissing() {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
-
-		if d.bom.CreationInfo.Created == "" {
-			d.bom.CreationInfo.Created = utcNowTime()
-		}
-	} else {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
-
-		d.bom.CreationInfo.Created = utcNowTime()
-	}
 	return nil
 }
 
