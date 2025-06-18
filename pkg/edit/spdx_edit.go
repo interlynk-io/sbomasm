@@ -114,6 +114,12 @@ func (d *spdxEditDoc) name() error {
 		if d.pkg.PackageName == "" {
 			d.pkg.PackageName = d.c.name
 		}
+	} else if d.c.onRemove() {
+		// TODO: Rethink before removing the package name
+		// I don;t think this is a good idea
+		if d.pkg.PackageName != "" {
+			d.pkg.PackageName = ""
+		}
 	} else {
 		d.pkg.PackageName = d.c.name
 	}
@@ -133,6 +139,12 @@ func (d *spdxEditDoc) version() error {
 	if d.c.onMissing() {
 		if d.pkg.PackageVersion == "" {
 			d.pkg.PackageVersion = d.c.version
+		}
+	} else if d.c.onRemove() {
+		// TODO: Rethink before removing the package version
+		// I don't think this is a good idea
+		if d.pkg.PackageVersion != "" {
+			d.pkg.PackageVersion = ""
 		}
 	} else {
 		d.pkg.PackageVersion = d.c.version
@@ -157,6 +169,12 @@ func (d *spdxEditDoc) supplier() error {
 	if d.c.onMissing() {
 		if d.pkg.PackageSupplier == nil {
 			d.pkg.PackageSupplier = &supplier
+		}
+	} else if d.c.onRemove() {
+		if d.pkg.PackageSupplier != nil {
+			if d.pkg.PackageSupplier.Supplier == supplier.Supplier && d.pkg.PackageSupplier.SupplierType == supplier.SupplierType {
+				d.pkg.PackageSupplier = nil
+			}
 		}
 	} else {
 		d.pkg.PackageSupplier = &supplier
@@ -201,6 +219,16 @@ func (d *spdxEditDoc) authors() error {
 		} else {
 			d.bom.CreationInfo.Creators = append(d.bom.CreationInfo.Creators, authors...)
 		}
+	} else if d.c.onRemove() {
+		if d.bom.CreationInfo != nil {
+			if d.bom.CreationInfo.Creators != nil {
+				d.bom.CreationInfo.Creators = lo.Filter(d.bom.CreationInfo.Creators, func(c spdx.Creator, _ int) bool {
+					return !lo.ContainsBy(authors, func(a spdx.Creator) bool {
+						return c.Creator == a.Creator && c.CreatorType == a.CreatorType
+					})
+				})
+			}
+		}
 	} else {
 		if d.bom.CreationInfo == nil {
 			d.bom.CreationInfo = &spdx.CreationInfo{
@@ -241,6 +269,14 @@ func (d *spdxEditDoc) purl() error {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
+		}
+	} else if d.c.onRemove() {
+		if foundPurl {
+			d.pkg.PackageExternalReferences = lo.Filter(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
+				return !lo.ContainsBy([]spdx.PackageExternalReference{purl}, func(p spdx.PackageExternalReference) bool {
+					return x.Locator == p.Locator && x.Category == p.Category
+				})
+			})
 		}
 	} else if d.c.onAppend() {
 		if !foundPurl {
@@ -299,6 +335,14 @@ func (d *spdxEditDoc) cpe() error {
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		}
+	} else if d.c.onRemove() {
+		if foundCpe {
+			d.pkg.PackageExternalReferences = lo.Filter(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
+				return !lo.ContainsBy([]spdx.PackageExternalReference{cpe}, func(p spdx.PackageExternalReference) bool {
+					return x.Locator == p.Locator && x.Category == p.Category
+				})
+			})
+		}
 	} else if d.c.onAppend() {
 		if !foundCpe {
 			if d.pkg.PackageExternalReferences == nil {
@@ -344,6 +388,16 @@ func (d *spdxEditDoc) licenses() error {
 				d.pkg.PackageLicenseConcluded = license
 			}
 		}
+	} else if d.c.onRemove() {
+		if d.c.search.subject == "document" {
+			if d.bom.DataLicense != "" {
+				d.bom.DataLicense = ""
+			}
+		} else {
+			if d.pkg.PackageLicenseConcluded != "" {
+				d.pkg.PackageLicenseConcluded = ""
+			}
+		}
 	} else {
 		if d.c.search.subject == "document" {
 			d.bom.DataLicense = license
@@ -368,6 +422,14 @@ func (d *spdxEditDoc) hashes() error {
 	if d.c.onMissing() {
 		if d.pkg.PackageChecksums == nil {
 			d.pkg.PackageChecksums = hashes
+		}
+	} else if d.c.onRemove() {
+		if d.pkg.PackageChecksums != nil {
+			d.pkg.PackageChecksums = lo.Filter(d.pkg.PackageChecksums, func(h spdx.Checksum, _ int) bool {
+				return !lo.ContainsBy(hashes, func(n spdx.Checksum) bool {
+					return h.Algorithm == n.Algorithm && h.Value == n.Value
+				})
+			})
 		}
 	} else if d.c.onAppend() {
 		if d.pkg.PackageChecksums == nil {
@@ -488,6 +550,12 @@ func (d *spdxEditDoc) copyright() error {
 		if d.pkg.PackageCopyrightText == "" {
 			d.pkg.PackageCopyrightText = d.c.copyright
 		}
+	} else if d.c.onRemove() {
+		if d.pkg.PackageCopyrightText != "" {
+			if d.pkg.PackageCopyrightText == d.c.copyright {
+				d.pkg.PackageCopyrightText = "NOASSERTION"
+			}
+		}
 	} else {
 		d.pkg.PackageCopyrightText = d.c.copyright
 	}
@@ -508,6 +576,16 @@ func (d *spdxEditDoc) description() error {
 		} else {
 			if d.pkg.PackageDescription == "" {
 				d.pkg.PackageDescription = d.c.description
+			}
+		}
+	} else if d.c.onRemove() {
+		if d.c.search.subject == "document" {
+			if d.bom.DocumentComment != "" {
+				d.bom.DocumentComment = ""
+			}
+		} else {
+			if d.pkg.PackageDescription != "" {
+				d.pkg.PackageDescription = ""
 			}
 		}
 	} else {
@@ -534,6 +612,12 @@ func (d *spdxEditDoc) repository() error {
 		if d.pkg.PackageDownloadLocation == "" {
 			d.pkg.PackageDownloadLocation = d.c.repository
 		}
+	} else if d.c.onRemove() {
+		if d.pkg.PackageDownloadLocation != "" {
+			if d.pkg.PackageDownloadLocation == d.c.repository {
+				d.pkg.PackageDownloadLocation = "NOASSERTION"
+			}
+		}
 	} else {
 		d.pkg.PackageDownloadLocation = d.c.repository
 	}
@@ -559,6 +643,12 @@ func (d *spdxEditDoc) typ() error {
 	if d.c.onMissing() {
 		if d.pkg.PrimaryPackagePurpose == "" {
 			d.pkg.PrimaryPackagePurpose = purpose
+		}
+	} else if d.c.onRemove() {
+		if d.pkg.PrimaryPackagePurpose != "" {
+			if d.pkg.PrimaryPackagePurpose == purpose {
+				d.pkg.PrimaryPackagePurpose = ""
+			}
 		}
 	} else {
 		d.pkg.PrimaryPackagePurpose = purpose
@@ -597,6 +687,32 @@ func (d *spdxEditDoc) lifeCycles() error {
 		}
 		if d.bom.CreationInfo.CreatorComment == "" {
 			d.bom.CreationInfo.CreatorComment = lifecycles
+		}
+	} else if d.c.onRemove() {
+		if d.bom.CreationInfo != nil && d.bom.CreationInfo.CreatorComment != "" {
+			comment := d.bom.CreationInfo.CreatorComment
+
+			prefix := "lifecycle:"
+
+			if strings.HasPrefix(comment, prefix) {
+				lifecycleStr := strings.TrimPrefix(comment, prefix)
+				lifecycleStr = strings.TrimSpace(lifecycleStr)
+
+				parts := strings.Split(lifecycleStr, ",")
+
+				filteredParts := lo.Filter(parts, func(p string, _ int) bool {
+					return !lo.ContainsBy(d.c.lifecycles, func(a string) bool {
+						return strings.TrimSpace(p) == strings.TrimSpace(a)
+					})
+				})
+
+				if len(filteredParts) > 0 {
+					d.bom.CreationInfo.CreatorComment = prefix + " " + strings.Join(filteredParts, ",")
+				} else {
+					// nothing left to keep
+					d.bom.CreationInfo.CreatorComment = ""
+				}
+			}
 		}
 	} else {
 		if d.bom.CreationInfo == nil {

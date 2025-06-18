@@ -32,6 +32,7 @@ type EditParams struct {
 
 	Append  bool
 	Missing bool
+	Remove  bool
 
 	Name        string
 	Version     string
@@ -55,7 +56,6 @@ func NewEditParams() *EditParams {
 }
 
 func Edit(eParams *EditParams) error {
-
 	log := logger.FromContext(*eParams.Ctx)
 
 	c, err := convertToConfigParams(eParams)

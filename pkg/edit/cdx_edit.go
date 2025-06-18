@@ -707,7 +707,11 @@ func (d *cdxEditDoc) authors() error {
 		}
 	} else if d.c.onAppend() {
 		if d.c.search.subject == "document" {
-			*d.bom.Metadata.Authors = append(*d.bom.Metadata.Authors, *authors...)
+			if d.bom.Metadata.Authors == nil {
+				d.bom.Metadata.Authors = authors
+			} else {
+				*d.bom.Metadata.Authors = append(*d.bom.Metadata.Authors, *authors...)
+			}
 		} else {
 			if d.bom.SpecVersion <= cydx.SpecVersion1_5 {
 				d.comp.Author = d.c.getFormattedAuthors()
