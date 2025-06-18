@@ -34,6 +34,7 @@ type SearchParams struct {
 	version string
 	missing bool
 	append  bool
+	remove  bool
 }
 
 type paramTuple struct {
@@ -139,12 +140,15 @@ func (c *configParams) onAppend() bool {
 	return c.search.append
 }
 
+func (c *configParams) onRemove() bool {
+	return c.search.remove
+}
+
 func (c *configParams) shouldSearch() bool {
 	return c.search.subject == "component-name-version"
 }
 
 func (c *configParams) getFormattedAuthors() string {
-
 	authors := []string{}
 	for _, author := range c.authors {
 		authors = append(authors, fmt.Sprintf("%s <%s>", author.name, author.value))
@@ -156,7 +160,7 @@ func (c *configParams) getFormattedAuthors() string {
 func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 	p := &configParams{}
 
-	//log := logger.FromContext(*eParams.Ctx)
+	// log := logger.FromContext(*eParams.Ctx)
 
 	p.ctx = eParams.Ctx
 
@@ -170,13 +174,13 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 		p.outputFilePath = eParams.Output
 	}
 
-	p.search = SearchParams{}
+	// p.search = SearchParams{}
 
 	if eParams.Subject != "" {
 		p.search.subject = eParams.Subject
 	}
 
-	p.search = SearchParams{}
+	// p.search = SearchParams{}
 
 	if eParams.Subject != "" && supportedSubjects[strings.ToLower(eParams.Subject)] {
 		p.search.subject = strings.ToLower(eParams.Subject)
@@ -195,6 +199,7 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 
 	p.search.missing = eParams.Missing
 	p.search.append = eParams.Append
+	p.search.remove = eParams.Remove
 
 	p.name = eParams.Name
 	p.version = eParams.Version
@@ -253,6 +258,7 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 
 	return p, nil
 }
+
 func parseInputFormat(s string) (name string, version string) {
 	// Trim any leading/trailing whitespace
 	s = strings.TrimSpace(s)
@@ -272,9 +278,9 @@ func parseInputFormat(s string) (name string, version string) {
 
 	return name, version
 }
+
 func validatePath(path string) error {
 	stat, err := os.Stat(path)
-
 	if err != nil {
 		return err
 	}

@@ -89,6 +89,7 @@ func init() {
 	// Edit controls
 	editCmd.Flags().BoolP("missing", "m", false, "edit only missing fields")
 	editCmd.Flags().BoolP("append", "a", false, "append to field instead of replacing")
+	editCmd.Flags().BoolP("remove", "r", false, "remove field instead of replacing")
 
 	// Edit fields
 	editCmd.Flags().String("name", "", "name of the entity")
@@ -126,6 +127,9 @@ func extractEditArgs(cmd *cobra.Command, args []string) (*edit.EditParams, error
 
 	append, _ := cmd.Flags().GetBool("append")
 	editParams.Append = append
+
+	remove, _ := cmd.Flags().GetBool("remove")
+	editParams.Remove = remove
 
 	name, _ := cmd.Flags().GetString("name")
 	editParams.Name = name
