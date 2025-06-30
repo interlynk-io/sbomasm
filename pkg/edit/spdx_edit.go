@@ -334,7 +334,7 @@ func (d *spdxEditDoc) cpe() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == "cpe23Type"
+				return strings.ToLower(x.RefType) == "cpe23type"
 			})
 
 			if extRef == nil {
