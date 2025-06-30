@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	SBOMASM = "sbomasm"
+	SBOMASM               = "sbomasm"
+	SupplierPrefixComment = "The supplier of this document are "
 )
 
 var SBOMASM_VERSION = version.Version
@@ -145,8 +146,27 @@ func (d *spdxEditDoc) supplier() error {
 		return errNoConfiguration
 	}
 
+	comment := ""
+	comment += fmt.Sprintf("%s (%s)", d.c.supplier.name, d.c.supplier.value)
+
 	if d.c.search.subject == "document" {
-		return errNotSupported
+		// add creator comment
+		if d.bom.CreationInfo == nil {
+			d.bom.CreationInfo = &spdx.CreationInfo{
+				CreatorComment: SupplierPrefixComment + comment,
+			}
+		} else {
+			if d.bom.CreationInfo.CreatorComment == "" {
+				d.bom.CreationInfo.CreatorComment = SupplierPrefixComment + comment
+			} else {
+				if !strings.Contains(d.bom.CreationInfo.CreatorComment, SupplierPrefixComment) {
+					d.bom.CreationInfo.CreatorComment += fmt.Sprintf("\n\n"+SupplierPrefixComment+"%s", comment)
+				} else {
+					d.bom.CreationInfo.CreatorComment += fmt.Sprintf(", "+"%s", comment)
+				}
+			}
+		}
+		return nil
 	}
 
 	supplier := spdx.Supplier{
