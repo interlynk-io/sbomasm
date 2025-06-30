@@ -587,7 +587,7 @@ func (d *cdxEditDoc) purl() error {
 	}
 
 	if d.c.onMissing() {
-		if d.comp.PackageURL == "" {
+		if d.comp.PackageURL == "" || d.comp.PackageURL != d.c.purl {
 			d.comp.PackageURL = d.c.purl
 		}
 	} else {

@@ -228,22 +228,22 @@ func (d *spdxEditDoc) purl() error {
 		Locator:  d.c.purl,
 	}
 
-	foundPurl := false
+	foundPurlWithKeyAndValue := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == "purl" {
-			foundPurl = true
+		if ref.RefType == "purl" && ref.Locator == d.c.purl {
+			foundPurlWithKeyAndValue = true
 		}
 	}
 
 	if d.c.onMissing() {
-		if !foundPurl {
+		if !foundPurlWithKeyAndValue {
 			if d.pkg.PackageExternalReferences == nil {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		}
 	} else if d.c.onAppend() {
-		if !foundPurl {
+		if !foundPurlWithKeyAndValue {
 			if d.pkg.PackageExternalReferences == nil {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
