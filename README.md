@@ -300,43 +300,33 @@ We support the following modifications operations
 
 `Document`
 
-| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
-|----------|----------|----------| -----------------------------|
-| author   | "name (email)"   |  Metadata->authors   | CreationInfo->Creator->Person|
-| supplier | "name (url)"   |  Metadata->Supplier   | CreationInfo->Creator->Comment |
-| tool | "name (version)"   |  Metadata->Tools   | CreationInfo->Creator->Tool |
-| lifecycle | "build" | Metadata->lifecycles->phase   | - |
-| type | "application" | -  | - |
-| name | "name" |  -   | - |
-| version | "1.0.0" |  -   | - |
-| description | "description" |  -   | DocumentComment |
-| copyright| "abc @2023" | -   | - |
-| repository | "github.com/interlynk/sbomasm"| bom->externalreferences | - |
-| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | -  | - |
-| purl| "pkg:github/apache/tomcat@9.0.0" | -  | - |
-| hash | "MD5 (1234567890)" | -   | - |
-| license | "MIT (mit.edu/~amini/LICENSE.md)" | Metadata->Licenses   | DataLicense |
-| timestamp | "2023-05-03T04:49:33.378-0700" | Metadata->timestamp  | CreationInfo->Created |
+| Input Param  | Input Format | CDX Spec Field | SPDX Spec field | Examples  |
+|----------|----------|----------| -----------------------------| -------------- |
+| author   | "name (email)"   |  Metadata->authors   | CreationInfo->Creator->Person| `--author "foo (foo@gmail.com)"`  |
+| supplier | "name (url)"   |  Metadata->Supplier   | CreationInfo->Creator->Comment | `--supplier "foo (https://foo.com)"` |
+| tool | "name (version)"   |  Metadata->Tools   | CreationInfo->Creator->Tool | `--tool "foo (v1.0.0)"` |
+| lifecycle | "build" | Metadata->lifecycles->phase   | N/A | `--lifecycle "build"` |
+| description | "description" |  N/A   | DocumentComment | `--description "hey, i am foo"` |
+| repository | "github.com/interlynk/sbomasm"| bom->externalreferences | N/A | `--repository "github.com/foo/foo"` |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Metadata->Licenses   | DataLicense | `--license "CC0-1.0"` |
+| timestamp | "2023-05-03T04:49:33.378-0700" | Metadata->timestamp  | CreationInfo->Created | it auto updated |
 
 `Primary Component & Component Name Version`
 
-| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
-|----------|----------|----------| -----------------------------|
-| author   | "name (email)"   |  Comp->authors or author  | - |
-| supplier | "name (url)"   |  Comp->Supplier   | Pkg->Supplier |
-| tool | "name (version)"   |  -   | - |
-| lifecycle | "build" | - | - |
-| type | "application" | Comp->Type  | Pkg->PrimaryPackagePurpose |
-| name | "name" |  Comp->name   | Pkg->PackageName |
-| version | "1.0.0" |  Comp->version   | Pkg->PackageVersion |
-| description | "description" |  Comp->Description   | Pkg->PackageDescription |
-| copyright| "abc @2023" | Comp->copyright  | pkg->copyright |
-| repository | "github.com/interlynk/sbomasm"| Comp->externalreferences | Pkg->PackageDownloadLocation |
-| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | Comp->cpe  | Pkg->ExternalReferences->Security |
-| purl| "pkg:github/apache/tomcat@9.0.0" | Comp->purl  | Pkg->ExternalReferences->PackageManager |
-| hash | "MD5 (1234567890)" | Comp->hashes   | Pkg->Checksums |
-| license | "MIT (mit.edu/~amini/LICENSE.md)" | Comp->Licenses   | Pkg->ConcludedLicense |
-| timestamp | "2023-05-03T04:49:33.378-0700" | -  | - |
+| Input Param  | Input Format | CDX Spec Field | SPDX Spec field | Examples |
+|----------|----------|----------| -----------------------------| --------------|
+| author   | "name (email)"   |  Comp->authors or author  | N/A | `--author "bar bar@gmail.com"`|
+| supplier | "name (url)"   |  Comp->Supplier   | Pkg->Supplier | `--supplier "bar (https://bar.com)"` |
+| type | "application" | Comp->Type  | Pkg->PrimaryPackagePurpose | `--type "application"` |
+| name | "name" |  Comp->name   | Pkg->PackageName | `--name "tablewriter-bar"` |
+| version | "1.0.0" |  Comp->version   | Pkg->PackageVersion | `--version "v1.0.5"` |
+| description | "description" |  Comp->Description   | Pkg->PackageDescription | `--description "hey, this bar"` |
+| copyright| "abc @2023" | Comp->copyright  | pkg->copyright | `--copyright "bar@2030"` |
+| repository | "github.com/interlynk/sbomasm"| Comp->externalreferences | Pkg->PackageDownloadLocation | `--repository "github.com/bar/bar"` |
+| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | Comp->cpe  | Pkg->ExternalReferences->Security | `--cpe "cpe:2.3:a:bar:tablewriter:v0.0.5:*:*:*:*:*:*:*"` |
+| purl| "pkg:github/apache/tomcat@9.0.0" | Comp->purl  | Pkg->ExternalReferences->PackageManager | `--purl "pkg:github/bar/bar@0.0.0"` |
+| hash | "MD5 (1234567890)" | Comp->hashes   | Pkg->Checksums | `--hash "MD5 (3f619af370f7e308b5a3d27a5a1d6646ea9de26)"` |
+| license | "MIT (mit.edu/~amini/LICENSE.md)" | Comp->Licenses   | Pkg->ConcludedLicense | `--license "MIT"` |
 
 ## Searching for a component
 
