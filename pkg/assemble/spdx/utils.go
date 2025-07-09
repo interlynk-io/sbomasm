@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/mitchellh/copystructure"
 	"github.com/pingcap/log"
 	"github.com/samber/lo"
@@ -68,7 +68,7 @@ func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := detect.Detect(f)
+	spec, format, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +76,13 @@ func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
 	switch format {
-	case detect.FileFormatJSON:
+	case sbom.FileFormatJSON:
 		d, err = spdx_json.Read(f)
-	case detect.FileFormatTagValue:
+	case sbom.FileFormatTagValue:
 		d, err = spdx_tv.Read(f)
-	case detect.FileFormatYAML:
+	case sbom.FileFormatYAML:
 		d, err = spdx_yaml.Read(f)
-	case detect.FileFormatRDF:
+	case sbom.FileFormatRDF:
 		d, err = spdx_rdf.Read(f)
 	default:
 		panic("unsupported spdx format")

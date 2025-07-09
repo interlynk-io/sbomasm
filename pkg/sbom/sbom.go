@@ -14,24 +14,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package assemble
+package sbom
 
 import (
+	"errors"
 	"os"
-
-	"github.com/interlynk-io/sbomasm/pkg/detect"
+	"time"
 )
 
-func detectSbom(path string) (string, string, error) {
+var (
+	errNoConfiguration = errors.New("no configuration provided")
+	errNotSupported    = errors.New("not supported")
+	errInvalidInput    = errors.New("invalid input data")
+)
+
+func DetectSbom(path string) (string, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", "", err
 	}
 	defer f.Close()
 
-	spec, format, err := detect.Detect(f)
+	spec, format, err := Detect(f)
 	if err != nil {
 		return "", "", err
 	}
 	return string(spec), string(format), nil
+}
+
+func utcNowTime() string {
+	location, _ := time.LoadLocation("UTC")
+	locationTime := time.Now().In(location)
+	return locationTime.Format(time.RFC3339)
 }

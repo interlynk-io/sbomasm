@@ -24,8 +24,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 
 	"github.com/samber/lo"
@@ -96,7 +96,7 @@ func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := detect.Detect(f)
+	spec, format, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}
@@ -104,13 +104,13 @@ func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
 	switch format {
-	case detect.FileFormatJSON:
+	case sbom.FileFormatJSON:
 		d, err = spdx_json.Read(f)
-	case detect.FileFormatTagValue:
+	case sbom.FileFormatTagValue:
 		d, err = spdx_tv.Read(f)
-	case detect.FileFormatYAML:
+	case sbom.FileFormatYAML:
 		d, err = spdx_yaml.Read(f)
-	case detect.FileFormatRDF:
+	case sbom.FileFormatRDF:
 		d, err = spdx_rdf.Read(f)
 	default:
 		panic("unsupported spdx format")
@@ -143,24 +143,24 @@ func writeSpdxSbom(doc common.AnyDocument, m *configParams) error {
 	}
 	defer inf.Close()
 
-	_, format, err := detect.Detect(inf)
+	_, format, err := sbom.Detect(inf)
 	if err != nil {
 		return err
 	}
 
 	switch format {
-	case detect.FileFormatJSON:
+	case sbom.FileFormatJSON:
 		var opt []spdx_json.WriteOption
 		opt = append(opt, spdx_json.Indent(" "))      // to create multiline json
 		opt = append(opt, spdx_json.EscapeHTML(true)) // to escape HTML characters
 		spdx_json.Write(doc, f, opt...)
-	case detect.FileFormatTagValue:
+	case sbom.FileFormatTagValue:
 		spdx_tv.Write(doc, f)
-	case detect.FileFormatYAML:
+	case sbom.FileFormatYAML:
 		spdx_yaml.Write(doc, f)
-	case detect.FileFormatRDF:
+	case sbom.FileFormatRDF:
 		panic("write rdf format not supported")
-	case detect.FileFormatXML:
+	case sbom.FileFormatXML:
 		panic("write xml format not supported")
 	}
 
