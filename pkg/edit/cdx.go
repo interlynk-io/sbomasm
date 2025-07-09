@@ -113,21 +113,14 @@ func loadCdxBom(ctx context.Context, path string) (*cydx.BOM, error) {
 
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
-	switch format {
-	case sbom.FileFormatJSON:
-		bom = new(cydx.BOM)
-		decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatJSON)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, err
-		}
-	case sbom.FileFormatXML:
-		bom = new(cydx.BOM)
-		decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatXML)
-		if err = decoder.Decode(bom); err != nil {
-			return nil, err
-		}
-	default:
-		panic("unsupported file format") // TODO: return error instead of panic
+	sbomDoc, err := sbom.ParseSBOM(f, spec, format)
+	if err != nil {
+		return nil, err
+	}
+
+	bom, ok := sbomDoc.Raw().(*cydx.BOM)
+	if !ok {
+		return nil, fmt.Errorf("failed to assert sbomDoc.Raw() to *cydx.BOM")
 	}
 
 	return bom, nil

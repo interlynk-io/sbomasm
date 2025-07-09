@@ -30,7 +30,6 @@ import (
 
 	"github.com/samber/lo"
 	spdx_json "github.com/spdx/tools-golang/json"
-	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx/common"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
@@ -103,18 +102,9 @@ func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
-	switch format {
-	case sbom.FileFormatJSON:
-		d, err = spdx_json.Read(f)
-	case sbom.FileFormatTagValue:
-		d, err = spdx_tv.Read(f)
-	case sbom.FileFormatYAML:
-		d, err = spdx_yaml.Read(f)
-	case sbom.FileFormatRDF:
-		d, err = spdx_rdf.Read(f)
-	default:
-		panic("unsupported spdx format")
-
+	d, err = sbom.ParseSBOM(f, spec, format)
+	if err != nil {
+		return nil, err
 	}
 
 	if err != nil {

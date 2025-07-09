@@ -17,33 +17,25 @@
 package sbom
 
 import (
-	"errors"
-	"os"
-	"time"
+	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/spdx/tools-golang/spdx/common"
 )
 
-var (
-	errNoConfiguration = errors.New("no configuration provided")
-	errNotSupported    = errors.New("not supported")
-	errInvalidInput    = errors.New("invalid input data")
-)
-
-func DetectSbom(path string) (string, string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", "", err
-	}
-	defer f.Close()
-
-	spec, format, err := Detect(f)
-	if err != nil {
-		return "", "", err
-	}
-	return string(spec), string(format), nil
+type SBOMDocument interface {
+	SpecType() string
+	Raw() any
 }
 
-func utcNowTime() string {
-	location, _ := time.LoadLocation("UTC")
-	locationTime := time.Now().In(location)
-	return locationTime.Format(time.RFC3339)
+type SPDXDocument struct {
+	Doc common.AnyDocument
 }
+
+func (s *SPDXDocument) SpecType() string { return "spdx" }
+func (s *SPDXDocument) Raw() any         { return s.Doc }
+
+type CycloneDXDocument struct {
+	BOM *cydx.BOM
+}
+
+func (c *CycloneDXDocument) SpecType() string { return "cdx" }
+func (c *CycloneDXDocument) Raw() any         { return c.BOM }
