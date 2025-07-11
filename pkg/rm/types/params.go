@@ -11,17 +11,20 @@ const (
 )
 
 type RmParams struct {
-	Kind             RemovalKind
-	Field            string
-	Scope            string
-	Key              string
-	Value            string
-	All              bool
-	ComponentName    string
-	ComponentVersion string
-	DependencyID     string
-	IsComponent      bool
-	IsDependency     bool
-	DryRun           bool
-	Summary          bool
+	Kind                 RemovalKind
+	Field                string
+	Scope                string
+	Key                  string
+	Value                string
+	All                  bool
+	ComponentName        string
+	ComponentVersion     string
+	DependencyID         string
+	IsComponent          bool
+	IsDependency         bool
+	IsKeyPresent         bool
+	IsValuePresent       bool
+	IsKeyAndValuePresent bool
+	DryRun               bool
+	Summary              bool
 }

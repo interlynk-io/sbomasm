@@ -27,56 +27,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// type RemovalKind string
-
-// const (
-// 	FieldRemoval      RemovalKind = "field"
-// 	ComponentRemoval  RemovalKind = "component"
-// 	DependencyRemoval RemovalKind = "dependency"
-// )
-
-// type RmParams struct {
-// 	Kind             RemovalKind
-// 	Field            string
-// 	Scope            string
-// 	Key              string
-// 	Value            string
-// 	All              bool
-// 	ComponentName    string
-// 	ComponentVersion string
-// 	DependencyID     string
-// 	IsComponent      bool
-// 	IsDependency     bool
-// }
-
-// var validFields = map[string][]string{
-// 	"document": {
-// 		"author",
-// 		"supplier",
-// 		"timestamp",
-// 		"tool",
-// 		"lifecycle",
-// 		"description",
-// 		"license",
-// 	},
-// 	"component": {
-// 		"author",
-// 		"supplier",
-// 		"type",
-// 		"repository",
-// 		"cpe",
-// 		"hash",
-// 		"license",
-// 		"copyright",
-// 		"purl",
-// 		"description",
-// 	},
-// 	"dependency": {
-// 		"from",
-// 		"to",
-// 	},
-// }
-
 var rmCmd = &cobra.Command{
 	Use:   "rm [flags] <input-file>",
 	Short: "Remove fields, components, or dependencies from an SBOM",
@@ -143,20 +93,24 @@ func init() {
 	rootCmd.AddCommand(rmCmd)
 
 	// Field Removal Flags
-	rmCmd.Flags().String("field", "", "Field to remove (e.g., author, license, purl)")
-	rmCmd.Flags().String("scope", "", "Scope to remove field from (document, component, dependency)")
-	rmCmd.Flags().String("key", "", "Optional key to filter field entries")
-	rmCmd.Flags().String("value", "", "Optional value to filter field entries")
-	rmCmd.Flags().Bool("all", false, "Apply field removal to all matching items (e.g. all components)")
+	rmCmd.Flags().StringP("field", "f", "", "Field to remove (e.g., author, license, purl)")
+	rmCmd.Flags().StringP("scope", "s", "", "Scope to remove field from (document, component, dependency)")
+	rmCmd.Flags().StringP("key", "k", "", "Optional key to filter field entries")
+	rmCmd.Flags().StringP("value", "v", "", "Optional value to filter field entries")
+	rmCmd.Flags().BoolP("all", "a", false, "Apply field removal to all matching items (e.g. all components)")
 
 	// Component Removal Flags
-	rmCmd.Flags().Bool("component", false, "Operate at component level (e.g., remove whole component or match by field)")
-	rmCmd.Flags().String("name", "", "Component name for removal or matching")
+	rmCmd.Flags().BoolP("component", "c", false, "Operate at component level (e.g., remove whole component or match by field)")
+	rmCmd.Flags().StringP("name", "n", "", "Component name for removal or matching")
 	rmCmd.Flags().String("version", "", "Component version for removal or matching")
 
 	// Dependency Removal Flags
 	rmCmd.Flags().Bool("dependency", false, "Operate at dependency level")
 	rmCmd.Flags().String("id", "", "Dependency ID or PURL to remove (e.g. pkg:...@version)")
+
+	rmCmd.Flags().Bool("dry-run", false, "Perform a dry run without making changes")
+	rmCmd.Flags().Bool("summary", false, "Print a summary of the changes instead of applying them")
+	rmCmd.Flags().StringP("output", "o", "", "Output file to write the modified SBOM (default: overwrite input file)")
 
 	// Custom help template: moves "Usage:" to the top
 	rmCmd.SetHelpTemplate(`Usage:
@@ -180,6 +134,8 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	key, _ := cmd.Flags().GetString("key")
 	value, _ := cmd.Flags().GetString("value")
 	all, _ := cmd.Flags().GetBool("all")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	summary, _ := cmd.Flags().GetBool("summary")
 
 	// Extract Component Removal Parameters
 	name, _ := cmd.Flags().GetString("name")
@@ -192,17 +148,26 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 
 	isDependency, _ := cmd.Flags().GetBool("dependency")
 
+	isKeyPresent := key != ""
+	isValuePresent := value != ""
+	isKeyAndValuePresent := isKeyPresent && isValuePresent
+
 	params := &types.RmParams{
-		Field:            field,
-		Scope:            scope,
-		Key:              key,
-		Value:            value,
-		All:              all,
-		ComponentName:    name,
-		ComponentVersion: version,
-		DependencyID:     dependencyID,
-		IsComponent:      isComponent,
-		IsDependency:     isDependency,
+		Field:                field,
+		Scope:                scope,
+		Key:                  key,
+		Value:                value,
+		All:                  all,
+		ComponentName:        name,
+		ComponentVersion:     version,
+		DependencyID:         dependencyID,
+		IsComponent:          isComponent,
+		IsDependency:         isDependency,
+		IsKeyPresent:         isKeyPresent,
+		IsValuePresent:       isValuePresent,
+		IsKeyAndValuePresent: isKeyAndValuePresent,
+		DryRun:               dryRun,  // Default to false, can be set via global flag
+		Summary:              summary, // Default to false, can be set via global flag
 	}
 
 	switch {
