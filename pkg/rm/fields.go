@@ -14,24 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package assemble
+package rm
 
-import (
-	"os"
+type DOCFIELD string
 
-	"github.com/interlynk-io/sbomasm/pkg/detect"
+const (
+	AUTHOR      DOCFIELD = "author"
+	SUPPLIER    DOCFIELD = "supplier"
+	TIMESTAMP   DOCFIELD = "timestamp"
+	TOOL        DOCFIELD = "tool"
+	LICENSE     DOCFIELD = "license"
+	LIFECYCLE   DOCFIELD = "lifecycle"
+	DESCRIPTION DOCFIELD = "description"
+	REPOSITORY  DOCFIELD = "repository"
 )
-
-func detectSbom(path string) (string, string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", "", err
-	}
-	defer f.Close()
-
-	spec, format, err := detect.Detect(f)
-	if err != nil {
-		return "", "", err
-	}
-	return string(spec), string(format), nil
-}

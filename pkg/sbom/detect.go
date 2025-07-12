@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package detect
+package sbom
 
 import (
 	"bufio"
@@ -22,6 +22,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -101,4 +102,18 @@ func Detect(f io.ReadSeeker) (SBOMSpecFormat, FileFormat, error) {
 	}
 
 	return "", "", fmt.Errorf("unknown spec or format")
+}
+
+func DetectSbom(path string) (string, string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", "", err
+	}
+	defer f.Close()
+
+	spec, format, err := Detect(f)
+	if err != nil {
+		return "", "", err
+	}
+	return string(spec), string(format), nil
 }

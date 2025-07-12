@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
 // EditParams represents the parameters for the edit command
@@ -55,7 +56,6 @@ func NewEditParams() *EditParams {
 }
 
 func Edit(eParams *EditParams) error {
-
 	log := logger.FromContext(*eParams.Ctx)
 
 	c, err := convertToConfigParams(eParams)
@@ -64,7 +64,7 @@ func Edit(eParams *EditParams) error {
 	}
 	log.Debugf("config %+v", c)
 
-	spec, format, err := detectSbom(eParams.Input)
+	spec, format, err := sbom.DetectSbom(eParams.Input)
 	if err != nil {
 		return err
 	}
