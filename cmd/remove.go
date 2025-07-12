@@ -85,7 +85,7 @@ Examples:
 			return err
 		}
 
-		return rm.Run(ctx, args, removalParams)
+		return rm.Engine(ctx, args, removalParams)
 	},
 }
 

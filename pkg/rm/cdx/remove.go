@@ -18,7 +18,24 @@ package cdx
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
+
+func RemoveCDXField(bom *cydx.BOM, targets []interface{}, params *types.RmParams) error {
+	switch params.Field {
+	case "author":
+		return RemoveAuthorFromMetadata(bom, targets)
+	case "supplier":
+		return RemoveSupplierFromMetadata(bom, targets)
+	case "license":
+		return RemoveLicenseFromMetadata(bom, targets)
+	// case "tool":
+	// 	return removeToolFromMetadata(bom, targets)
+	default:
+		// return types.ErrUnsupportedField
+	}
+	return nil
+}
 
 func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	if bom.Metadata.Supplier == nil {

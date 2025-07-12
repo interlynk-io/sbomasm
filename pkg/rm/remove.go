@@ -19,11 +19,9 @@ package rm
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
 type SCOPE string
@@ -34,10 +32,10 @@ const (
 	DEPENDENCY SCOPE = "dependency"
 )
 
-func rmCycloneDX(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
+func Remove(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
 	switch params.Kind {
 	case types.FieldRemoval:
-		return handleCDXFieldRemoval(ctx, bom, params)
+		return fieldRemoval(ctx, sbomDoc, params)
 	case types.ComponentRemoval:
 		// TODO: Implement
 		return fmt.Errorf("component removal not implemented yet")
@@ -50,10 +48,10 @@ func rmCycloneDX(ctx context.Context, bom *cydx.BOM, params *types.RmParams) err
 	}
 }
 
-func handleCDXFieldRemoval(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
+func fieldRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
 	switch SCOPE(params.Scope) {
 	case DOCUMENT:
-		return handleFieldFromCDXDocument(ctx, bom, params)
+		return fieldRemovalFromDocument(ctx, sbomDoc, params)
 	case COMPONENT:
 		// return removeFieldFromCDXComponents(ctx, bom, params)
 	case DEPENDENCY:
@@ -64,129 +62,164 @@ func handleCDXFieldRemoval(ctx context.Context, bom *cydx.BOM, params *types.RmP
 	return fmt.Errorf("field removal for scope %q not implemented", params.Scope)
 }
 
-func handleFieldFromCDXDocument(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
-	// no metadata, nothing to remove
-	if bom.Metadata == nil {
-		return nil
-	}
-
-	// first select field
-	selected, err := selectFieldFromCDXDocument(bom, params)
-	if err != nil {
-		return err
-	}
-
-	// Filter target entries
-	targets, err := filterFieldFromCDXDocument(selected, params)
-	if err != nil {
-		return fmt.Errorf("failed to filter target entries: %w", err)
-	}
-
-	if len(targets) == 0 {
-		fmt.Println("No matching fields found.")
-		return nil
-	}
-
-	// log it or summarize about it
-	if params.DryRun {
-		fmt.Println("Dry-run mode: matched entries that would be removed:")
-		for _, entry := range selected {
-			fmt.Printf("  - %v\n", entry)
-		}
-		return nil
-	}
-
-	if params.Summary {
-		renderFieldSummary(params.Field, selected)
-		return nil
-	}
-
-	// and finally remove that field from the document
-	return removeTargetFieldFromCDXDocument(bom, targets, params)
+func fieldRemovalFromDocument(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
+	fieldRemoval := &FieldOperationEngine{doc: sbomDoc}
+	return fieldRemoval.Execute(ctx, params)
 }
 
-func selectFieldFromCDXDocument(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
-	field := strings.ToLower(params.Field)
+// func rmCycloneDX(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
+// 	switch params.Kind {
+// 	case types.FieldRemoval:
+// 		return handleCDXFieldRemoval(ctx, bom, params)
+// 	case types.ComponentRemoval:
+// 		// TODO: Implement
+// 		return fmt.Errorf("component removal not implemented yet")
+// 	case types.DependencyRemoval:
+// 		// TODO: Implement
+// 		return fmt.Errorf("dependency removal not implemented yet")
+// 	default:
+// 		// return sbom.ErrInvalidRemovalKind
+// 		return fmt.Errorf("invalid removal kind: %s", params.Kind)
+// 	}
+// }
 
-	switch DOCFIELD(field) {
-	case AUTHOR:
-		return cdx.SelectAuthorFromMetadata(bom)
-	case SUPPLIER:
-		return cdx.SelectSupplierFromMetadata(bom)
-	case TIMESTAMP:
-		return cdx.SelectTimestampFromMetadata(bom)
-	case TOOL:
-		return cdx.SelectToolFromMetadata(bom)
-	case LICENSE:
-		return cdx.SelectLicenseFromMetadata(bom)
-	case LIFECYCLE:
-		return cdx.SelectLifecycleFromMetadata(bom)
-	case DESCRIPTION:
-		// return selectDescriptionFromMetadata(bom, params)
-	case REPOSITORY:
-		return cdx.SelectRepositoryFromMetadata(bom)
+// func handleCDXFieldRemoval(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
+// 	switch SCOPE(params.Scope) {
+// 	case DOCUMENT:
+// 		return handleFieldFromCDXDocument(ctx, bom, params)
+// 	case COMPONENT:
+// 		// return removeFieldFromCDXComponents(ctx, bom, params)
+// 	case DEPENDENCY:
+// 		// return removeFieldFromCDXDependencies(ctx, bom, params)
+// 	default:
+// 		return fmt.Errorf("invalid scope for field removal: %s", params.Scope)
+// 	}
+// 	return fmt.Errorf("field removal for scope %q not implemented", params.Scope)
+// }
 
-	}
-	return nil, fmt.Errorf("unsupported document field for CycloneDX: %s", field)
-}
+// func handleFieldFromCDXDocument(ctx context.Context, bom *cydx.BOM, params *types.RmParams) error {
+// 	// no metadata, nothing to remove
+// 	if bom.Metadata == nil {
+// 		return nil
+// 	}
 
-func filterFieldFromCDXDocument(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	field := strings.ToLower(params.Field)
+// 	// first select field
+// 	selected, err := selectFieldFromCDXDocument(bom, params)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	switch DOCFIELD(field) {
-	case AUTHOR:
-		return cdx.FilterAuthorFromMetadata(selected, params)
-	case SUPPLIER:
-		return cdx.FilterSupplierFromMetadata(selected, params)
-	case TIMESTAMP:
-		// return filterTimestampFromMetadata(selected, params)
-	case TOOL:
-		// return filterToolFromMetadata(selected, params)
-	case LICENSE:
-		return cdx.FilterLicenseFromMetadata(selected, params)
-	case DESCRIPTION:
-		// return filterDescriptionFromMetadata(bom, params)
-	case REPOSITORY:
-		// return filterRepositoryFromMetadata(bom, params)
+// 	// Filter target entries
+// 	targets, err := filterFieldFromCDXDocument(selected, params)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to filter target entries: %w", err)
+// 	}
 
-	}
-	return nil, fmt.Errorf("unsupported document field for CycloneDX: %s", field)
-}
+// 	if len(targets) == 0 {
+// 		fmt.Println("No matching fields found.")
+// 		return nil
+// 	}
 
-func renderFieldSummary(field string, selected []interface{}) {
-	switch DOCFIELD(field) {
-	case AUTHOR:
-		cdx.RenderSummaryAuthor(selected)
-	case SUPPLIER:
-		cdx.RenderSummarySupplier(selected)
-	case TOOL:
-		cdx.RenderSummaryTool(selected)
-	case LICENSE:
-		cdx.RenderSummaryLicense(selected)
-	// Add more as needed
-	default:
-		fmt.Println("📋 Summary of removed entries:")
-		for _, entry := range selected {
-			fmt.Printf("  - %v\n", entry)
-		}
-	}
-}
+// 	// log it or summarize about it
+// 	if params.DryRun {
+// 		fmt.Println("Dry-run mode: matched entries that would be removed:")
+// 		for _, entry := range selected {
+// 			fmt.Printf("  - %v\n", entry)
+// 		}
+// 		return nil
+// 	}
 
-func removeTargetFieldFromCDXDocument(bom *cydx.BOM, targets []interface{}, params *types.RmParams) error {
-	switch strings.ToLower(params.Field) {
-	case "author":
-		return cdx.RemoveAuthorFromMetadata(bom, targets)
-	case "supplier":
-		return cdx.RemoveSupplierFromMetadata(bom, targets)
-	case "timestamp":
-		// return removeTimestampFromMetadata(bom, targets)
-	case "tool":
-		// return removeToolFromMetadata(bom, targets)
-	case "license":
-		return cdx.RemoveLicenseFromMetadata(bom, targets)
-	case "description":
-		// return removeDescriptionFromMetadata(bom, targets)
-	}
+// 	if params.Summary {
+// 		renderFieldSummary(params.Field, selected)
+// 		return nil
+// 	}
 
-	return fmt.Errorf("removal for field %q not implemented", params.Field)
-}
+// 	// and finally remove that field from the document
+// 	return removeTargetFieldFromCDXDocument(bom, targets, params)
+// }
+
+// func selectFieldFromCDXDocument(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+// 	field := strings.ToLower(params.Field)
+
+// 	switch DOCFIELD(field) {
+// 	case AUTHOR:
+// 		return cdx.SelectAuthorFromMetadata(bom)
+// 	case SUPPLIER:
+// 		return cdx.SelectSupplierFromMetadata(bom)
+// 	case TIMESTAMP:
+// 		return cdx.SelectTimestampFromMetadata(bom)
+// 	case TOOL:
+// 		return cdx.SelectToolFromMetadata(bom)
+// 	case LICENSE:
+// 		return cdx.SelectLicenseFromMetadata(bom)
+// 	case LIFECYCLE:
+// 		return cdx.SelectLifecycleFromMetadata(bom)
+// 	case DESCRIPTION:
+// 		// return selectDescriptionFromMetadata(bom, params)
+// 	case REPOSITORY:
+// 		return cdx.SelectRepositoryFromMetadata(bom)
+
+// 	}
+// 	return nil, fmt.Errorf("unsupported document field for CycloneDX: %s", field)
+// }
+
+// func filterFieldFromCDXDocument(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+// 	field := strings.ToLower(params.Field)
+
+// 	switch DOCFIELD(field) {
+// 	case AUTHOR:
+// 		return cdx.FilterAuthorFromMetadata(selected, params)
+// 	case SUPPLIER:
+// 		return cdx.FilterSupplierFromMetadata(selected, params)
+// 	case TIMESTAMP:
+// 		// return filterTimestampFromMetadata(selected, params)
+// 	case TOOL:
+// 		// return filterToolFromMetadata(selected, params)
+// 	case LICENSE:
+// 		return cdx.FilterLicenseFromMetadata(selected, params)
+// 	case DESCRIPTION:
+// 		// return filterDescriptionFromMetadata(bom, params)
+// 	case REPOSITORY:
+// 		// return filterRepositoryFromMetadata(bom, params)
+
+// 	}
+// 	return nil, fmt.Errorf("unsupported document field for CycloneDX: %s", field)
+// }
+
+// func renderFieldSummary(field string, selected []interface{}) {
+// 	switch DOCFIELD(field) {
+// 	case AUTHOR:
+// 		cdx.RenderSummaryAuthor(selected)
+// 	case SUPPLIER:
+// 		cdx.RenderSummarySupplier(selected)
+// 	case TOOL:
+// 		cdx.RenderSummaryTool(selected)
+// 	case LICENSE:
+// 		cdx.RenderSummaryLicense(selected)
+// 	// Add more as needed
+// 	default:
+// 		fmt.Println("📋 Summary of removed entries:")
+// 		for _, entry := range selected {
+// 			fmt.Printf("  - %v\n", entry)
+// 		}
+// 	}
+// }
+
+// func removeTargetFieldFromCDXDocument(bom *cydx.BOM, targets []interface{}, params *types.RmParams) error {
+// 	switch strings.ToLower(params.Field) {
+// 	case "author":
+// 		return cdx.RemoveAuthorFromMetadata(bom, targets)
+// 	case "supplier":
+// 		return cdx.RemoveSupplierFromMetadata(bom, targets)
+// 	case "timestamp":
+// 		// return removeTimestampFromMetadata(bom, targets)
+// 	case "tool":
+// 		// return removeToolFromMetadata(bom, targets)
+// 	case "license":
+// 		return cdx.RemoveLicenseFromMetadata(bom, targets)
+// 	case "description":
+// 		// return removeDescriptionFromMetadata(bom, targets)
+// 	}
+
+// 	return fmt.Errorf("removal for field %q not implemented", params.Field)
+// }

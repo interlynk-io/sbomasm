@@ -21,6 +21,28 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
+func FilterCDXField(bom *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	switch params.Field {
+	case "author":
+		return FilterAuthorFromMetadata(selected, params)
+	case "supplier":
+		return FilterSupplierFromMetadata(selected, params)
+	case "timestamp":
+		// return FilterTimestampFromMetadata(selected, params)
+	case "tool":
+		// return FilterToolFromMetadata(selected, params)
+	case "license":
+		return FilterLicenseFromMetadata(selected, params)
+	case "lifecycle":
+		// return FilterLifecycleFromMetadata(selected, params)
+	case "repository":
+		// return FilterRepositoryFromMetadata(selected, params)
+	default:
+		// return nil, types.ErrUnsupportedField
+	}
+	return nil, nil
+}
+
 func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	var filtered []interface{}
 	for _, s := range selected {

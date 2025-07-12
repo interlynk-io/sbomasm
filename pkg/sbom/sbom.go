@@ -18,12 +18,18 @@ package sbom
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/spdx/tools-golang/spdx/common"
 )
 
 type SBOMDocument interface {
 	SpecType() string
 	Raw() any
+	Select(params *types.RmParams) ([]interface{}, error)
+	Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error)
+	Remove(targets []interface{}, params *types.RmParams) error
+	Summary(field string, selected []interface{})
 }
 
 type SPDXDocument struct {
@@ -32,6 +38,25 @@ type SPDXDocument struct {
 
 func (s *SPDXDocument) SpecType() string { return "spdx" }
 func (s *SPDXDocument) Raw() any         { return s.Doc }
+func (s *SPDXDocument) Select(params *types.RmParams) ([]interface{}, error) {
+	// return spdx.SelectSPDXField(s.Doc, params)
+	return nil, nil // TODO: Implement this
+}
+
+func (s *SPDXDocument) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	// return spdx.FilterSPDXField(s.Doc, selected, params)
+	return nil, nil // TODO: Implement this
+}
+
+func (s *SPDXDocument) Summary(field string, selected []interface{}) {
+	// spdx.RenderSPDXSummary(field, selected)
+	// return nil, nil // TODO: Implement this
+}
+
+func (s *SPDXDocument) Remove(targets []interface{}, params *types.RmParams) error {
+	// return spdx.RemoveSPDXField(s.Doc, targets, params)
+	return nil // TODO: Implement this
+}
 
 type CycloneDXDocument struct {
 	BOM *cydx.BOM
@@ -39,3 +64,19 @@ type CycloneDXDocument struct {
 
 func (c *CycloneDXDocument) SpecType() string { return "cdx" }
 func (c *CycloneDXDocument) Raw() any         { return c.BOM }
+
+func (c *CycloneDXDocument) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectCDXField(c.BOM, params)
+}
+
+func (c *CycloneDXDocument) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterCDXField(c.BOM, selected, params)
+}
+
+func (c *CycloneDXDocument) Summary(field string, selected []interface{}) {
+	cdx.RenderCDXSummary(field, selected)
+}
+
+func (c *CycloneDXDocument) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveCDXField(c.BOM, targets, params)
+}

@@ -16,7 +16,33 @@
 
 package cdx
 
-import cydx "github.com/CycloneDX/cyclonedx-go"
+import (
+	"fmt"
+
+	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+)
+
+func SelectCDXField(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	switch params.Field {
+	case "author":
+		return SelectAuthorFromMetadata(bom)
+	case "supplier":
+		return SelectSupplierFromMetadata(bom)
+	case "timestamp":
+		return SelectTimestampFromMetadata(bom)
+	case "tool":
+		return SelectToolFromMetadata(bom)
+	case "license":
+		return SelectLicenseFromMetadata(bom)
+	case "lifecycle":
+		return SelectLifecycleFromMetadata(bom)
+	case "repository":
+		return SelectRepositoryFromMetadata(bom)
+	default:
+		return nil, fmt.Errorf("unsupported field: %s", params.Field)
+	}
+}
 
 func SelectAuthorFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 	if bom.Metadata.Authors == nil || len(*bom.Metadata.Authors) == 0 {

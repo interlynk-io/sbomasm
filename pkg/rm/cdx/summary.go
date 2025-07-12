@@ -22,9 +22,24 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
 
-func RenderSummaryAuthor(selected []interface{}) {
+func RenderCDXSummary(field string, target []interface{}) {
+	switch field {
+	case "author":
+		RenderSummaryAuthor(target)
+	case "supplier":
+		RenderSummarySupplier(target)
+	case "tool":
+		RenderSummaryTool(target)
+	case "license":
+		RenderSummaryLicense(target)
+	default:
+		fmt.Printf("No summary renderer for field: %s\n", field)
+	}
+}
+
+func RenderSummaryAuthor(target []interface{}) {
 	fmt.Println("📋 Summary of removed author entries:")
-	for _, entry := range selected {
+	for _, entry := range target {
 		if author, ok := entry.(cydx.OrganizationalContact); ok {
 			fmt.Println("  - Author:")
 			fmt.Printf("      ID:    %s\n", author.BOMRef)
@@ -34,9 +49,9 @@ func RenderSummaryAuthor(selected []interface{}) {
 	}
 }
 
-func RenderSummarySupplier(selected []interface{}) {
+func RenderSummarySupplier(target []interface{}) {
 	fmt.Println("📋 Summary of removed supplier entries:")
-	for _, entry := range selected {
+	for _, entry := range target {
 		if supplier, ok := entry.(cydx.OrganizationalEntity); ok {
 			fmt.Println("  - Supplier:")
 			fmt.Printf("      Name: %s\n", supplier.Name)
@@ -51,9 +66,9 @@ func RenderSummarySupplier(selected []interface{}) {
 	}
 }
 
-func RenderSummaryTool(selected []interface{}) {
+func RenderSummaryTool(target []interface{}) {
 	fmt.Println("📋 Summary of removed tool entries:")
-	for _, entry := range selected {
+	for _, entry := range target {
 		if tool, ok := entry.(cydx.Tool); ok {
 			fmt.Println("  - Tool:")
 			fmt.Printf("      Name:    %s\n", tool.Name)
@@ -63,9 +78,9 @@ func RenderSummaryTool(selected []interface{}) {
 	}
 }
 
-func RenderSummaryLicense(selected []interface{}) {
+func RenderSummaryLicense(target []interface{}) {
 	fmt.Println("📋 Summary of removed license entries:")
-	for _, entry := range selected {
+	for _, entry := range target {
 		if lic, ok := entry.(cydx.LicenseChoice); ok {
 			fmt.Println("  - License:")
 			if lic.Expression != "" {

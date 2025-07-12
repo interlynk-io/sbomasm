@@ -27,7 +27,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
-func Run(ctx context.Context, args []string, params *types.RmParams) error {
+func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	inputFile := args[0]
 	if inputFile == "" {
 		return errors.New("input file path not provided")
@@ -59,28 +59,32 @@ func Run(ctx context.Context, args []string, params *types.RmParams) error {
 		return err
 	}
 
-	switch spec {
-	case sbom.SBOMSpecCDX:
-		cdxDoc, ok := sbomDoc.(*sbom.CycloneDXDocument)
-		if !ok {
-			return fmt.Errorf("expected CycloneDX document, got %T", sbomDoc)
-		}
-		bom := cdxDoc.BOM
-
-		return rmCycloneDX(ctx, bom, params)
-
-	case sbom.SBOMSpecSPDX:
-		_, ok := sbomDoc.(*sbom.SPDXDocument)
-		if !ok {
-			return fmt.Errorf("expected SPDX document, got %T", sbomDoc)
-		}
-		// return rmSPDX(ctx, spdxDoc.Doc, params)
-
-	case sbom.SBOMSpecUnknown:
-		return fmt.Errorf("unknown SBOM spec type detected")
-
-	default:
-		return fmt.Errorf("unsupported SBOM spec type: %s", spec)
+	err = Remove(ctx, sbomDoc, params)
+	if err != nil {
+		return err
 	}
+	// switch spec {
+	// case sbom.SBOMSpecCDX:
+	// 	cdxDoc, ok := sbomDoc.(*sbom.CycloneDXDocument)
+	// 	if !ok {
+	// 		return fmt.Errorf("expected CycloneDX document, got %T", sbomDoc)
+	// 	}
+	// 	bom := cdxDoc.BOM
+
+	// 	return rmCycloneDX(ctx, bom, params)
+
+	// case sbom.SBOMSpecSPDX:
+	// 	_, ok := sbomDoc.(*sbom.SPDXDocument)
+	// 	if !ok {
+	// 		return fmt.Errorf("expected SPDX document, got %T", sbomDoc)
+	// 	}
+	// 	// return rmSPDX(ctx, spdxDoc.Doc, params)
+
+	// case sbom.SBOMSpecUnknown:
+	// 	return fmt.Errorf("unknown SBOM spec type detected")
+
+	// default:
+	// 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
+	// }
 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
 }
