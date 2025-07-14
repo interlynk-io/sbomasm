@@ -23,8 +23,10 @@ import (
 	"io"
 	"os"
 
+	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/spdx/tools-golang/spdx/common"
 )
 
 func Engine(ctx context.Context, args []string, params *types.RmParams) error {
@@ -46,7 +48,8 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	fmt.Println("Detected SBOM format:", spec)
+	fmt.Println("Detected SBOM format:", format)
+	fmt.Println("Detected SBOM spec:", spec)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -59,32 +62,20 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return err
 	}
 
+	// Cast the underlying raw doc to correct type for registration
+	switch spec {
+	case sbom.SBOMSpecCDX:
+		RegisterHandlers(sbomDoc.Raw().(*cydx.BOM), nil)
+	case sbom.SBOMSpecSPDX:
+		RegisterHandlers(nil, sbomDoc.Raw().(common.AnyDocument))
+	default:
+		return fmt.Errorf("unsupported spec: %s", spec)
+	}
+
 	err = Remove(ctx, sbomDoc, params)
 	if err != nil {
 		return err
 	}
-	// switch spec {
-	// case sbom.SBOMSpecCDX:
-	// 	cdxDoc, ok := sbomDoc.(*sbom.CycloneDXDocument)
-	// 	if !ok {
-	// 		return fmt.Errorf("expected CycloneDX document, got %T", sbomDoc)
-	// 	}
-	// 	bom := cdxDoc.BOM
 
-	// 	return rmCycloneDX(ctx, bom, params)
-
-	// case sbom.SBOMSpecSPDX:
-	// 	_, ok := sbomDoc.(*sbom.SPDXDocument)
-	// 	if !ok {
-	// 		return fmt.Errorf("expected SPDX document, got %T", sbomDoc)
-	// 	}
-	// 	// return rmSPDX(ctx, spdxDoc.Doc, params)
-
-	// case sbom.SBOMSpecUnknown:
-	// 	return fmt.Errorf("unknown SBOM spec type detected")
-
-	// default:
-	// 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
-	// }
 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
 }

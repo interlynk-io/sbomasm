@@ -19,6 +19,7 @@ package rm
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
@@ -33,33 +34,54 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 		return nil
 	}
 
-	selected, err := f.doc.Select(params)
+	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
+	fmt.Println("Spec Type:", spec)
+	fmt.Println("Scope:", scope)
+	fmt.Println("Field:", field)
+
+	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
+	fmt.Println("Handler Key:", key)
+	handler, ok := handlerRegistry[key]
+	if !ok {
+		return fmt.Errorf("no handler registered for key: %s", key)
+	}
+	fmt.Println("Using handler:", handler)
+
+	// Select
+	selected, err := handler.Select(params)
 	if err != nil {
 		return err
 	}
 
-	targets, err := f.doc.Filter(selected, params)
+	if len(selected) == 0 {
+		fmt.Println("No matching entries found.")
+		return nil
+	}
+
+	// Filter
+	targets, err := handler.Filter(selected, params)
 	if err != nil {
 		return err
 	}
 
 	if len(targets) == 0 {
-		fmt.Println("No matching fields found.")
+		fmt.Println("No matching entries found.")
 		return nil
 	}
 
+	// Summary or Dry-run
+	if params.Summary {
+		handler.Summary(selected)
+		return nil
+	}
 	if params.DryRun {
-		fmt.Println("Dry-run mode:")
-		for _, entry := range selected {
+		fmt.Println("Dry-run: matched entries:")
+		for _, entry := range targets {
 			fmt.Printf("  - %v\n", entry)
 		}
 		return nil
 	}
 
-	if params.Summary {
-		f.doc.Summary(params.Field, selected)
-		return nil
-	}
-
-	return f.doc.Remove(targets, params)
+	// Remove
+	return handler.Remove(targets, params)
 }

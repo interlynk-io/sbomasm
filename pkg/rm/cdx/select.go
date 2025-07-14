@@ -23,25 +23,8 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-func SelectCDXField(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
-	switch params.Field {
-	case "author":
-		return SelectAuthorFromMetadata(bom)
-	case "supplier":
-		return SelectSupplierFromMetadata(bom)
-	case "timestamp":
-		return SelectTimestampFromMetadata(bom)
-	case "tool":
-		return SelectToolFromMetadata(bom)
-	case "license":
-		return SelectLicenseFromMetadata(bom)
-	case "lifecycle":
-		return SelectLifecycleFromMetadata(bom)
-	case "repository":
-		return SelectRepositoryFromMetadata(bom)
-	default:
-		return nil, fmt.Errorf("unsupported field: %s", params.Field)
-	}
+func selectFromCDXDependency(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	return nil, fmt.Errorf("CDX dependency selection not implemented yet")
 }
 
 func SelectAuthorFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
@@ -49,12 +32,6 @@ func SelectAuthorFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 		return nil, nil
 	}
 
-	// var selected []interface{}
-	// if bom.Metadata.Authors != nil {
-	// 	for _, author := range *bom.Metadata.Authors {
-	// 		selected = append(selected, author)
-	// 	}
-	// }
 	return []interface{}{*bom.Metadata.Authors}, nil
 }
 
@@ -83,10 +60,6 @@ func SelectToolFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 			return nil, nil
 		}
 		return []interface{}{*bom.Metadata.Tools.Components}, nil
-		// for _, tool := range *bom.Metadata.Tools.Components {
-		// 	selected = append(selected, tool)
-		// }
-		// return selected, nil
 	}
 
 	for _, tool := range *bom.Metadata.Tools.Tools {
@@ -103,10 +76,7 @@ func SelectLicenseFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 	if bom.Metadata.Licenses == nil {
 		return nil, nil
 	}
-	// var selected []interface{}
-	// for _, lic := range *bom.Metadata.Licenses {
-	// 	selected = append(selected, lic)
-	// }
+	fmt.Println("Selecting licenses from metadata")
 	return []interface{}{*bom.Metadata.Licenses}, nil
 }
 
@@ -114,10 +84,6 @@ func SelectLifecycleFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 	if bom.Metadata.Lifecycles == nil {
 		return nil, nil
 	}
-	// var selected []interface{}
-	// for _, lifecycle := range *bom.Metadata.Lifecycles {
-	// 	selected = append(selected, lifecycle)
-	// }
 	return []interface{}{*bom.Metadata.Lifecycles}, nil
 }
 
@@ -125,11 +91,6 @@ func SelectRepositoryFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 	if bom.ExternalReferences == nil || len(*bom.ExternalReferences) == 0 {
 		return nil, nil
 	}
-
-	// var selected []interface{}
-	// for _, repo := range *bom.ExternalReferences {
-	// 	selected = append(selected, repo)
-	// }
 
 	return []interface{}{*bom.ExternalReferences}, nil
 }

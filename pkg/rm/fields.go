@@ -16,6 +16,8 @@
 
 package rm
 
+import "github.com/interlynk-io/sbomasm/pkg/rm/types"
+
 type DOCFIELD string
 
 const (
@@ -28,3 +30,10 @@ const (
 	DESCRIPTION DOCFIELD = "description"
 	REPOSITORY  DOCFIELD = "repository"
 )
+
+type FieldHandler interface {
+	Select(params *types.RmParams) ([]interface{}, error)
+	Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error)
+	Remove(targets []interface{}, params *types.RmParams) error
+	Summary(selected []interface{})
+}

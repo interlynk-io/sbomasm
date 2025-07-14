@@ -17,25 +17,10 @@
 package cdx
 
 import (
-	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/types"
-)
+	"strings"
 
-func RemoveCDXField(bom *cydx.BOM, targets []interface{}, params *types.RmParams) error {
-	switch params.Field {
-	case "author":
-		return RemoveAuthorFromMetadata(bom, targets)
-	case "supplier":
-		return RemoveSupplierFromMetadata(bom, targets)
-	case "license":
-		return RemoveLicenseFromMetadata(bom, targets)
-	// case "tool":
-	// 	return removeToolFromMetadata(bom, targets)
-	default:
-		// return types.ErrUnsupportedField
-	}
-	return nil
-}
+	cydx "github.com/CycloneDX/cyclonedx-go"
+)
 
 func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	if bom.Metadata.Supplier == nil {
@@ -84,27 +69,6 @@ func matchLicense(tar interface{}, lic cydx.LicenseChoice) bool {
 	return candidate.Expression == lic.Expression
 }
 
-// func removeToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
-// 	if bom.Metadata.Tools == nil {
-// 		return nil
-// 	}
-// 	var filtered []cydx.Tool
-// 	for _, tool := range *bom.Metadata.Tools.Components {
-// 		match := false
-// 		for _, tar := range targets {
-// 			if matchTool(tar, tool) {
-// 				match = true
-// 				break
-// 			}
-// 		}
-// 		if !match {
-// 			filtered = append(filtered, tool)
-// 		}
-// 	}
-// 	bom.Metadata.Tools = &filtered
-// 	return nil
-// }
-
 func RemoveAuthorFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	if bom.Metadata == nil || bom.Metadata.Authors == nil {
 		return nil
@@ -133,4 +97,121 @@ func matchAuthor(tar interface{}, author cydx.OrganizationalContact) bool {
 		return false
 	}
 	return candidate.Name == author.Name && candidate.Email == author.Email
+}
+
+func RemoveLifecycleFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+	if bom.Metadata == nil || bom.Metadata.Lifecycles == nil {
+		return nil
+	}
+
+	var filtered []cydx.Lifecycle
+	for _, lifecycle := range *bom.Metadata.Lifecycles {
+		match := false
+		for _, target := range targets {
+			if candidate, ok := target.(cydx.Lifecycle); ok && matchLifecycle(candidate, lifecycle) {
+				match = true
+				break
+			}
+		}
+		if !match {
+			filtered = append(filtered, lifecycle)
+		}
+	}
+
+	bom.Metadata.Lifecycles = &filtered
+	return nil
+}
+
+func matchLifecycle(a, b cydx.Lifecycle) bool {
+	return a.Phase == b.Phase && a.Description == b.Description
+}
+
+func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+	if bom.Metadata == nil || bom.ExternalReferences == nil {
+		return nil
+	}
+
+	var filtered []cydx.ExternalReference
+	for _, ref := range *bom.ExternalReferences {
+		if strings.ToLower(string(ref.Type)) != "vcs" {
+			filtered = append(filtered, ref)
+			continue
+		}
+
+		match := false
+		for _, target := range targets {
+			if candidate, ok := target.(cydx.ExternalReference); ok && matchExternalReference(candidate, ref) {
+				match = true
+				break
+			}
+		}
+
+		if !match {
+			filtered = append(filtered, ref)
+		}
+	}
+	bom.ExternalReferences = &filtered
+	return nil
+}
+
+func matchExternalReference(a, b cydx.ExternalReference) bool {
+	return a.Type == b.Type && a.URL == b.URL && a.Comment == b.Comment
+}
+
+func RemoveTimestampFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+	if bom.Metadata == nil {
+		return nil
+	}
+	bom.Metadata.Timestamp = ""
+	return nil
+}
+
+func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+	if bom.Metadata == nil || bom.Metadata.Tools == nil {
+		return nil
+	}
+
+	// Handle v1.5+ tools (Components)
+	if bom.SpecVersion > cydx.SpecVersion1_4 {
+		if bom.Metadata.Tools.Components != nil {
+			var filtered []cydx.Component
+			for _, tool := range *bom.Metadata.Tools.Components {
+				match := false
+				for _, tar := range targets {
+					if candidate, ok := tar.(cydx.Component); ok {
+						if tool.Name == candidate.Name && tool.Version == candidate.Version {
+							match = true
+							break
+						}
+					}
+				}
+				if !match {
+					filtered = append(filtered, tool)
+				}
+			}
+			bom.Metadata.Tools.Components = &filtered
+		}
+	} else {
+		// Handle <= v1.4 tools (Tool struct)
+		if bom.Metadata.Tools.Tools != nil {
+			var filtered []cydx.Tool
+			for _, tool := range *bom.Metadata.Tools.Tools {
+				match := false
+				for _, tar := range targets {
+					if candidate, ok := tar.(cydx.Tool); ok {
+						if tool.Name == candidate.Name && tool.Version == candidate.Version {
+							match = true
+							break
+						}
+					}
+				}
+				if !match {
+					filtered = append(filtered, tool)
+				}
+			}
+			bom.Metadata.Tools.Tools = &filtered
+		}
+	}
+
+	return nil
 }

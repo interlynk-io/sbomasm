@@ -32,7 +32,7 @@ type SBOMSpecFormat string
 
 const (
 	SBOMSpecSPDX    SBOMSpecFormat = "spdx"
-	SBOMSpecCDX     SBOMSpecFormat = "cyclonedx"
+	SBOMSpecCDX     SBOMSpecFormat = "cdx"
 	SBOMSpecUnknown SBOMSpecFormat = "unknown"
 )
 

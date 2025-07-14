@@ -14,28 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sbom
+package cdx
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/spdx/tools-golang/spdx/common"
+	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type SBOMDocument interface {
-	SpecType() string
-	Raw() any
+type CdxDocToolHandler struct {
+	Bom *cydx.BOM
 }
 
-type SPDXDocument struct {
-	Doc common.AnyDocument
+func (h *CdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectToolFromMetadata(h.Bom)
 }
 
-func (s *SPDXDocument) SpecType() string { return "spdx" }
-func (s *SPDXDocument) Raw() any         { return s.Doc }
-
-type CycloneDXDocument struct {
-	BOM *cydx.BOM
+func (h *CdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterToolFromMetadata(selected, params)
 }
 
-func (c *CycloneDXDocument) SpecType() string { return "cdx" }
-func (c *CycloneDXDocument) Raw() any         { return c.BOM }
+func (h *CdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveToolFromMetadata(h.Bom, targets)
+}
+
+func (h *CdxDocToolHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryTool(selected)
+}

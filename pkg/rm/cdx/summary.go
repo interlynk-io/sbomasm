@@ -18,24 +18,10 @@ package cdx
 
 import (
 	"fmt"
+	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
-
-func RenderCDXSummary(field string, target []interface{}) {
-	switch field {
-	case "author":
-		RenderSummaryAuthor(target)
-	case "supplier":
-		RenderSummarySupplier(target)
-	case "tool":
-		RenderSummaryTool(target)
-	case "license":
-		RenderSummaryLicense(target)
-	default:
-		fmt.Printf("No summary renderer for field: %s\n", field)
-	}
-}
 
 func RenderSummaryAuthor(target []interface{}) {
 	fmt.Println("📋 Summary of removed author entries:")
@@ -89,6 +75,42 @@ func RenderSummaryLicense(target []interface{}) {
 				fmt.Printf("      ID:   %s\n", lic.License.ID)
 				fmt.Printf("      Name: %s\n", lic.License.Name)
 			}
+		}
+	}
+}
+
+func RenderSummaryLifecycle(selected []interface{}) {
+	fmt.Println("📋 Summary of removed lifecycle entries:")
+	for _, entry := range selected {
+		if lc, ok := entry.(cydx.Lifecycle); ok {
+			fmt.Println("  - Lifecycle:")
+			fmt.Printf("      Phase: %s\n", lc.Phase)
+			if lc.Description != "" {
+				fmt.Printf("      Description: %s\n", lc.Description)
+			}
+		}
+	}
+}
+
+func RenderSummaryRepository(selected []interface{}) {
+	fmt.Println("📋 Summary of removed repository (VCS) entries:")
+	for _, entry := range selected {
+		if ref, ok := entry.(cydx.ExternalReference); ok {
+			fmt.Println("  - Repository:")
+			fmt.Printf("      Type:    %s\n", ref.Type)
+			fmt.Printf("      URL:     %s\n", ref.URL)
+			if ref.Comment != "" {
+				fmt.Printf("      Comment: %s\n", ref.Comment)
+			}
+		}
+	}
+}
+
+func RenderSummaryTimestamp(selected []interface{}) {
+	fmt.Println("📋 Summary of removed timestamp:")
+	for _, entry := range selected {
+		if ts, ok := entry.(time.Time); ok {
+			fmt.Printf("  - Timestamp: %s\n", ts.Format(time.RFC3339))
 		}
 	}
 }

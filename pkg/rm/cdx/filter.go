@@ -17,31 +17,12 @@
 package cdx
 
 import (
+	"fmt"
+	"strings"
+
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
-
-func FilterCDXField(bom *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	switch params.Field {
-	case "author":
-		return FilterAuthorFromMetadata(selected, params)
-	case "supplier":
-		return FilterSupplierFromMetadata(selected, params)
-	case "timestamp":
-		// return FilterTimestampFromMetadata(selected, params)
-	case "tool":
-		// return FilterToolFromMetadata(selected, params)
-	case "license":
-		return FilterLicenseFromMetadata(selected, params)
-	case "lifecycle":
-		// return FilterLifecycleFromMetadata(selected, params)
-	case "repository":
-		// return FilterRepositoryFromMetadata(selected, params)
-	default:
-		// return nil, types.ErrUnsupportedField
-	}
-	return nil, nil
-}
 
 func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	var filtered []interface{}
@@ -50,7 +31,6 @@ func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([
 		if !ok {
 			continue
 		}
-		// for _, author := range *bom.Metadata.Authors {
 		if params.IsKeyAndValuePresent {
 			// match both key and value
 			if author.Name == params.Key && author.Email == params.Value {
@@ -73,17 +53,20 @@ func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([
 	return filtered, nil
 }
 
-func FilterSupplierFromMetadata(supplier []interface{}, params *types.RmParams) ([]interface{}, error) {
+func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	var filtered []interface{}
-	for _, sup := range supplier {
-		supplier, ok := sup.(cydx.OrganizationalEntity)
+	for _, entry := range selected {
+		supplier, ok := entry.(cydx.OrganizationalEntity)
 		if !ok {
 			continue
 		}
-		if params.All ||
-			(params.IsKeyAndValuePresent && supplier.Name == params.Key && containsEmail(supplier.Contact, params.Value)) ||
-			(params.IsKeyPresent && supplier.Name == params.Key) ||
-			(params.IsValuePresent && containsEmail(supplier.Contact, params.Value)) {
+		if params.IsKeyAndValuePresent && supplier.Name == params.Key && containsEmail(supplier.Contact, params.Value) {
+			filtered = append(filtered, supplier)
+		} else if params.IsKeyPresent && supplier.Name == params.Key {
+			filtered = append(filtered, supplier)
+		} else if params.IsValuePresent && containsEmail(supplier.Contact, params.Value) {
+			filtered = append(filtered, supplier)
+		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
 			filtered = append(filtered, supplier)
 		}
 	}
@@ -105,14 +88,93 @@ func containsEmail(contacts *[]cydx.OrganizationalContact, email string) bool {
 func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	var filtered []interface{}
 	for _, entry := range selected {
-		lic, ok := entry.(cydx.LicenseChoice)
+		license, ok := entry.(cydx.LicenseChoice)
 		if !ok {
 			continue
 		}
-		if params.All ||
-			(params.IsKeyPresent && lic.Expression == params.Key) {
-			filtered = append(filtered, lic)
+		if params.IsKeyPresent && license.Expression == params.Key {
+			filtered = append(filtered, license)
+		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+			filtered = append(filtered, license)
 		}
 	}
+	fmt.Println("Filtered licenses:", filtered)
+	return filtered, nil
+}
+
+func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+	for _, s := range selected {
+		lifecycle, ok := s.(string)
+		if !ok {
+			continue
+		}
+		if params.IsKeyPresent && lifecycle == params.Key {
+			filtered = append(filtered, lifecycle)
+		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+			filtered = append(filtered, lifecycle)
+		}
+	}
+	return filtered, nil
+}
+
+func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+	for _, entry := range selected {
+		ref, ok := entry.(cydx.ExternalReference)
+		if !ok || strings.ToLower(string(ref.Type)) != "vcs" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && ref.Comment == params.Key && ref.URL == params.Value {
+			filtered = append(filtered, ref)
+		} else if params.IsKeyPresent && ref.Comment == params.Key {
+			filtered = append(filtered, ref)
+		} else if params.IsValuePresent && ref.URL == params.Value {
+			filtered = append(filtered, ref)
+		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+			filtered = append(filtered, ref)
+		}
+	}
+	return filtered, nil
+}
+
+func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if len(selected) == 0 {
+		return nil, nil
+	}
+	if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		return selected, nil
+	}
+	return nil, nil
+}
+
+func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	for _, s := range selected {
+		switch tool := s.(type) {
+		case cydx.Tool:
+			// v1.4 style tool object
+			if params.All ||
+				(params.IsKeyAndValuePresent && tool.Name == params.Key && tool.Version == params.Value) ||
+				(params.IsKeyPresent && tool.Name == params.Key) ||
+				(params.IsValuePresent && tool.Version == params.Value) {
+				filtered = append(filtered, tool)
+			}
+
+		case cydx.Component:
+			// v1.5+ tool-as-component
+			if tool.Type == cydx.ComponentTypeApplication || tool.Type == cydx.ComponentTypeFramework {
+				if params.All ||
+					(params.IsKeyAndValuePresent && tool.Name == params.Key && tool.Version == params.Value) ||
+					(params.IsKeyPresent && tool.Name == params.Key) ||
+					(params.IsValuePresent && tool.Version == params.Value) {
+					filtered = append(filtered, tool)
+				}
+			}
+		}
+	}
+
 	return filtered, nil
 }
