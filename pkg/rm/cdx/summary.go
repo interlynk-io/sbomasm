@@ -18,7 +18,6 @@ package cdx
 
 import (
 	"fmt"
-	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
@@ -55,11 +54,25 @@ func RenderSummarySupplier(target []interface{}) {
 func RenderSummaryTool(target []interface{}) {
 	fmt.Println("📋 Summary of removed tool entries:")
 	for _, entry := range target {
-		if tool, ok := entry.(cydx.Tool); ok {
-			fmt.Println("  - Tool:")
-			fmt.Printf("      Name:    %s\n", tool.Name)
-			fmt.Printf("      Version: %s\n", tool.Version)
-			fmt.Printf("      Vendor:  %s\n", tool.Vendor)
+		switch tools := entry.(type) {
+		case []cydx.Tool:
+			for _, tool := range tools {
+				fmt.Println("  - Tool:")
+				fmt.Printf("      Name:    %s\n", tool.Name)
+				fmt.Printf("      Version: %s\n", tool.Version)
+				fmt.Printf("      Vendor:  %s\n", tool.Vendor)
+				fmt.Println()
+			}
+		case []cydx.Component:
+			for _, tool := range tools {
+				fmt.Println("  - Tool (as Component):")
+				fmt.Printf("      Name:    %s\n", tool.Name)
+				fmt.Printf("      Version: %s\n", tool.Version)
+				fmt.Printf("      Type:    %s\n", tool.Type)
+				fmt.Println()
+			}
+		default:
+			fmt.Printf("  - Unknown tool entry: %v\n", entry)
 		}
 	}
 }
@@ -95,12 +108,14 @@ func RenderSummaryLifecycle(selected []interface{}) {
 func RenderSummaryRepository(selected []interface{}) {
 	fmt.Println("📋 Summary of removed repository (VCS) entries:")
 	for _, entry := range selected {
-		if ref, ok := entry.(cydx.ExternalReference); ok {
-			fmt.Println("  - Repository:")
-			fmt.Printf("      Type:    %s\n", ref.Type)
-			fmt.Printf("      URL:     %s\n", ref.URL)
-			if ref.Comment != "" {
-				fmt.Printf("      Comment: %s\n", ref.Comment)
+		if extRefs, ok := entry.([]cydx.ExternalReference); ok {
+			for _, ref := range extRefs {
+				fmt.Println("  - Repository:")
+				fmt.Printf("      Type:    %s\n", ref.Type)
+				fmt.Printf("      URL:     %s\n", ref.URL)
+				if ref.Comment != "" {
+					fmt.Printf("      Comment: %s\n", ref.Comment)
+				}
 			}
 		}
 	}
@@ -108,9 +123,7 @@ func RenderSummaryRepository(selected []interface{}) {
 
 func RenderSummaryTimestamp(selected []interface{}) {
 	fmt.Println("📋 Summary of removed timestamp:")
-	for _, entry := range selected {
-		if ts, ok := entry.(time.Time); ok {
-			fmt.Printf("  - Timestamp: %s\n", ts.Format(time.RFC3339))
-		}
+	if timestamp, ok := selected[0].(string); ok {
+		fmt.Printf("  - Timestamp: %s\n", timestamp)
 	}
 }

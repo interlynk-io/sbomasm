@@ -35,9 +35,6 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 	}
 
 	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
-	fmt.Println("Spec Type:", spec)
-	fmt.Println("Scope:", scope)
-	fmt.Println("Field:", field)
 
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
 	fmt.Println("Handler Key:", key)
@@ -45,7 +42,6 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 	if !ok {
 		return fmt.Errorf("no handler registered for key: %s", key)
 	}
-	fmt.Println("Using handler:", handler)
 
 	// Select
 	selected, err := handler.Select(params)

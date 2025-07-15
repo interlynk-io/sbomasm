@@ -17,34 +17,59 @@
 package cdx
 
 import (
+	"fmt"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
 
 func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
-	if bom.Metadata.Supplier == nil {
+	if bom.Metadata == nil || bom.Metadata.Supplier == nil {
 		return nil
 	}
+
+	original := bom.Metadata.Supplier
+	removed := false
+
 	for _, tar := range targets {
-		supplier, ok := tar.(cydx.OrganizationalEntity)
-		if ok && matchSupplier(*bom.Metadata.Supplier, supplier) {
+		candidate, ok := tar.(cydx.OrganizationalEntity)
+		if !ok {
+			continue
+		}
+		if matchSupplier(*original, candidate) {
 			bom.Metadata.Supplier = nil
+			removed = true
 			break
 		}
+	}
+
+	if removed {
+		fmt.Println("🧹 Removed 1 supplier from metadata.")
 	}
 	return nil
 }
 
 func matchSupplier(a, b cydx.OrganizationalEntity) bool {
-	return a.Name == b.Name
+	if a.Name != "" && a.Name == b.Name {
+		return true
+	}
+
+	// Optional: Add more strict matching on contact or URL
+	if a.URL != nil && b.URL != nil && len(*a.URL) > 0 && len(*b.URL) > 0 && (*a.URL)[0] == (*b.URL)[0] {
+		return true
+	}
+
+	return false
 }
 
 func RemoveLicenseFromMetadata(bom *cydx.BOM, targets []interface{}) error {
-	if bom.Metadata.Licenses == nil {
+	if bom.Metadata == nil || bom.Metadata.Licenses == nil {
 		return nil
 	}
+
+	originalCount := len(*bom.Metadata.Licenses)
 	var filtered cydx.Licenses
+
 	for _, lic := range *bom.Metadata.Licenses {
 		match := false
 		for _, tar := range targets {
@@ -57,7 +82,18 @@ func RemoveLicenseFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 			filtered = append(filtered, lic)
 		}
 	}
-	bom.Metadata.Licenses = &filtered
+
+	removedCount := originalCount - len(filtered)
+	if removedCount > 0 {
+		fmt.Printf("🧹 Removed %d license(s) from metadata.\n", removedCount)
+	}
+
+	if len(filtered) == 0 {
+		bom.Metadata.Licenses = nil
+	} else {
+		bom.Metadata.Licenses = &filtered
+	}
+
 	return nil
 }
 
@@ -66,7 +102,23 @@ func matchLicense(tar interface{}, lic cydx.LicenseChoice) bool {
 	if !ok {
 		return false
 	}
-	return candidate.Expression == lic.Expression
+
+	// Expression match
+	if candidate.Expression != "" && candidate.Expression == lic.Expression {
+		return true
+	}
+
+	// License object match (ID or Name)
+	if candidate.License != nil && lic.License != nil {
+		if candidate.License.ID != "" && candidate.License.ID == lic.License.ID {
+			return true
+		}
+		if candidate.License.Name != "" && candidate.License.Name == lic.License.Name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func RemoveAuthorFromMetadata(bom *cydx.BOM, targets []interface{}) error {
@@ -75,28 +127,36 @@ func RemoveAuthorFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	var filtered []cydx.OrganizationalContact
-	for _, author := range *bom.Metadata.Authors {
-		match := false
-		for _, tar := range targets {
-			if matchAuthor(tar, author) {
-				match = true
-				break
-			}
-		}
-		if !match {
+	original := *bom.Metadata.Authors
+
+	for _, author := range original {
+		if !isAuthorInTargets(author, targets) {
 			filtered = append(filtered, author)
 		}
 	}
-	bom.Metadata.Authors = &filtered
+
+	// Optional: log change
+	removedCount := len(original) - len(filtered)
+	fmt.Printf("🧹 Removed %d author(s) from metadata.\n", removedCount)
+
+	if len(filtered) == 0 {
+		bom.Metadata.Authors = nil
+	} else {
+		bom.Metadata.Authors = &filtered
+	}
+
 	return nil
 }
 
-func matchAuthor(tar interface{}, author cydx.OrganizationalContact) bool {
-	candidate, ok := tar.(cydx.OrganizationalContact)
-	if !ok {
-		return false
+func isAuthorInTargets(author cydx.OrganizationalContact, targets []interface{}) bool {
+	for _, tar := range targets {
+		if candidate, ok := tar.(cydx.OrganizationalContact); ok {
+			if candidate.Name == author.Name && candidate.Email == author.Email {
+				return true
+			}
+		}
 	}
-	return candidate.Name == author.Name && candidate.Email == author.Email
+	return false
 }
 
 func RemoveLifecycleFromMetadata(bom *cydx.BOM, targets []interface{}) error {
@@ -105,25 +165,33 @@ func RemoveLifecycleFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	var filtered []cydx.Lifecycle
-	for _, lifecycle := range *bom.Metadata.Lifecycles {
-		match := false
-		for _, target := range targets {
-			if candidate, ok := target.(cydx.Lifecycle); ok && matchLifecycle(candidate, lifecycle) {
-				match = true
-				break
-			}
-		}
-		if !match {
+	original := *bom.Metadata.Lifecycles
+
+	for _, lifecycle := range original {
+		if !isLifecycleInTargets(lifecycle, targets) {
 			filtered = append(filtered, lifecycle)
 		}
 	}
 
-	bom.Metadata.Lifecycles = &filtered
+	removedCount := len(original) - len(filtered)
+	fmt.Printf("🧹 Removed %d lifecycle(s) from metadata.\n", removedCount)
+
+	if len(filtered) == 0 {
+		bom.Metadata.Lifecycles = nil
+	} else {
+		bom.Metadata.Lifecycles = &filtered
+	}
+
 	return nil
 }
 
-func matchLifecycle(a, b cydx.Lifecycle) bool {
-	return a.Phase == b.Phase && a.Description == b.Description
+func isLifecycleInTargets(candidate cydx.Lifecycle, targets []interface{}) bool {
+	for _, target := range targets {
+		if target == string(candidate.Phase) {
+			return true
+		}
+	}
+	return false
 }
 
 func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
@@ -131,8 +199,13 @@ func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 		return nil
 	}
 
-	var filtered []cydx.ExternalReference
+	var (
+		filtered []cydx.ExternalReference
+		removed  int
+	)
+
 	for _, ref := range *bom.ExternalReferences {
+		// Only consider VCS-type references
 		if strings.ToLower(string(ref.Type)) != "vcs" {
 			filtered = append(filtered, ref)
 			continue
@@ -140,17 +213,27 @@ func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 
 		match := false
 		for _, target := range targets {
-			if candidate, ok := target.(cydx.ExternalReference); ok && matchExternalReference(candidate, ref) {
+			candidate, ok := target.(cydx.ExternalReference)
+			if ok && matchExternalReference(candidate, ref) {
 				match = true
 				break
 			}
 		}
 
-		if !match {
-			filtered = append(filtered, ref)
+		if match {
+			removed++
+			continue // skip adding this ref
 		}
+		filtered = append(filtered, ref)
 	}
-	bom.ExternalReferences = &filtered
+
+	if len(filtered) == 0 {
+		bom.ExternalReferences = nil
+	} else {
+		bom.ExternalReferences = &filtered
+	}
+
+	fmt.Printf("🧹 Removed %d repository (VCS) reference(s) from metadata.\n", removed)
 	return nil
 }
 
@@ -171,41 +254,51 @@ func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 		return nil
 	}
 
-	// Handle v1.5+ tools (Components)
+	removedCount := 0
+
+	matchToolByNameAndVersion := func(aName, aVersion, bName, bVersion string) bool {
+		return aName == bName && aVersion == bVersion
+	}
+
 	if bom.SpecVersion > cydx.SpecVersion1_4 {
+		// v1.5+ tools as components
 		if bom.Metadata.Tools.Components != nil {
 			var filtered []cydx.Component
 			for _, tool := range *bom.Metadata.Tools.Components {
 				match := false
 				for _, tar := range targets {
 					if candidate, ok := tar.(cydx.Component); ok {
-						if tool.Name == candidate.Name && tool.Version == candidate.Version {
+						if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
 							match = true
 							break
 						}
 					}
 				}
-				if !match {
+				if match {
+					removedCount++
+				} else {
 					filtered = append(filtered, tool)
 				}
 			}
 			bom.Metadata.Tools.Components = &filtered
 		}
 	} else {
-		// Handle <= v1.4 tools (Tool struct)
+		// v1.4 and earlier: tools are of type Tool
 		if bom.Metadata.Tools.Tools != nil {
 			var filtered []cydx.Tool
 			for _, tool := range *bom.Metadata.Tools.Tools {
 				match := false
 				for _, tar := range targets {
 					if candidate, ok := tar.(cydx.Tool); ok {
-						if tool.Name == candidate.Name && tool.Version == candidate.Version {
+						if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
 							match = true
 							break
 						}
 					}
 				}
-				if !match {
+				if match {
+					removedCount++
+				} else {
 					filtered = append(filtered, tool)
 				}
 			}
@@ -213,5 +306,12 @@ func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 		}
 	}
 
+	// Cleanup: If both Tools and Components are empty or nil, remove the Tools block entirely
+	if (bom.Metadata.Tools.Tools == nil || len(*bom.Metadata.Tools.Tools) == 0) &&
+		(bom.Metadata.Tools.Components == nil || len(*bom.Metadata.Tools.Components) == 0) {
+		bom.Metadata.Tools = nil
+	}
+
+	fmt.Printf("🧹 Removed %d tool(s) from metadata.\n", removedCount)
 	return nil
 }

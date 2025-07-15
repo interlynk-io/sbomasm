@@ -77,5 +77,26 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return err
 	}
 
+	// 🧾 Step: Output the modified SBOM
+	if params.OutputFile != "" {
+		fmt.Println("Writing updated SBOM to file:", params.OutputFile)
+		// Write to file
+		f, err := os.Create(params.OutputFile)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %w", err)
+		}
+		defer f.Close()
+
+		if err := sbom.WriteSBOM(f, sbomDoc); err != nil {
+			return fmt.Errorf("failed to write SBOM to file: %w", err)
+		}
+		fmt.Printf("✅ Updated SBOM written to file: %s\n", params.OutputFile)
+	} else {
+		// Write to stdout
+		if err := sbom.WriteSBOM(os.Stdout, sbomDoc); err != nil {
+			return fmt.Errorf("failed to write SBOM to stdout: %w", err)
+		}
+	}
+
 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
 }

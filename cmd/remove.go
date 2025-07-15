@@ -136,6 +136,7 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	all, _ := cmd.Flags().GetBool("all")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	summary, _ := cmd.Flags().GetBool("summary")
+	outputFile, _ := cmd.Flags().GetString("output")
 
 	// Extract Component Removal Parameters
 	name, _ := cmd.Flags().GetString("name")
@@ -166,8 +167,9 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 		IsKeyPresent:         isKeyPresent,
 		IsValuePresent:       isValuePresent,
 		IsKeyAndValuePresent: isKeyAndValuePresent,
-		DryRun:               dryRun,  // Default to false, can be set via global flag
-		Summary:              summary, // Default to false, can be set via global flag
+		DryRun:               dryRun,
+		Summary:              summary,
+		OutputFile:           outputFile,
 	}
 
 	switch {

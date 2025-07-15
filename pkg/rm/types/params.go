@@ -49,4 +49,5 @@ type RmParams struct {
 	IsKeyAndValuePresent bool
 	DryRun               bool
 	Summary              bool
+	OutputFile           string
 }

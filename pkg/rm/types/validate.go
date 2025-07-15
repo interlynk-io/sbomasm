@@ -27,6 +27,7 @@ var ValidFields = map[string][]string{
 		"lifecycle",
 		"description",
 		"license",
+		"repository",
 	},
 	"component": {
 		"author",
