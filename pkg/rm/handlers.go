@@ -19,12 +19,13 @@ package rm
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/handler/cdx"
-	"github.com/spdx/tools-golang/spdx/common"
+	"github.com/interlynk-io/sbomasm/pkg/rm/handler/spdx"
+	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
 var handlerRegistry = map[string]FieldHandler{}
 
-func RegisterHandlers(bom *cydx.BOM, spdxDoc common.AnyDocument) {
+func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	// CDX Document-level handlers
 	handlerRegistry["cdx:document:author"] = &cdx.CdxDocAuthorHandler{Bom: bom}
 	handlerRegistry["cdx:document:supplier"] = &cdx.CdxDocSupplierHandler{Bom: bom}
@@ -34,10 +35,14 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc common.AnyDocument) {
 	handlerRegistry["cdx:document:license"] = &cdx.CdxDocLicenseHandler{Bom: bom}
 	handlerRegistry["cdx:document:lifecycle"] = &cdx.CdxDocLifecycleHandler{Bom: bom}
 
-	// // SPDX Document-level handlers
-	// handlerRegistry["spdx:document:author"] = &spdx.SpdxDocAuthorHandler{spdxDoc}
-	// handlerRegistry["spdx:document:creator"] = &spdx.SpdxDocCreatorHandler{spdxDoc}
-	// handlerRegistry["spdx:document:license"] = &spdx.SpdxDocLicenseHandler{spdxDoc}
+	// SPDX Document-level handlers
+	handlerRegistry["spdx:document:author"] = &spdx.SpdxDocAuthorHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:supplier"] = &spdx.SpdxDocSupplierHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:tool"] = &spdx.SpdxDocToolHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:timestamp"] = &spdx.SpdxDocTimestampHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:repository"] = &spdx.SpdxDocRepoHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:license"] = &spdx.SpdxDocLicenseHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:lifecycle"] = &spdx.SpdxDocLifecycleHandler{Doc: spdxDoc}
 
 	// Later: Component-scope or Dependency-scope handlers
 }

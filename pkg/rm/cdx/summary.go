@@ -22,7 +22,7 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
 
-func RenderSummaryAuthor(target []interface{}) {
+func RenderSummaryAuthorFromMetadata(target []interface{}) {
 	fmt.Println("📋 Summary of removed author entries:")
 	for _, entry := range target {
 		if author, ok := entry.(cydx.OrganizationalContact); ok {
@@ -34,7 +34,7 @@ func RenderSummaryAuthor(target []interface{}) {
 	}
 }
 
-func RenderSummarySupplier(target []interface{}) {
+func RenderSummarySupplierFromMetadata(target []interface{}) {
 	fmt.Println("📋 Summary of removed supplier entries:")
 	for _, entry := range target {
 		if supplier, ok := entry.(cydx.OrganizationalEntity); ok {
@@ -51,7 +51,7 @@ func RenderSummarySupplier(target []interface{}) {
 	}
 }
 
-func RenderSummaryTool(target []interface{}) {
+func RenderSummaryToolFromMetadata(target []interface{}) {
 	fmt.Println("📋 Summary of removed tool entries:")
 	for _, entry := range target {
 		switch tools := entry.(type) {
@@ -77,7 +77,7 @@ func RenderSummaryTool(target []interface{}) {
 	}
 }
 
-func RenderSummaryLicense(target []interface{}) {
+func RenderSummaryLicenseFromMetadata(target []interface{}) {
 	fmt.Println("📋 Summary of removed license entries:")
 	for _, entry := range target {
 		if lic, ok := entry.(cydx.LicenseChoice); ok {
@@ -92,7 +92,7 @@ func RenderSummaryLicense(target []interface{}) {
 	}
 }
 
-func RenderSummaryLifecycle(selected []interface{}) {
+func RenderSummaryLifecycleFromMetadata(selected []interface{}) {
 	fmt.Println("📋 Summary of removed lifecycle entries:")
 	for _, entry := range selected {
 		if lc, ok := entry.(cydx.Lifecycle); ok {
@@ -105,7 +105,7 @@ func RenderSummaryLifecycle(selected []interface{}) {
 	}
 }
 
-func RenderSummaryRepository(selected []interface{}) {
+func RenderSummaryRepositoryFromMetadata(selected []interface{}) {
 	fmt.Println("📋 Summary of removed repository (VCS) entries:")
 	for _, entry := range selected {
 		if extRefs, ok := entry.([]cydx.ExternalReference); ok {
@@ -121,7 +121,7 @@ func RenderSummaryRepository(selected []interface{}) {
 	}
 }
 
-func RenderSummaryTimestamp(selected []interface{}) {
+func RenderSummaryTimestampFromMetadata(selected []interface{}) {
 	fmt.Println("📋 Summary of removed timestamp:")
 	if timestamp, ok := selected[0].(string); ok {
 		fmt.Printf("  - Timestamp: %s\n", timestamp)

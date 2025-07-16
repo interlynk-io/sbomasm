@@ -39,5 +39,5 @@ func (h *CdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmPa
 }
 
 func (h *CdxDocSupplierHandler) Summary(selected []interface{}) {
-	cdx.RenderSummarySupplier(selected)
+	cdx.RenderSummarySupplierFromMetadata(selected)
 }

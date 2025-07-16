@@ -21,12 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
-	"github.com/spdx/tools-golang/spdx/common"
+	"github.com/spdx/tools-golang/spdx"
 )
 
 func Engine(ctx context.Context, args []string, params *types.RmParams) error {
@@ -67,7 +68,12 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	case sbom.SBOMSpecCDX:
 		RegisterHandlers(sbomDoc.Raw().(*cydx.BOM), nil)
 	case sbom.SBOMSpecSPDX:
-		RegisterHandlers(nil, sbomDoc.Raw().(common.AnyDocument))
+		doc, ok := sbomDoc.Raw().(*spdx.Document)
+		if !ok {
+			// handle error, maybe return or panic, depending on your use case
+			log.Println("Could not assert SPDX document")
+		}
+		RegisterHandlers(nil, doc)
 	default:
 		return fmt.Errorf("unsupported spec: %s", spec)
 	}

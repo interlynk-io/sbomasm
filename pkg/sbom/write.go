@@ -21,7 +21,8 @@ import (
 	"io"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/spdx/tools-golang/spdx/common"
+	spdxjson "github.com/spdx/tools-golang/json"
+	"github.com/spdx/tools-golang/spdx"
 )
 
 func WriteSBOM(w io.Writer, doc SBOMDocument) error {
@@ -31,12 +32,9 @@ func WriteSBOM(w io.Writer, doc SBOMDocument) error {
 		encoder.SetPretty(true)
 		return encoder.Encode(d)
 
-	case common.AnyDocument:
-		// SPDX encoding logic
-		// Use github.com/spdx/tools-golang/json
-		// or custom marshaling
+	case *spdx.Document:
+		return spdxjson.Write(d, w)
 	default:
 		return fmt.Errorf("unsupported SBOM type for writing")
 	}
-	return fmt.Errorf("unsupported SBOM type for writing")
 }

@@ -39,5 +39,5 @@ func (h *CdxDocRepoHandler) Remove(targets []interface{}, params *types.RmParams
 }
 
 func (h *CdxDocRepoHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryRepository(selected)
+	cdx.RenderSummaryRepositoryFromMetadata(selected)
 }

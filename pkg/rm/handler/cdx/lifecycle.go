@@ -39,5 +39,5 @@ func (h *CdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmP
 }
 
 func (h *CdxDocLifecycleHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryLifecycle(selected)
+	cdx.RenderSummaryLifecycleFromMetadata(selected)
 }

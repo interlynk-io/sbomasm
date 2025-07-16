@@ -39,5 +39,5 @@ func (h *CdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmPara
 }
 
 func (h *CdxDocAuthorHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryAuthor(selected)
+	cdx.RenderSummaryAuthorFromMetadata(selected)
 }

@@ -39,5 +39,5 @@ func (h *CdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmP
 }
 
 func (h *CdxDocTimestampHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryTimestamp(selected)
+	cdx.RenderSummaryTimestampFromMetadata(selected)
 }
