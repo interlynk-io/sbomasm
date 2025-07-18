@@ -99,6 +99,7 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 	if err != nil {
 		return fmt.Errorf("error selecting dependencies: %w", err)
 	}
+	fmt.Println("Selected dependencies:", selectedDeps)
 
 	// Step 3: Remove components
 	if err := c.removeComponents(selectedComponents); err != nil {

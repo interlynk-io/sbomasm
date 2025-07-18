@@ -64,17 +64,16 @@ func (c *ComponentsOperationEngine) selectComponents(ctx context.Context, params
 	return selectedComponents, nil
 }
 
-func (c *ComponentsOperationEngine) findDependenciesForComponents(components []interface{}) ([]string, error) {
-	// TODO: Implement dependency finding logic
-	return []string{}, nil
+func (c *ComponentsOperationEngine) findDependenciesForComponents(components []interface{}) ([]interface{}, error) {
+	return cmps.FindAllDependenciesForComponents(c.doc, components), nil
 }
 
 func (c *ComponentsOperationEngine) removeComponents(components []interface{}) error {
 	// TODO: Implement component removal logic
-	return nil
+	return cmps.RemoveComponents(c.doc, components)
 }
 
-func (c *ComponentsOperationEngine) removeDependencies(dependencies []string) error {
+func (c *ComponentsOperationEngine) removeDependencies(dependencies []interface{}) error {
 	// TODO: Implement dependency removal logic
-	return nil
+	return cmps.RemoveDependencies(c.doc, dependencies)
 }

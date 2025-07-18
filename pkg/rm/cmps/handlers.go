@@ -25,7 +25,126 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
+	v2_3 "github.com/spdx/tools-golang/spdx/v2/v2_3"
 )
+
+func RemoveDependencies(sbomDoc sbom.SBOMDocument, selectedDependencies []interface{}) error {
+	toRemove := make(map[string]bool)
+	for _, dep := range selectedDependencies {
+		if depRef, ok := dep.(string); ok {
+			toRemove[depRef] = true
+		}
+	}
+
+	switch doc := sbomDoc.Raw().(type) {
+	case *spdx.Document:
+		var filtered []*v2_3.Relationship
+		for _, rel := range doc.Relationships {
+			if !toRemove[string(rel.RefB.ElementRefID)] {
+				filtered = append(filtered, rel)
+			}
+		}
+		doc.Relationships = filtered
+
+	case *cydx.BOM:
+		if doc.Dependencies == nil {
+			return nil
+		}
+		var filtered []cydx.Dependency
+		for _, dep := range *doc.Dependencies {
+			if !toRemove[dep.Ref] {
+				filtered = append(filtered, dep)
+			}
+		}
+		doc.Dependencies = &filtered
+
+	default:
+		return fmt.Errorf("unsupported SBOM format for dependency removal")
+	}
+
+	return nil
+}
+
+func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{}) error {
+	switch doc := sbomDoc.Raw().(type) {
+	case *spdx.Document:
+		var filtered []*v2_3.Package
+		toRemove := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if pkg, ok := comp.(spdx.Package); ok {
+				toRemove[string(pkg.PackageSPDXIdentifier)] = true
+			}
+		}
+		for _, p := range doc.Packages {
+			if !toRemove[string(p.PackageSPDXIdentifier)] {
+				filtered = append(filtered, p)
+			}
+		}
+
+		doc.Packages = filtered
+
+	case *cydx.BOM:
+		var filtered []cydx.Component
+		toRemove := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if cdxComp, ok := comp.(cydx.Component); ok {
+				toRemove[cdxComp.BOMRef] = true
+			}
+		}
+		for _, c := range *doc.Components {
+			if !toRemove[c.BOMRef] {
+				filtered = append(filtered, c)
+			}
+		}
+		doc.Components = &filtered
+
+	default:
+		return fmt.Errorf("unsupported SBOM format for component removal")
+	}
+
+	return nil
+}
+
+func FindAllDependenciesForComponents(doc sbom.SBOMDocument, selectedComponents []interface{}) []interface{} {
+	var dependencies []interface{}
+
+	switch sbomDoc := doc.Raw().(type) {
+	case *spdx.Document:
+		pkgIDs := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if pkg, ok := comp.(spdx.Package); ok {
+				pkgIDs[string(pkg.PackageSPDXIdentifier)] = true
+			}
+		}
+
+		for _, rel := range sbomDoc.Relationships {
+			if pkgIDs[string(rel.RefA.ElementRefID)] && rel.Relationship == "DEPENDS_ON" {
+				dependencies = append(dependencies, string(rel.RefB.ElementRefID))
+			}
+		}
+	case *cydx.BOM:
+		selectedRefs := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if cdxComp, ok := comp.(cydx.Component); ok {
+				selectedRefs[cdxComp.BOMRef] = true
+			}
+		}
+
+		if sbomDoc.Dependencies != nil {
+			for _, dep := range *sbomDoc.Dependencies {
+				if selectedRefs[dep.Ref] {
+					for _, d := range *dep.Dependencies {
+						dependencies = append(dependencies, d)
+					}
+				}
+			}
+		}
+	default:
+		fmt.Println("Unsupported SBOM format")
+	}
+
+	return dependencies
+}
 
 func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) ([]interface{}, error) {
 	var selectedComponents []interface{}
