@@ -18,26 +18,26 @@ package cdx
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxDocToolHandler struct {
+type CdxDocTimestampHandler struct {
 	Bom *cydx.BOM
 }
 
-func (h *CdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectToolFromMetadata(h.Bom)
+func (h *CdxDocTimestampHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectTimestampFromMetadata(h.Bom)
 }
 
-func (h *CdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return cdx.FilterToolFromMetadata(selected, params)
+func (h *CdxDocTimestampHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterTimestampFromMetadata(selected, params)
 }
 
-func (h *CdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveToolFromMetadata(h.Bom, targets)
+func (h *CdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveTimestampFromMetadata(h.Bom, targets)
 }
 
-func (h *CdxDocToolHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryToolFromMetadata(selected)
+func (h *CdxDocTimestampHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryTimestampFromMetadata(selected)
 }

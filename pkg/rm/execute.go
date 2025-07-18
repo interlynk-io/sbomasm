@@ -19,6 +19,7 @@ package rm
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
@@ -26,6 +27,10 @@ import (
 )
 
 type FieldOperationEngine struct {
+	doc sbom.SBOMDocument
+}
+
+type ComponentsOperationEngine struct {
 	doc sbom.SBOMDocument
 }
 
@@ -80,4 +85,31 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 
 	// Remove
 	return handler.Remove(targets, params)
+}
+
+func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.RmParams) error {
+	// Step 1: Select components based on filter criteria
+	selectedComponents, err := c.selectComponents(ctx, params)
+	if err != nil {
+		return fmt.Errorf("error selecting components: %w", err)
+	}
+
+	// Step 2: Find corresponding dependencies
+	selectedDeps, err := c.findDependenciesForComponents(selectedComponents)
+	if err != nil {
+		return fmt.Errorf("error selecting dependencies: %w", err)
+	}
+
+	// Step 3: Remove components
+	if err := c.removeComponents(selectedComponents); err != nil {
+		return fmt.Errorf("error removing components: %w", err)
+	}
+
+	// Step 4: Remove dependencies
+	if err := c.removeDependencies(selectedDeps); err != nil {
+		return fmt.Errorf("error removing dependencies: %w", err)
+	}
+
+	log.Printf("Removed %d components and %d dependencies", len(selectedComponents), len(selectedDeps))
+	return nil
 }

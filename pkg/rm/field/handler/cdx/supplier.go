@@ -18,26 +18,26 @@ package cdx
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxDocAuthorHandler struct {
+type CdxDocSupplierHandler struct {
 	Bom *cydx.BOM
 }
 
-func (h *CdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectAuthorFromMetadata(h.Bom)
+func (h *CdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectSupplierFromMetadata(h.Bom)
 }
 
-func (h *CdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return cdx.FilterAuthorFromMetadata(selected, params)
+func (h *CdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterSupplierFromMetadata(selected, params)
 }
 
-func (h *CdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveAuthorFromMetadata(h.Bom, targets)
+func (h *CdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveSupplierFromMetadata(h.Bom, targets)
 }
 
-func (h *CdxDocAuthorHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryAuthorFromMetadata(selected)
+func (h *CdxDocSupplierHandler) Summary(selected []interface{}) {
+	cdx.RenderSummarySupplierFromMetadata(selected)
 }

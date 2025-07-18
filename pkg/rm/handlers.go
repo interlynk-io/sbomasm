@@ -17,9 +17,14 @@
 package rm
 
 import (
+	"context"
+	"fmt"
+
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/handler/cdx"
-	"github.com/interlynk-io/sbomasm/pkg/rm/handler/spdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/cmps"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
@@ -45,4 +50,31 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	handlerRegistry["spdx:document:lifecycle"] = &spdx.SpdxDocLifecycleHandler{Doc: spdxDoc}
 
 	// Later: Component-scope or Dependency-scope handlers
+}
+
+func (c *ComponentsOperationEngine) selectComponents(ctx context.Context, params *types.RmParams) ([]interface{}, error) {
+	// TODO: Implement component selection logic
+	selectedComponents, err := cmps.SelectComponents(ctx, c.doc, params)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Selected components:", selectedComponents)
+
+	return selectedComponents, nil
+}
+
+func (c *ComponentsOperationEngine) findDependenciesForComponents(components []interface{}) ([]string, error) {
+	// TODO: Implement dependency finding logic
+	return []string{}, nil
+}
+
+func (c *ComponentsOperationEngine) removeComponents(components []interface{}) error {
+	// TODO: Implement component removal logic
+	return nil
+}
+
+func (c *ComponentsOperationEngine) removeDependencies(dependencies []string) error {
+	// TODO: Implement dependency removal logic
+	return nil
 }

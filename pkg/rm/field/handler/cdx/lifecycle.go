@@ -18,7 +18,7 @@ package cdx
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/rm/cdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 

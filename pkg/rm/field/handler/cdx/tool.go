@@ -14,30 +14,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package spdx
+package cdx
 
 import (
-	"github.com/interlynk-io/sbomasm/pkg/rm/spdx"
+	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
-	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocToolHandler struct {
-	Doc *spdxdoc.Document
+type CdxDocToolHandler struct {
+	Bom *cydx.BOM
 }
 
-func (h *SpdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectToolFromMetadata(h.Doc)
+func (h *CdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectToolFromMetadata(h.Bom)
 }
 
-func (h *SpdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterToolFromMetadata(selected, params)
+func (h *CdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterToolFromMetadata(selected, params)
 }
 
-func (h *SpdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveToolFromMetadata(h.Doc, targets)
+func (h *CdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveToolFromMetadata(h.Bom, targets)
 }
 
-func (h *SpdxDocToolHandler) Summary(selected []interface{}) {
-	spdx.RenderSummaryToolFromMetadata(selected)
+func (h *CdxDocToolHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryToolFromMetadata(selected)
 }

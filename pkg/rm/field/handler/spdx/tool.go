@@ -17,27 +17,27 @@
 package spdx
 
 import (
-	"github.com/interlynk-io/sbomasm/pkg/rm/spdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocSupplierHandler struct {
+type SpdxDocToolHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectSupplierFromMetadata(h.Doc)
+func (h *SpdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectToolFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterSupplierFromMetadata(selected, params)
+func (h *SpdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterToolFromMetadata(selected, params)
 }
 
-func (h *SpdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveSupplierFromMetadata(h.Doc, targets)
+func (h *SpdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveToolFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocSupplierHandler) Summary(selected []interface{}) {
-	spdx.RenderSummarySupplierFromMetadata(selected)
+func (h *SpdxDocToolHandler) Summary(selected []interface{}) {
+	spdx.RenderSummaryToolFromMetadata(selected)
 }

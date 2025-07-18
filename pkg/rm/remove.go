@@ -38,8 +38,7 @@ func Remove(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmPara
 		return fieldRemoval(ctx, sbomDoc, params)
 
 	case types.ComponentRemoval:
-		// TODO: Implement
-		return fmt.Errorf("component removal not implemented yet")
+		return componentsRemoval(ctx, sbomDoc, params)
 	case types.DependencyRemoval:
 		// TODO: Implement
 		return fmt.Errorf("dependency removal not implemented yet")
@@ -53,5 +52,13 @@ func fieldRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.
 	fieldRemoval := &FieldOperationEngine{
 		doc: sbomDoc,
 	}
+
 	return fieldRemoval.Execute(ctx, params)
+}
+
+func componentsRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
+	componentsRemoval := &ComponentsOperationEngine{
+		doc: sbomDoc,
+	}
+	return componentsRemoval.Execute(ctx, params)
 }

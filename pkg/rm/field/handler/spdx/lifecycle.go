@@ -17,27 +17,27 @@
 package spdx
 
 import (
-	"github.com/interlynk-io/sbomasm/pkg/rm/spdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocAuthorHandler struct {
+type SpdxDocLifecycleHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectAuthorFromMetadata(h.Doc)
+func (h *SpdxDocLifecycleHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectLifecycleFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterAuthorFromMetadata(selected, params)
+func (h *SpdxDocLifecycleHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterLifecycleFromMetadata(selected, params)
 }
 
-func (h *SpdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveAuthorFromMetadata(h.Doc, targets)
+func (h *SpdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveLifecycleFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocAuthorHandler) Summary(selected []interface{}) {
-	spdx.RenderSummaryAuthor(selected)
+func (h *SpdxDocLifecycleHandler) Summary(selected []interface{}) {
+	spdx.RenderSummaryLifecycleFromMetadata(selected)
 }

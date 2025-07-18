@@ -100,7 +100,7 @@ func init() {
 	rmCmd.Flags().BoolP("all", "a", false, "Apply field removal to all matching items (e.g. all components)")
 
 	// Component Removal Flags
-	rmCmd.Flags().BoolP("component", "c", false, "Operate at component level (e.g., remove whole component or match by field)")
+	rmCmd.Flags().BoolP("components", "c", false, "Operate at component level (e.g., remove whole component or match by field)")
 	rmCmd.Flags().StringP("name", "n", "", "Component name for removal or matching")
 	rmCmd.Flags().String("version", "", "Component version for removal or matching")
 
@@ -145,9 +145,9 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	// Extract Dependency Removal Parameters
 	dependencyID, _ := cmd.Flags().GetString("id")
 
-	isComponent, _ := cmd.Flags().GetBool("component")
+	isComponentRemoval, _ := cmd.Flags().GetBool("components")
 
-	isDependency, _ := cmd.Flags().GetBool("dependency")
+	isDependencyRemoval, _ := cmd.Flags().GetBool("dependency")
 
 	isKeyPresent := key != ""
 	isValuePresent := value != ""
@@ -162,8 +162,8 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 		ComponentName:        name,
 		ComponentVersion:     version,
 		DependencyID:         dependencyID,
-		IsComponent:          isComponent,
-		IsDependency:         isDependency,
+		IsComponent:          isComponentRemoval,
+		IsDependency:         isDependencyRemoval,
 		IsKeyPresent:         isKeyPresent,
 		IsValuePresent:       isValuePresent,
 		IsKeyAndValuePresent: isKeyAndValuePresent,
@@ -173,11 +173,14 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	}
 
 	switch {
-	case field != "":
+	case field != "" && scope != "":
 		params.Kind = types.FieldRemoval
-	case isComponent:
+	case isComponentRemoval:
 		params.Kind = types.ComponentRemoval
-	case isDependency:
+		if params.ComponentName == "" && params.ComponentVersion == "" {
+			params.All = true // If no specific component filters, treat as all components
+		}
+	case isDependencyRemoval:
 		params.Kind = types.DependencyRemoval
 	}
 

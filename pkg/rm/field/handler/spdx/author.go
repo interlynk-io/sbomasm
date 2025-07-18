@@ -17,27 +17,27 @@
 package spdx
 
 import (
-	"github.com/interlynk-io/sbomasm/pkg/rm/spdx"
+	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocLicenseHandler struct {
+type SpdxDocAuthorHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocLicenseHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectLicenseFromMetadata(h.Doc)
+func (h *SpdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectAuthorFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterLicenseFromMetadata(selected, params)
+func (h *SpdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterAuthorFromMetadata(selected, params)
 }
 
-func (h *SpdxDocLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveLicenseFromMetadata(h.Doc, targets)
+func (h *SpdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveAuthorFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocLicenseHandler) Summary(selected []interface{}) {
-	spdx.RenderSummaryLicense(selected)
+func (h *SpdxDocAuthorHandler) Summary(selected []interface{}) {
+	spdx.RenderSummaryAuthorFromMetadata(selected)
 }

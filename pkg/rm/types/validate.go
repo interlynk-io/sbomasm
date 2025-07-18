@@ -113,15 +113,15 @@ func (p *RmParams) Validate() error {
 			return nil
 		}
 
-		// deal with bulk component
-		if p.All {
-			if p.Key != "" || p.Value != "" {
-				return nil
-			}
-			return fmt.Errorf("bulk component removal with --all requires at least --key or --value for matching")
-		}
+		// // deal with bulk component
+		// if p.All {
+		// 	if p.Key != "" || p.Value != "" {
+		// 		return nil
+		// 	}
+		// 	return fmt.Errorf("bulk component removal with --all requires at least --key or --value for matching")
+		// }
 
-		return fmt.Errorf("invalid component removal: either use --name and --version, or --key/--value with --all")
+		return nil
 	}
 
 	// CASE 3: Dependency Removal
