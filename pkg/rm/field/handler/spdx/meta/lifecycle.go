@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package spdx
+package meta
 
 import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
@@ -22,22 +22,22 @@ import (
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocSupplierHandler struct {
+type SpdxDocLifecycleHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectSupplierFromMetadata(h.Doc)
+func (h *SpdxDocLifecycleHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectLifecycleFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterSupplierFromMetadata(selected, params)
+func (h *SpdxDocLifecycleHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterLifecycleFromMetadata(selected, params)
 }
 
-func (h *SpdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveSupplierFromMetadata(h.Doc, targets)
+func (h *SpdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveLifecycleFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocSupplierHandler) Summary(selected []interface{}) {
-	spdx.RenderSummarySupplierFromMetadata(selected)
+func (h *SpdxDocLifecycleHandler) Summary(selected []interface{}) {
+	spdx.RenderSummaryLifecycleFromMetadata(selected)
 }

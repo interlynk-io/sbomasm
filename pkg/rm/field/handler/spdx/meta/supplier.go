@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package spdx
+package meta
 
 import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
@@ -22,22 +22,22 @@ import (
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocTimestampHandler struct {
+type SpdxDocSupplierHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocTimestampHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectTimestampFromMetadata(h.Doc)
+func (h *SpdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectSupplierFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocTimestampHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterTimestampFromMetadata(selected, params)
+func (h *SpdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterSupplierFromMetadata(selected, params)
 }
 
-func (h *SpdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveTimestampFromMetadata(h.Doc, targets)
+func (h *SpdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveSupplierFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocTimestampHandler) Summary(selected []interface{}) {
-	spdx.RenderSummaryTimestampFromMetadata(selected)
+func (h *SpdxDocSupplierHandler) Summary(selected []interface{}) {
+	spdx.RenderSummarySupplierFromMetadata(selected)
 }

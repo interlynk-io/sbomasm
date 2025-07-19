@@ -22,8 +22,9 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/cmps"
-	"github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx"
-	"github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx"
+	cdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/meta"
+	spdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx/meta"
+
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
@@ -32,22 +33,22 @@ var handlerRegistry = map[string]FieldHandler{}
 
 func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	// CDX Document-level handlers
-	handlerRegistry["cdx:document:author"] = &cdx.CdxDocAuthorHandler{Bom: bom}
-	handlerRegistry["cdx:document:supplier"] = &cdx.CdxDocSupplierHandler{Bom: bom}
-	handlerRegistry["cdx:document:tool"] = &cdx.CdxDocToolHandler{Bom: bom}
-	handlerRegistry["cdx:document:timestamp"] = &cdx.CdxDocTimestampHandler{Bom: bom}
-	handlerRegistry["cdx:document:repository"] = &cdx.CdxDocRepoHandler{Bom: bom}
-	handlerRegistry["cdx:document:license"] = &cdx.CdxDocLicenseHandler{Bom: bom}
-	handlerRegistry["cdx:document:lifecycle"] = &cdx.CdxDocLifecycleHandler{Bom: bom}
+	handlerRegistry["cdx:document:author"] = &cdxmeta.CdxDocAuthorHandler{Bom: bom}
+	handlerRegistry["cdx:document:supplier"] = &cdxmeta.CdxDocSupplierHandler{Bom: bom}
+	handlerRegistry["cdx:document:tool"] = &cdxmeta.CdxDocToolHandler{Bom: bom}
+	handlerRegistry["cdx:document:timestamp"] = &cdxmeta.CdxDocTimestampHandler{Bom: bom}
+	handlerRegistry["cdx:document:repository"] = &cdxmeta.CdxDocRepoHandler{Bom: bom}
+	handlerRegistry["cdx:document:license"] = &cdxmeta.CdxDocLicenseHandler{Bom: bom}
+	handlerRegistry["cdx:document:lifecycle"] = &cdxmeta.CdxDocLifecycleHandler{Bom: bom}
 
 	// SPDX Document-level handlers
-	handlerRegistry["spdx:document:author"] = &spdx.SpdxDocAuthorHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:supplier"] = &spdx.SpdxDocSupplierHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:tool"] = &spdx.SpdxDocToolHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:timestamp"] = &spdx.SpdxDocTimestampHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:repository"] = &spdx.SpdxDocRepoHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:license"] = &spdx.SpdxDocLicenseHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:document:lifecycle"] = &spdx.SpdxDocLifecycleHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:author"] = &spdxmeta.SpdxDocAuthorHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:supplier"] = &spdxmeta.SpdxDocSupplierHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:tool"] = &spdxmeta.SpdxDocToolHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:timestamp"] = &spdxmeta.SpdxDocTimestampHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:repository"] = &spdxmeta.SpdxDocRepoHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:license"] = &spdxmeta.SpdxDocLicenseHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:document:lifecycle"] = &spdxmeta.SpdxDocLifecycleHandler{Doc: spdxDoc}
 
 	// Later: Component-scope or Dependency-scope handlers
 }

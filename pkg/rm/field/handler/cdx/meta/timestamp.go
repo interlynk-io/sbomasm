@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cdx
+package meta
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -22,22 +22,22 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxDocRepoHandler struct {
+type CdxDocTimestampHandler struct {
 	Bom *cydx.BOM
 }
 
-func (h *CdxDocRepoHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectRepositoryFromMetadata(h.Bom)
+func (h *CdxDocTimestampHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectTimestampFromMetadata(h.Bom)
 }
 
-func (h *CdxDocRepoHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return cdx.FilterRepositoryFromMetadata(selected, params)
+func (h *CdxDocTimestampHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterTimestampFromMetadata(selected, params)
 }
 
-func (h *CdxDocRepoHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveRepositoryFromMetadata(h.Bom, targets)
+func (h *CdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveTimestampFromMetadata(h.Bom, targets)
 }
 
-func (h *CdxDocRepoHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryRepositoryFromMetadata(selected)
+func (h *CdxDocTimestampHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryTimestampFromMetadata(selected)
 }

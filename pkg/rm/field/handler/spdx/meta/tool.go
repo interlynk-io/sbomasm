@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package spdx
+package meta
 
 import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
@@ -22,22 +22,22 @@ import (
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
-type SpdxDocAuthorHandler struct {
+type SpdxDocToolHandler struct {
 	Doc *spdxdoc.Document
 }
 
-func (h *SpdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectAuthorFromMetadata(h.Doc)
+func (h *SpdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return spdx.SelectToolFromMetadata(h.Doc)
 }
 
-func (h *SpdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return spdx.FilterAuthorFromMetadata(selected, params)
+func (h *SpdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return spdx.FilterToolFromMetadata(selected, params)
 }
 
-func (h *SpdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveAuthorFromMetadata(h.Doc, targets)
+func (h *SpdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return spdx.RemoveToolFromMetadata(h.Doc, targets)
 }
 
-func (h *SpdxDocAuthorHandler) Summary(selected []interface{}) {
-	spdx.RenderSummaryAuthorFromMetadata(selected)
+func (h *SpdxDocToolHandler) Summary(selected []interface{}) {
+	spdx.RenderSummaryToolFromMetadata(selected)
 }

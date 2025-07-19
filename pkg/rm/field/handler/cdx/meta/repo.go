@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cdx
+package meta
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -22,22 +22,22 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxDocSupplierHandler struct {
+type CdxDocRepoHandler struct {
 	Bom *cydx.BOM
 }
 
-func (h *CdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectSupplierFromMetadata(h.Bom)
+func (h *CdxDocRepoHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectRepositoryFromMetadata(h.Bom)
 }
 
-func (h *CdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return cdx.FilterSupplierFromMetadata(selected, params)
+func (h *CdxDocRepoHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterRepositoryFromMetadata(selected, params)
 }
 
-func (h *CdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveSupplierFromMetadata(h.Bom, targets)
+func (h *CdxDocRepoHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveRepositoryFromMetadata(h.Bom, targets)
 }
 
-func (h *CdxDocSupplierHandler) Summary(selected []interface{}) {
-	cdx.RenderSummarySupplierFromMetadata(selected)
+func (h *CdxDocRepoHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryRepositoryFromMetadata(selected)
 }

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cdx
+package meta
 
 import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -22,22 +22,22 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxDocLifecycleHandler struct {
+type CdxDocLicenseHandler struct {
 	Bom *cydx.BOM
 }
 
-func (h *CdxDocLifecycleHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectLifecycleFromMetadata(h.Bom)
+func (h *CdxDocLicenseHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectLicenseFromMetadata(h.Bom)
 }
 
-func (h *CdxDocLifecycleHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	return cdx.FilterLifecycleFromMetadata(selected, params)
+func (h *CdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterLicenseFromMetadata(selected, params)
 }
 
-func (h *CdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveLifecycleFromMetadata(h.Bom, targets)
+func (h *CdxDocLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveLicenseFromMetadata(h.Bom, targets)
 }
 
-func (h *CdxDocLifecycleHandler) Summary(selected []interface{}) {
-	cdx.RenderSummaryLifecycleFromMetadata(selected)
+func (h *CdxDocLicenseHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryLicenseFromMetadata(selected)
 }
