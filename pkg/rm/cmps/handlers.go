@@ -96,6 +96,13 @@ func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{
 				filtered = append(filtered, c)
 			}
 		}
+
+		if doc.Metadata != nil && doc.Metadata.Component != nil {
+			metaRef := doc.Metadata.Component.BOMRef
+			if _, ok := toRemove[metaRef]; ok {
+				doc.Metadata.Component = nil
+			}
+		}
 		doc.Components = &filtered
 
 	default:
@@ -118,7 +125,19 @@ func FindAllDependenciesForComponents(doc sbom.SBOMDocument, selectedComponents 
 		}
 
 		for _, rel := range sbomDoc.Relationships {
-			if pkgIDs[string(rel.RefA.ElementRefID)] && rel.Relationship == "DEPENDS_ON" {
+			if pkgIDs[string(rel.RefA.ElementRefID)] && (rel.Relationship == "DEPENDS_ON" || rel.Relationship == "CONTAINS") {
+				fmt.Println("Found Dependency A:", rel.RefA.ElementRefID)
+				fmt.Println("Found Dependency B:", rel.RefB.ElementRefID)
+
+				dependencies = append(dependencies, string(rel.RefB.ElementRefID))
+
+			}
+
+			// remove describes relationships for primary components
+			if rel.Relationship == "DESCRIBES" && pkgIDs[string(rel.RefB.ElementRefID)] {
+				fmt.Println("Found Describes Relationship:", rel.RefB.ElementRefID)
+				fmt.Println("Dep A: ", rel.RefA.ElementRefID)
+				// We don't add these to dependencies, just skip them
 				dependencies = append(dependencies, string(rel.RefB.ElementRefID))
 			}
 		}
@@ -143,6 +162,10 @@ func FindAllDependenciesForComponents(doc sbom.SBOMDocument, selectedComponents 
 		fmt.Println("Unsupported SBOM format")
 	}
 
+	for _, dep := range dependencies {
+		fmt.Printf("- Found Dependency: %s\n", dep)
+	}
+
 	return dependencies
 }
 
@@ -162,6 +185,13 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 				selectedComponents = append(selectedComponents, component)
 			}
 		}
+
+		// Also check metadata.component
+		if doc.Metadata != nil && doc.Metadata.Component != nil {
+			if shouldSelectCDXComponent(doc.Metadata.Component, params) {
+				selectedComponents = append(selectedComponents, *doc.Metadata.Component)
+			}
+		}
 	default:
 		return nil, fmt.Errorf("unsupported SBOM format")
 	}
@@ -169,7 +199,17 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
 	fmt.Printf("Selected %d components based on criteria: %+v\n", len(selectedComponents), params)
-	fmt.Println("Selected components:", selectedComponents)
+	for _, comp := range selectedComponents {
+		switch c := comp.(type) {
+		case spdx.Package:
+			fmt.Printf("  - SPDX Package: %s %s\n", c.PackageName, c.PackageVersion)
+		case cydx.Component:
+			fmt.Printf("  - CycloneDX Component: %s %s\n", c.Name, c.Version)
+		default:
+			fmt.Printf("  - Unknown Component Type: %T\n", c)
+		}
+	}
+	// fmt.Println("Selected components:", selectedComponents)
 	return selectedComponents, nil
 }
 
