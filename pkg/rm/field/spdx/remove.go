@@ -19,6 +19,7 @@ package spdx
 import (
 	"fmt"
 
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -172,5 +173,137 @@ func RemoveTimestampFromMetadata(doc *spdx.Document, targets []interface{}) erro
 		}
 	}
 
+	return nil
+}
+
+func RemovePurlFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		var newRefs []*spdx.PackageExternalReference
+		for _, ref := range pkg.PackageExternalReferences {
+			if ref.RefType != "purl" {
+				newRefs = append(newRefs, ref)
+			}
+		}
+		pkg.PackageExternalReferences = newRefs
+	}
+	return nil
+}
+
+func RemoveCopyrightFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+		pkg.PackageCopyrightText = ""
+	}
+	return nil
+}
+
+func RemoveCpeFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		var newRefs []*spdx.PackageExternalReference
+		for _, ref := range pkg.PackageExternalReferences {
+			if ref.RefType != "cpe" {
+				newRefs = append(newRefs, ref)
+			}
+		}
+		pkg.PackageExternalReferences = newRefs
+	}
+	return nil
+}
+
+func RemoveDescriptionFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+		pkg.PackageDescription = ""
+	}
+	return nil
+}
+
+func RemoveHashFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		var newChecksums []spdx.Checksum
+		for _, checksum := range pkg.PackageChecksums {
+			if checksum.Value != params.Value {
+				newChecksums = append(newChecksums, checksum)
+			}
+		}
+		pkg.PackageChecksums = newChecksums
+	}
+	return nil
+}
+
+func RemoveLicenseFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageLicenseConcluded == params.Value {
+			pkg.PackageLicenseConcluded = ""
+			fmt.Println("🧹 Removed SPDX package license:", params.Value)
+		}
+	}
+	return nil
+}
+
+func RemoveRepoFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageDownloadLocation == params.Value {
+			pkg.PackageDownloadLocation = ""
+		}
+	}
+	return nil
+}
+
+func RemoveTypeFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PrimaryPackagePurpose == params.Value {
+			pkg.PrimaryPackagePurpose = ""
+			fmt.Println("🧹 Removed SPDX package type:", params.Value)
+		}
+
+	}
+	return nil
+}
+
+func RemoveSupplierFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+		pkg.PackageSupplier = nil
+	}
 	return nil
 }

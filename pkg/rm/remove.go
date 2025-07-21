@@ -49,11 +49,22 @@ func Remove(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmPara
 }
 
 func fieldRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
-	fieldRemoval := &FieldOperationEngine{
-		doc: sbomDoc,
-	}
+	// fieldRemoval := &FieldOperationEngine{
+	// 	doc: sbomDoc,
+	// }
 
-	return fieldRemoval.Execute(ctx, params)
+	// return fieldRemoval.Execute(ctx, params)
+
+	engine := &FieldOperationEngine{doc: sbomDoc}
+
+	if string(params.Scope) == string(DOCUMENT) {
+		return engine.ExecuteDocumentFieldRemoval(ctx, params)
+	} else if string(params.Scope) == string(COMPONENT) {
+		return engine.ExecuteComponentFieldRemoval(ctx, params)
+	} else if string(params.Scope) == string(DEPENDENCY) {
+		// return engine.ExecuteDependencyFieldRemoval(ctx, params)
+	}
+	return fmt.Errorf("invalid scope for field removal: %s", params.Scope)
 }
 
 func componentsRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {

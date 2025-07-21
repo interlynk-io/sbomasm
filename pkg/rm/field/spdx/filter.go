@@ -175,3 +175,276 @@ func FilterTimestampFromMetadata(allTimestamps []interface{}, params *types.RmPa
 	fmt.Println("Filtered SPDX timestamps:", filteredTimestamps)
 	return filteredTimestamps, nil
 }
+
+func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil // No filtering criteria, return all
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		for _, ref := range pkg.PackageExternalReferences {
+			if ref.RefType != "purl" {
+				continue
+			}
+
+			// Exact key + value match
+			if params.IsKeyAndValuePresent {
+				if ref.RefType == params.Key && ref.Locator == params.Value {
+					filtered = append(filtered, pkg)
+				}
+			} else if params.IsKeyPresent && ref.RefType == params.Key {
+				filtered = append(filtered, pkg)
+			} else if params.IsValuePresent && ref.Locator == params.Value {
+				filtered = append(filtered, pkg)
+			}
+		}
+	}
+
+	return filtered, nil
+}
+
+func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageCopyrightText == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && pkg.PackageCopyrightText == params.Key && pkg.PackageCopyrightText == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && pkg.PackageCopyrightText == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PackageCopyrightText == params.Value {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	fmt.Println("Filtered SPDX copyrights:", filtered)
+	return filtered, nil
+}
+
+func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		for _, ref := range pkg.PackageExternalReferences {
+			if ref.RefType != "cpe" {
+				continue
+			}
+
+			if params.IsKeyAndValuePresent && ref.RefType == params.Key && ref.Locator == params.Value {
+				filtered = append(filtered, pkg)
+			} else if params.IsKeyPresent && ref.RefType == params.Key {
+				filtered = append(filtered, pkg)
+			} else if params.IsValuePresent && ref.Locator == params.Value {
+				filtered = append(filtered, pkg)
+			}
+		}
+	}
+
+	fmt.Println("Filtered SPDX CPEs:", filtered)
+	return filtered, nil
+}
+
+func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageDescription == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && pkg.PackageDescription == params.Key && pkg.PackageDescription == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && pkg.PackageDescription == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PackageDescription == params.Value {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	fmt.Println("Filtered SPDX descriptions:", filtered)
+	return filtered, nil
+}
+
+func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if len(pkg.PackageChecksums) == 0 {
+			continue
+		}
+
+		for _, checksum := range pkg.PackageChecksums {
+			if params.IsKeyAndValuePresent && checksum.Value == params.Value {
+				filtered = append(filtered, pkg)
+			} else if params.IsKeyPresent {
+				filtered = append(filtered, pkg)
+			} else if params.IsValuePresent && checksum.Value == params.Value {
+				filtered = append(filtered, pkg)
+			}
+		}
+	}
+
+	fmt.Println("Filtered SPDX hashes:", filtered)
+	return filtered, nil
+}
+
+func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageLicenseConcluded == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && pkg.PackageLicenseConcluded == params.Key && pkg.PackageLicenseConcluded == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && pkg.PackageLicenseConcluded == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PackageLicenseConcluded == params.Value {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	fmt.Println("Filtered SPDX licenses:", filtered)
+	return filtered, nil
+}
+
+func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageDownloadLocation == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && pkg.PackageDownloadLocation == params.Key && pkg.PackageDownloadLocation == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && pkg.PackageDownloadLocation == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PackageDownloadLocation == params.Value {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	fmt.Println("Filtered SPDX repositories:", filtered)
+	return filtered, nil
+}
+
+func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil // No filtering criteria, return all
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PrimaryPackagePurpose == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && pkg.PrimaryPackagePurpose == params.Key && pkg.PrimaryPackagePurpose == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && pkg.PrimaryPackagePurpose == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PrimaryPackagePurpose == params.Value {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	fmt.Println("Filtered SPDX types:", filtered)
+	return filtered, nil
+}
+
+func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil // No filtering criteria, return all
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		pkg, ok := e.(*spdx.Package)
+		if !ok {
+			continue
+		}
+
+		if pkg.PackageSupplier == nil {
+			continue
+		}
+
+		supplier := pkg.PackageSupplier.Supplier
+
+		if params.IsKeyAndValuePresent && supplier == params.Key && pkg.PackageSupplier.Supplier == params.Value {
+			filtered = append(filtered, pkg)
+		} else if params.IsKeyPresent && supplier == params.Key {
+			filtered = append(filtered, pkg)
+		} else if params.IsValuePresent && pkg.PackageSupplier.Supplier == params.Value {
+			filtered = append(filtered, pkg)
+		}
+
+	}
+
+	fmt.Println("Filtered SPDX suppliers:", filtered)
+	return filtered, nil
+}

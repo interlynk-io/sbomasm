@@ -23,6 +23,7 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/cmps"
 	cdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/meta"
+	spdxcomp "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx/comp"
 	spdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx/meta"
 
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
@@ -49,6 +50,18 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	handlerRegistry["spdx:document:repository"] = &spdxmeta.SpdxDocRepoHandler{Doc: spdxDoc}
 	handlerRegistry["spdx:document:license"] = &spdxmeta.SpdxDocLicenseHandler{Doc: spdxDoc}
 	handlerRegistry["spdx:document:lifecycle"] = &spdxmeta.SpdxDocLifecycleHandler{Doc: spdxDoc}
+
+	// SPDX Component-level handlers
+	// handlerRegistry["spdx:component:author"] = &spdxcomp.SpdxComponentAuthorHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:supplier"] = &spdxcomp.SpdxComponentSupplierHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:repository"] = &spdxcomp.SpdxComponentRepoHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:license"] = &spdxcomp.SpdxComponentLicenseHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:type"] = &spdxcomp.SpdxComponentTypeHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:description"] = &spdxcomp.SpdxComponentDescriptionHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:copyright"] = &spdxcomp.SpdxComponentCopyrightHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:cpe"] = &spdxcomp.SpdxComponentCpeHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:purl"] = &spdxcomp.SpdxComponentPurlHandler{Doc: spdxDoc}
+	handlerRegistry["spdx:component:hash"] = &spdxcomp.SpdxComponentHashHandler{Doc: spdxDoc}
 
 	// Later: Component-scope or Dependency-scope handlers
 }

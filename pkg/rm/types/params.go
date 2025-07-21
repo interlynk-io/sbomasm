@@ -50,4 +50,6 @@ type RmParams struct {
 	DryRun               bool
 	Summary              bool
 	OutputFile           string
+	SelectedComponents   []interface{}
+	AllComponents        bool
 }

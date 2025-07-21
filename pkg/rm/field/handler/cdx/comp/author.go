@@ -7,11 +7,11 @@ import (
 )
 
 type CdxCompAuthorHandler struct {
-	Bom *cydx.BOM
+	Component *cydx.Component
 }
 
 func (h *CdxCompAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectAuthorFromComponents(h.Bom)
+	return cdx.SelectAuthorFromComponents(h.Component)
 }
 
 func (h *CdxCompAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {

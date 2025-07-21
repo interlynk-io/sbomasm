@@ -170,6 +170,7 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 		DryRun:               dryRun,
 		Summary:              summary,
 		OutputFile:           outputFile,
+		AllComponents:        all,
 	}
 
 	switch {

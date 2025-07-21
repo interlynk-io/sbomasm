@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
@@ -105,4 +106,110 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	}
 
 	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
+}
+
+func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, params *types.RmParams) error {
+	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
+	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
+
+	handler, ok := handlerRegistry[key]
+	if !ok {
+		return fmt.Errorf("no handler registered for key: %s", key)
+	}
+
+	selected, err := handler.Select(params)
+	if err != nil {
+		return err
+	}
+
+	if len(selected) == 0 {
+		fmt.Println("No matching entries found.")
+		return nil
+	}
+
+	targets, err := handler.Filter(selected, params)
+	if err != nil {
+		return err
+	}
+
+	if len(targets) == 0 {
+		fmt.Println("No matching entries found.")
+		return nil
+	}
+
+	if params.Summary {
+		handler.Summary(selected)
+		return nil
+	}
+	if params.DryRun {
+		fmt.Println("Dry-run: matched entries:")
+		for _, entry := range targets {
+			fmt.Printf("  - %v\n", entry)
+		}
+		return nil
+	}
+
+	return handler.Remove(targets, params)
+}
+
+func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context, params *types.RmParams) error {
+	// Step 1: Select relevant components
+	compEngine := &FieldOperationComponentEngine{doc: f.doc}
+	selectedComponents, err := compEngine.SelectComponents(ctx, params)
+	if err != nil {
+		return fmt.Errorf("failed to select components: %w", err)
+	}
+	if len(selectedComponents) == 0 {
+		fmt.Println("No matching components found.")
+		return nil
+	}
+	fmt.Println("Selected components for field removal:", len(selectedComponents))
+	fmt.Println("Selected components:", selectedComponents)
+
+	// Step 2: For each selected component, operate on field
+	spec, field := f.doc.SpecType(), strings.ToLower(params.Field)
+	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), "component", field)
+
+	handler, ok := handlerRegistry[key]
+	if !ok {
+		return fmt.Errorf("no handler registered for key: %s", key)
+	}
+
+	// Set selected components for field handler to operate on
+	params.SelectedComponents = selectedComponents
+
+	// Step 3: Select field entries from components
+	selected, err := handler.Select(params)
+	if err != nil {
+		return err
+	}
+	if len(selected) == 0 {
+		fmt.Println("No matching fields found in selected components.")
+		return nil
+	}
+
+	// Step 4: Filter fields
+	targets, err := handler.Filter(selected, params)
+	if err != nil {
+		return err
+	}
+	if len(targets) == 0 {
+		fmt.Println("No matching field entries after filtering.")
+		return nil
+	}
+
+	if params.Summary {
+		handler.Summary(selected)
+		return nil
+	}
+	if params.DryRun {
+		fmt.Println("Dry-run: matched field entries:")
+		for _, entry := range targets {
+			fmt.Printf("  - %v\n", entry)
+		}
+		return nil
+	}
+
+	// Step 5: Remove matched fields from components
+	return handler.Remove(targets, params)
 }
