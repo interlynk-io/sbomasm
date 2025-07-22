@@ -35,7 +35,7 @@ func (h *CdxComponentCpeHandler) Filter(selected []interface{}, params *types.Rm
 }
 
 func (h *CdxComponentCpeHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveCpeFromComponent(targets, params)
+	return cdx.RemoveCpeFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentCpeHandler) Summary(selected []interface{}) {

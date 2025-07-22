@@ -35,7 +35,7 @@ func (h *SpdxComponentHashHandler) Filter(selected []interface{}, params *types.
 }
 
 func (h *SpdxComponentHashHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveHashFromComponent(targets, params)
+	return spdx.RemoveHashFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentHashHandler) Summary(selected []interface{}) {

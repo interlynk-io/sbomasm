@@ -18,6 +18,7 @@ package spdx
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
@@ -38,11 +39,12 @@ func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) 
 		match := false
 		switch {
 		case params.IsKeyAndValuePresent:
-			match = strings.Contains(author.Creator, params.Key) && strings.Contains(author.Creator, params.Value)
+			match = strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Key)) &&
+				strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Value))
 		case params.IsKeyPresent:
-			match = strings.Contains(author.Creator, params.Key)
+			match = strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Key))
 		case params.IsValuePresent:
-			match = strings.Contains(author.Creator, params.Value)
+			match = strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Value))
 		case params.All || (!params.IsKeyPresent && !params.IsValuePresent):
 			match = true
 		}
@@ -183,58 +185,140 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(PurlEntry)
+		if !ok || entry.Ref.RefType != "purl" {
+			// Log: "Skipping invalid PURL entry: %v", e
 			continue
 		}
 
-		for _, ref := range pkg.PackageExternalReferences {
-			if ref.RefType != "purl" {
-				continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Ref.Locator, params.Value) {
+				match = true
 			}
+		default:
+			match = true
+		}
 
-			// Exact key + value match
-			if params.IsKeyAndValuePresent {
-				if ref.RefType == params.Key && ref.Locator == params.Value {
-					filtered = append(filtered, pkg)
-				}
-			} else if params.IsKeyPresent && ref.RefType == params.Key {
-				filtered = append(filtered, pkg)
-			} else if params.IsValuePresent && ref.Locator == params.Value {
-				filtered = append(filtered, pkg)
-			}
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
-
 	return filtered, nil
 }
 
-func FilterCopyrightFromComponent(_ *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(AuthorEntry)
+		if !ok || entry.Originator == nil {
+			fmt.Println("Skipping invalid author entry:", e)
 			continue
 		}
 
-		if pkg.PackageCopyrightText == "" {
-			continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			// Match against Originator or email
+			if strings.EqualFold(entry.Originator.Originator, params.Value) {
+				match = true
+			} else {
+				// Extract email (e.g., "Person: John Doe (john@example.com)")
+				re := regexp.MustCompile(`\(([^)]+)\)`)
+				if matches := re.FindStringSubmatch(entry.Originator.Originator); len(matches) > 1 {
+					if strings.EqualFold(matches[1], params.Value) {
+						match = true
+					}
+				}
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for author field")
+			}
+		default:
+			match = true
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PackageCopyrightText == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PackageCopyrightText == params.Value {
-			filtered = append(filtered, pkg)
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX copyrights:", filtered)
+	fmt.Println("Filtered SPDX author entries:", len(filtered))
+	return filtered, nil
+}
+
+func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		entry, ok := e.(SupplierEntry)
+		if !ok || entry.Supplier == nil {
+			fmt.Println("Skipping invalid supplier entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Supplier.Supplier, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Matched NOASSERTION for supplier in component:", entry.Package.PackageName)
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Println("Filtered SPDX supplier entries:", len(filtered))
+	return filtered, nil
+}
+
+func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return entries, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range entries {
+		entry, ok := e.(CopyrightEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid copyright entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Matched NOASSERTION for copyright in component:", entry.Package.PackageName)
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Println("Filtered SPDX copyright entries:", len(filtered))
 	return filtered, nil
 }
 
@@ -244,29 +328,36 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 	}
 
 	var filtered []interface{}
-
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(CpeEntry)
+		if !ok || entry.Ref == nil || (entry.Ref.RefType != "cpe22Type" && entry.Ref.RefType != "cpe23Type") {
+			fmt.Println("Skipping invalid CPE entry:", e)
 			continue
 		}
 
-		for _, ref := range pkg.PackageExternalReferences {
-			if ref.RefType != "cpe" {
-				continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Ref.Locator, params.Value) {
+				match = true
 			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+			}
+		case params.IsKeyPresent:
+			if entry.Ref.RefType == params.Key && (params.Key == "cpe22Type" || params.Key == "cpe23Type") {
+				match = true
+			}
+		default:
+			match = true
+		}
 
-			if params.IsKeyAndValuePresent && ref.RefType == params.Key && ref.Locator == params.Value {
-				filtered = append(filtered, pkg)
-			} else if params.IsKeyPresent && ref.RefType == params.Key {
-				filtered = append(filtered, pkg)
-			} else if params.IsValuePresent && ref.Locator == params.Value {
-				filtered = append(filtered, pkg)
-			}
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX CPEs:", filtered)
+	fmt.Println("Filtered SPDX CPE entries:", len(filtered))
 	return filtered, nil
 }
 
@@ -277,25 +368,31 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(DescriptionEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid description entry:", e)
 			continue
 		}
 
-		if pkg.PackageDescription == "" {
-			continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+			}
+		default:
+			match = true
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PackageDescription == params.Key && pkg.PackageDescription == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && pkg.PackageDescription == params.Key {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PackageDescription == params.Value {
-			filtered = append(filtered, pkg)
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX descriptions:", filtered)
+	fmt.Println("Filtered SPDX description entries:", len(filtered))
 	return filtered, nil
 }
 
@@ -306,27 +403,35 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(HashEntry)
+		if !ok || entry.Checksum == nil {
+			fmt.Println("Skipping invalid hash entry:", e)
 			continue
 		}
 
-		if len(pkg.PackageChecksums) == 0 {
-			continue
-		}
-
-		for _, checksum := range pkg.PackageChecksums {
-			if params.IsKeyAndValuePresent && checksum.Value == params.Value {
-				filtered = append(filtered, pkg)
-			} else if params.IsKeyPresent {
-				filtered = append(filtered, pkg)
-			} else if params.IsValuePresent && checksum.Value == params.Value {
-				filtered = append(filtered, pkg)
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Checksum.Value, params.Value) {
+				match = true
 			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+			}
+		case params.IsKeyPresent:
+			if strings.EqualFold(string(entry.Checksum.Algorithm), params.Key) {
+				match = true
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX hashes:", filtered)
+	fmt.Println("Filtered SPDX hash entries:", len(filtered))
 	return filtered, nil
 }
 
@@ -337,25 +442,31 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(LicenseEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid license entry:", e)
 			continue
 		}
 
-		if pkg.PackageLicenseConcluded == "" {
-			continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Matched NOASSERTION for license in component:", entry.Package.PackageName)
+			}
+		default:
+			match = true
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PackageLicenseConcluded == params.Key && pkg.PackageLicenseConcluded == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && pkg.PackageLicenseConcluded == params.Key {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PackageLicenseConcluded == params.Value {
-			filtered = append(filtered, pkg)
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX licenses:", filtered)
+	fmt.Println("Filtered SPDX license entries:", len(filtered))
 	return filtered, nil
 }
 
@@ -366,85 +477,65 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(RepositoryEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid repository entry:", e)
 			continue
 		}
 
-		if pkg.PackageDownloadLocation == "" {
-			continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+			}
+		default:
+			match = true
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PackageDownloadLocation == params.Key && pkg.PackageDownloadLocation == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && pkg.PackageDownloadLocation == params.Key {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PackageDownloadLocation == params.Value {
-			filtered = append(filtered, pkg)
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX repositories:", filtered)
+	fmt.Println("Filtered SPDX repository entries:", len(filtered))
 	return filtered, nil
 }
 
 func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
-		return entries, nil // No filtering criteria, return all
+		return entries, nil
 	}
 
 	var filtered []interface{}
 	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
+		entry, ok := e.(TypeEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid type entry:", e)
 			continue
 		}
 
-		if pkg.PrimaryPackagePurpose == "" {
-			continue
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for type field")
+			}
+		default:
+			match = true
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PrimaryPackagePurpose == params.Key && pkg.PrimaryPackagePurpose == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && pkg.PrimaryPackagePurpose == params.Key {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PrimaryPackagePurpose == params.Value {
-			filtered = append(filtered, pkg)
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered SPDX types:", filtered)
-	return filtered, nil
-}
-
-func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
-		return entries, nil // No filtering criteria, return all
-	}
-
-	var filtered []interface{}
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
-			continue
-		}
-
-		if pkg.PackageSupplier == nil {
-			continue
-		}
-
-		supplier := pkg.PackageSupplier.Supplier
-
-		if params.IsKeyAndValuePresent && supplier == params.Key && pkg.PackageSupplier.Supplier == params.Value {
-			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && supplier == params.Key {
-			filtered = append(filtered, pkg)
-		} else if params.IsValuePresent && pkg.PackageSupplier.Supplier == params.Value {
-			filtered = append(filtered, pkg)
-		}
-
-	}
-
-	fmt.Println("Filtered SPDX suppliers:", filtered)
+	fmt.Println("Filtered SPDX type entries:", len(filtered))
 	return filtered, nil
 }

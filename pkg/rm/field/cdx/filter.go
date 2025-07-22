@@ -231,276 +231,363 @@ func matchTool(name, version string, params *types.RmParams) bool {
 }
 
 func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "author" {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
 
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Authors == nil {
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(AuthorEntry)
+		if !ok || entry.Author == nil {
+			fmt.Println("Skipping invalid author entry:", e)
 			continue
 		}
 
-		for _, author := range *comp.Authors {
-			if params.IsKeyAndValuePresent && (author.Name == params.Value || author.Email == params.Value) {
-				filtered = append(filtered, comp)
-				break
-			} else if params.IsKeyPresent {
-				filtered = append(filtered, comp)
-				break
-			} else if params.IsValuePresent && (author.Name == params.Value || author.Email == params.Value) {
-				filtered = append(filtered, comp)
-				break
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Author.Name, params.Value) || strings.EqualFold(entry.Author.Email, params.Value) {
+				match = true
 			}
-		}
-	}
-	fmt.Println("Filtered authors from component:", filtered)
-	return filtered, nil
-}
-
-func FilterCopyrightFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "copyright" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Copyright == "" {
-			continue
-		}
-
-		if params.IsKeyAndValuePresent && comp.Copyright == params.Value {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && comp.Copyright == params.Value {
-			filtered = append(filtered, comp)
-		}
-	}
-
-	fmt.Println("Filtered copyrights from component:", filtered)
-	return filtered, nil
-}
-
-func FilterCpeFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "cpe" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.CPE == "" {
-			continue
-		}
-
-		if params.IsKeyAndValuePresent && comp.CPE == params.Value {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && comp.CPE == params.Value {
-			filtered = append(filtered, comp)
-		}
-	}
-
-	fmt.Println("Filtered CPEs from component:", filtered)
-	return filtered, nil
-}
-
-func FilterPurlFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "purl" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.PackageURL == "" {
-			continue
-		}
-
-		if params.IsKeyAndValuePresent && comp.PackageURL == params.Value {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && comp.PackageURL == params.Value {
-			filtered = append(filtered, comp)
-		}
-	}
-
-	fmt.Println("Filtered Package URLs from component:", filtered)
-	return filtered, nil
-}
-
-func FilterDescriptionFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "description" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Description == "" {
-			continue
-		}
-
-		if params.IsKeyAndValuePresent && comp.Description == params.Value {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && comp.Description == params.Value {
-			filtered = append(filtered, comp)
-		}
-	}
-
-	fmt.Println("Filtered descriptions from component:", filtered)
-	return filtered, nil
-}
-
-func FilterHashFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "hash" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Hashes == nil || len(*comp.Hashes) == 0 {
-			continue
-		}
-
-		for _, hash := range *comp.Hashes {
-			if params.IsKeyAndValuePresent && hash.Value == params.Value {
-				filtered = append(filtered, comp)
-			} else if params.IsKeyPresent {
-				filtered = append(filtered, comp)
-			} else if params.IsValuePresent && hash.Value == params.Value {
-				filtered = append(filtered, comp)
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for author field")
 			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered hashes from component:", filtered)
+	fmt.Printf("Filtered %d author entries\n", len(filtered))
 	return filtered, nil
 }
 
-func FilterLicenseFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "license" {
+func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
 
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Licenses == nil || len(*comp.Licenses) == 0 {
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(SupplierEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid supplier entry:", e)
 			continue
 		}
 
-		for _, license := range *comp.Licenses {
-			if params.IsKeyAndValuePresent && license.Expression == params.Value {
-				filtered = append(filtered, comp)
-			} else if params.IsKeyPresent {
-				filtered = append(filtered, comp)
-			} else if params.IsValuePresent && license.Expression == params.Value {
-				filtered = append(filtered, comp)
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
 			}
-		}
-	}
-
-	fmt.Println("Filtered licenses from component:", filtered)
-	return filtered, nil
-}
-
-func FilterRepoFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "repository" {
-		return selected, nil
-	}
-
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.ExternalReferences == nil {
-			continue
-		}
-
-		for _, ref := range *comp.ExternalReferences {
-			if ref.Type != "vcs" && ref.Type != "distribution" {
-				continue
+			if params.Value == "NOASSERTION" {
+				fmt.Printf("Matched NOASSERTION for supplier in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
 			}
+		default:
+			match = true
+		}
 
-			if params.IsKeyAndValuePresent && ref.URL == params.Value {
-				filtered = append(filtered, comp)
-			} else if params.IsKeyPresent {
-				filtered = append(filtered, comp)
-			} else if params.IsValuePresent && ref.URL == params.Value {
-				filtered = append(filtered, comp)
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d supplier entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(CopyrightEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid copyright entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
 			}
+			if params.Value == "NOASSERTION" {
+				fmt.Printf("Matched NOASSERTION for copyright in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered repositories from component:", filtered)
+	fmt.Printf("Filtered %d copyright entries\n", len(filtered))
 	return filtered, nil
 }
 
-func FilterSupplierFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "supplier" {
+func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
 
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Supplier == nil {
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(CpeEntry)
+		if !ok || entry.Ref == nil || entry.Ref.Type != cydx.ERTypeSecurityContact {
+			fmt.Println("Skipping invalid CPE entry:", e)
 			continue
 		}
 
-		if params.IsKeyAndValuePresent && (comp.Supplier.Name == params.Value) {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && (comp.Supplier.Name == params.Value) {
-			filtered = append(filtered, comp)
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Ref.URL, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+			}
+		case params.IsKeyPresent:
+			if entry.Ref.Type == cydx.ExternalReferenceType(params.Key) && params.Key == string(cydx.ERTypeSecurityContact) {
+				match = true
+			}
+		default:
+			match = true
 		}
 
+		if match {
+			filtered = append(filtered, entry)
+		}
 	}
 
-	fmt.Println("Filtered suppliers from component:", filtered)
+	fmt.Printf("Filtered %d CPE entries\n", len(filtered))
 	return filtered, nil
 }
 
-func FilterTypeFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	var filtered []interface{}
-
-	if params.Key != "type" {
+func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
 
-	for _, entry := range selected {
-		comp, ok := entry.(*cydx.Component)
-		if !ok || comp.Type == "" {
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(DescriptionEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid description entry:", e)
 			continue
 		}
 
-		if params.IsKeyAndValuePresent && string(comp.Type) == params.Value {
-			filtered = append(filtered, comp)
-		} else if params.IsKeyPresent {
-			filtered = append(filtered, comp)
-		} else if params.IsValuePresent && string(comp.Type) == params.Value {
-			filtered = append(filtered, comp)
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
 		}
 	}
 
-	fmt.Println("Filtered types from component:", filtered)
+	fmt.Printf("Filtered %d description entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(HashEntry)
+		if !ok || entry.Hash == nil {
+			fmt.Println("Skipping invalid hash entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Hash.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+			}
+		case params.IsKeyPresent:
+			if strings.EqualFold(string(entry.Hash.Algorithm), params.Key) {
+				match = true
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d hash entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(LicenseEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid license entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Printf("Matched NOASSERTION for license in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d license entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(PurlEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid PURL entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for PURL field")
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d PURL entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(RepositoryEntry)
+		if !ok || entry.Ref == nil || (entry.Ref.Type != cydx.ERTypeVCS && entry.Ref.Type != cydx.ERTypeDistribution) {
+			fmt.Println("Skipping invalid repository entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(entry.Ref.URL, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+			}
+		case params.IsKeyPresent:
+			if entry.Ref.Type == cydx.ExternalReferenceType(params.Key) && (params.Key == string(cydx.ERTypeVCS) || params.Key == string(cydx.ERTypeDistribution)) {
+				match = true
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d repository entries\n", len(filtered))
+	return filtered, nil
+}
+
+func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(TypeEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid type entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsValuePresent:
+			if strings.EqualFold(string(entry.Value), params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				fmt.Println("Warning: NOASSERTION is unlikely for type field")
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	fmt.Printf("Filtered %d type entries\n", len(filtered))
 	return filtered, nil
 }

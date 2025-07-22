@@ -35,7 +35,7 @@ func (h *SpdxComponentSupplierHandler) Filter(selected []interface{}, params *ty
 }
 
 func (h *SpdxComponentSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveSupplierFromComponent(targets, params)
+	return spdx.RemoveSupplierFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentSupplierHandler) Summary(selected []interface{}) {

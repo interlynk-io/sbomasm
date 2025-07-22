@@ -18,6 +18,7 @@ package cdx
 
 import (
 	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 )
@@ -128,150 +129,218 @@ func RenderSummaryTimestampFromMetadata(selected []interface{}) {
 	}
 }
 
-func RenderSummaryAuthorFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryAuthorFromComponent(entries []interface{}) {
+	fmt.Println("Summary of author entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No author entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(AuthorEntry)
+		if !ok || entry.Author == nil {
+			fmt.Println("Skipping invalid author entry:", e)
 			continue
 		}
-		if comp.Author != "" {
-			summary = append(summary, comp.Author)
+		email := entry.Author.Email
+		if email == "" {
+			email = "<no email>"
 		}
+		fmt.Printf("  - Component: %s@%s, Author: %s (%s)\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Author.Name,
+			email)
 	}
-	return summary
 }
 
-func RenderSummarySupplierFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummarySupplierFromComponent(entries []interface{}) {
+	fmt.Println("Summary of supplier entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No supplier entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(SupplierEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid supplier entry:", e)
 			continue
 		}
-		if comp.Supplier != nil && comp.Supplier.Name != "" {
-			summary = append(summary, comp.Supplier.Name)
+		fmt.Printf("  - Component: %s@%s, Supplier: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+		if strings.EqualFold(entry.Value, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for supplier")
 		}
 	}
-	return summary
 }
 
-func RenderSummaryTypeFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryCopyrightFromComponent(entries []interface{}) {
+	fmt.Println("Summary of copyright entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No copyright entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(CopyrightEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid copyright entry:", e)
 			continue
 		}
-		if comp.Type != "" {
-			summary = append(summary, string(comp.Type))
+		fmt.Printf("  - Component: %s@%s, Copyright: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+		if strings.EqualFold(entry.Value, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for copyright")
 		}
 	}
-	return summary
 }
 
-func RenderSummaryRepoFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryCpeFromComponent(entries []interface{}) {
+	fmt.Println("Summary of CPE entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No CPE entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(CpeEntry)
+		if !ok || entry.Ref == nil || entry.Ref.Type != cydx.ERTypeSecurityContact {
+			fmt.Println("Skipping invalid CPE entry:", e)
 			continue
 		}
-		if comp.ExternalReferences != nil {
-			for _, ref := range *comp.ExternalReferences {
-				if ref.Type == cydx.ERTypeVCS || ref.Type == cydx.ERTypeDistribution {
-					summary = append(summary, ref.URL)
-				}
-			}
-		}
+		fmt.Printf("  - Component: %s@%s, CPE: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Ref.URL)
 	}
-	return summary
 }
 
-func RenderSummaryLicenseFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryDescriptionFromComponent(entries []interface{}) {
+	fmt.Println("Summary of description entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No description entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok || comp.Licenses == nil {
+		entry, ok := e.(DescriptionEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid description entry:", e)
 			continue
 		}
-		for _, lic := range *comp.Licenses {
-			if lic.Expression != "" {
-				summary = append(summary, lic.Expression)
-			} else if lic.License != nil {
-				summary = append(summary, lic.License.ID)
-			}
-		}
+		fmt.Printf("  - Component: %s@%s, Description: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
 	}
-	return summary
 }
 
-// func RenderSummaryHashFromComponent(entries []interface{}) []string {
-// 	var summary []string
-// 	for _, e := range entries {
-// 		comp, ok := e.(cydx.Component)
-// 		if !ok {
-// 			continue
-// 		}
-// 		for _, hash := range comp.Hashes {
-// 			summary = append(summary, fmt.Sprintf("%s: %s", hash.Algorithm, hash.Value))
-// 		}
-// 	}
-// 	return summary
-// }
+func RenderSummaryHashFromComponent(entries []interface{}) {
+	fmt.Println("Summary of hash entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No hash entries selected for removal")
+		return
+	}
 
-func RenderSummaryDescriptionFromComponent(entries []interface{}) []string {
-	var summary []string
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(HashEntry)
+		if !ok || entry.Hash == nil {
+			fmt.Println("Skipping invalid hash entry:", e)
 			continue
 		}
-		if comp.Description != "" {
-			summary = append(summary, comp.Description)
-		}
+		fmt.Printf("  - Component: %s@%s, Hash: %s (%s)\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Hash.Value,
+			entry.Hash.Algorithm)
 	}
-	return summary
 }
 
-func RenderSummaryCpeFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryLicenseFromComponent(entries []interface{}) {
+	fmt.Println("Summary of license entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No license entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(LicenseEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid license entry:", e)
 			continue
 		}
-		if comp.CPE != "" {
-			summary = append(summary, comp.CPE)
+		fmt.Printf("  - Component: %s@%s, License: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+		if strings.EqualFold(entry.Value, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for license")
 		}
 	}
-	return summary
 }
 
-func RenderSummaryPurlFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryPurlFromComponent(entries []interface{}) {
+	fmt.Println("Summary of PURL entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No PURL entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(PurlEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid PURL entry:", e)
 			continue
 		}
-		if comp.PackageURL != "" {
-			summary = append(summary, comp.PackageURL)
-		}
+		fmt.Printf("  - Component: %s@%s, PURL: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
 	}
-	return summary
 }
 
-func RenderSummaryCopyrightFromComponent(entries []interface{}) []string {
-	var summary []string
+func RenderSummaryRepoFromComponent(entries []interface{}) {
+	fmt.Println("Summary of repository entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No repository entries selected for removal")
+		return
+	}
+
 	for _, e := range entries {
-		comp, ok := e.(cydx.Component)
-		if !ok {
+		entry, ok := e.(RepositoryEntry)
+		if !ok || entry.Ref == nil || (entry.Ref.Type != cydx.ERTypeVCS && entry.Ref.Type != cydx.ERTypeDistribution) {
+			fmt.Println("Skipping invalid repository entry:", e)
 			continue
 		}
-		if comp.Copyright != "" {
-			summary = append(summary, comp.Copyright)
-		}
+		fmt.Printf("  - Component: %s@%s, Repository: %s (%s)\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Ref.URL,
+			entry.Ref.Type)
 	}
-	return summary
+}
+
+func RenderSummaryTypeFromComponent(entries []interface{}) {
+	fmt.Println("Summary of type entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No type entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(TypeEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid type entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Type: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+	}
 }

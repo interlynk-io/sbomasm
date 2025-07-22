@@ -35,7 +35,7 @@ func (h *CdxComponentLicenseHandler) Filter(selected []interface{}, params *type
 }
 
 func (h *CdxComponentLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveLicenseFromComponent(targets, params)
+	return cdx.RemoveLicenseFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentLicenseHandler) Summary(selected []interface{}) {

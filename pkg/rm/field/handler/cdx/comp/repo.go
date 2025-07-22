@@ -35,7 +35,7 @@ func (h *CdxComponentRepoHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *CdxComponentRepoHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveRepoFromComponent(targets, params)
+	return cdx.RemoveRepoFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentRepoHandler) Summary(selected []interface{}) {

@@ -35,7 +35,7 @@ func (h *CdxComponentCopyrightHandler) Filter(selected []interface{}, params *ty
 }
 
 func (h *CdxComponentCopyrightHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveCopyrightFromComponent(targets, params)
+	return cdx.RemoveCopyrightFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentCopyrightHandler) Summary(selected []interface{}) {

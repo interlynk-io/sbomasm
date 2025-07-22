@@ -35,7 +35,7 @@ func (h *SpdxComponentDescriptionHandler) Filter(selected []interface{}, params 
 }
 
 func (h *SpdxComponentDescriptionHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveDescriptionFromComponent(targets, params)
+	return spdx.RemoveDescriptionFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentDescriptionHandler) Summary(selected []interface{}) {

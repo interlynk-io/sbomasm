@@ -35,7 +35,7 @@ func (h *SpdxComponentPurlHandler) Filter(selected []interface{}, params *types.
 }
 
 func (h *SpdxComponentPurlHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemovePurlFromComponent(targets, params)
+	return spdx.RemovePurlFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentPurlHandler) Summary(selected []interface{}) {

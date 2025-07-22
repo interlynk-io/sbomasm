@@ -35,7 +35,7 @@ func (h *CdxComponentPurlHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *CdxComponentPurlHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemovePurlFromComponent(targets, params)
+	return cdx.RemovePurlFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentPurlHandler) Summary(selected []interface{}) {

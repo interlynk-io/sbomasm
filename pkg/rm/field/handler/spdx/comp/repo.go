@@ -35,7 +35,7 @@ func (h *SpdxComponentRepoHandler) Filter(selected []interface{}, params *types.
 }
 
 func (h *SpdxComponentRepoHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveRepoFromComponent(targets, params)
+	return spdx.RemoveRepoFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentRepoHandler) Summary(selected []interface{}) {

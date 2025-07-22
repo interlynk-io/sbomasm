@@ -35,7 +35,7 @@ func (h *SpdxComponentTypeHandler) Filter(selected []interface{}, params *types.
 }
 
 func (h *SpdxComponentTypeHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveTypeFromComponent(targets, params)
+	return spdx.RemoveTypeFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentTypeHandler) Summary(selected []interface{}) {

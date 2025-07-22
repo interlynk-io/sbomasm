@@ -35,7 +35,7 @@ func (h *SpdxComponentCopyrightHandler) Filter(selected []interface{}, params *t
 }
 
 func (h *SpdxComponentCopyrightHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveCopyrightFromComponent(targets, params)
+	return spdx.RemoveCopyrightFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentCopyrightHandler) Summary(selected []interface{}) {

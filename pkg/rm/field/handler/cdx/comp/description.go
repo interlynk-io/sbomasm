@@ -35,7 +35,7 @@ func (h *CdxComponentDescriptionHandler) Filter(selected []interface{}, params *
 }
 
 func (h *CdxComponentDescriptionHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveDescriptionFromComponent(targets, params)
+	return cdx.RemoveDescriptionFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentDescriptionHandler) Summary(selected []interface{}) {

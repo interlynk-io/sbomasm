@@ -35,7 +35,7 @@ func (h *CdxComponentTypeHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *CdxComponentTypeHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveTypeFromComponent(targets, params)
+	return cdx.RemoveTypeFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentTypeHandler) Summary(selected []interface{}) {

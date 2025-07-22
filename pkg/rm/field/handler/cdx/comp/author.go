@@ -35,7 +35,7 @@ func (h *CdxCompAuthorHandler) Filter(selected []interface{}, params *types.RmPa
 }
 
 func (h *CdxCompAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveAuthorFromComponent(targets, params)
+	return cdx.RemoveAuthorFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxCompAuthorHandler) Summary(selected []interface{}) {

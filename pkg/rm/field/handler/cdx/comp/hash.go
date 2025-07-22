@@ -35,7 +35,7 @@ func (h *CdxComponentHashHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *CdxComponentHashHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveHashFromComponent(targets, params)
+	return cdx.RemoveHashFromComponent(h.Bom, targets, params)
 }
 
 func (h *CdxComponentHashHandler) Summary(selected []interface{}) {

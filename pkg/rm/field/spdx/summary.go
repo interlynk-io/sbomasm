@@ -18,6 +18,7 @@ package spdx
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/spdx/tools-golang/spdx"
@@ -25,9 +26,16 @@ import (
 
 func RenderSummaryAuthorFromMetadata(target []interface{}) {
 	fmt.Println("📋 Summary of removed SPDX authors:")
+
+	if len(target) == 0 {
+		fmt.Println("  - No authors selected for removal")
+		return
+	}
+
 	for _, entry := range target {
-		if authorStr, ok := entry.(string); ok && strings.HasPrefix(authorStr, "Person:") {
-			fmt.Printf("  - %s\n", authorStr)
+		author, ok := entry.(spdx.Creator)
+		if ok {
+			fmt.Printf("  - %s\n", author.Creator)
 		}
 	}
 }
@@ -77,125 +85,221 @@ func RenderSummaryTimestampFromMetadata(target []interface{}) {
 	}
 }
 
+func RenderSummaryAuthorFromComponent(entries []interface{}) {
+	fmt.Println("Summary of author entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No author entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(AuthorEntry)
+		if !ok || entry.Originator == nil {
+			fmt.Println("Skipping invalid author entry:", e)
+			continue
+		}
+
+		// Extract email for display
+		email := "<no email>"
+		re := regexp.MustCompile(`\(([^)]+)\)`)
+		if matches := re.FindStringSubmatch(entry.Originator.Originator); len(matches) > 1 {
+			email = matches[1]
+		}
+		fmt.Printf("  - Component: %s@%s, Author: %s (%s)\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Originator.Originator,
+			email)
+	}
+}
+
+func RenderSummarySupplierFromComponent(entries []interface{}) {
+	fmt.Println("Summary of supplier entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No supplier entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(SupplierEntry)
+		if !ok || entry.Supplier == nil {
+			fmt.Println("Skipping invalid supplier entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Supplier: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Supplier.Supplier)
+		if strings.EqualFold(entry.Supplier.Supplier, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for supplier")
+		}
+	}
+}
+
+func RenderSummaryCopyrightFromComponent(entries []interface{}) {
+	fmt.Println("Summary of copyright entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No copyright entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(CopyrightEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid copyright entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Copyright: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Value)
+		if strings.EqualFold(entry.Value, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for copyright")
+		}
+	}
+}
+
+func RenderSummaryCpeFromComponent(entries []interface{}) {
+	fmt.Println("Summary of CPE entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No CPE entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(CpeEntry)
+		if !ok || entry.Ref == nil || (entry.Ref.RefType != "cpe22Type" && entry.Ref.RefType != "cpe23Type") {
+			fmt.Println("Skipping invalid CPE entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, CPE: %s (%s)\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Ref.Locator,
+			entry.Ref.RefType)
+	}
+}
+
+func RenderSummaryDescriptionFromComponent(entries []interface{}) {
+	fmt.Println("Summary of description entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No description entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(DescriptionEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid description entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Description: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Value)
+	}
+}
+
+func RenderSummaryHashFromComponent(entries []interface{}) {
+	fmt.Println("Summary of hash entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No hash entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(HashEntry)
+		if !ok || entry.Checksum == nil {
+			fmt.Println("Skipping invalid hash entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Hash: %s (%s)\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Checksum.Value,
+			entry.Checksum.Algorithm)
+	}
+}
+
+func RenderSummaryLicenseFromComponent(entries []interface{}) {
+	fmt.Println("Summary of license entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No license entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(LicenseEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid license entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, License: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Value)
+		if strings.EqualFold(entry.Value, "NOASSERTION") {
+			fmt.Println("    Note: NOASSERTION matched for license")
+		}
+	}
+}
+
+func RenderSummaryRepoFromComponent(entries []interface{}) {
+	fmt.Println("Summary of repository entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No repository entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(RepositoryEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid repository entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Repository: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Value)
+	}
+}
+
+func RenderSummaryTypeFromComponent(entries []interface{}) {
+	fmt.Println("Summary of type entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No type entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(TypeEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid type entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Type: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Value)
+	}
+}
+
 func RenderSummaryPurlFromComponent(entries []interface{}) {
-	fmt.Println("Summary of components with purl:")
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
-			continue
-		}
-		fmt.Printf("  - Name: %s, Version: %s\n", pkg.PackageName, pkg.PackageVersion)
-	}
-}
-
-func RenderSummaryCopyrightFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || pkg.PackageCopyrightText == "" {
-			continue
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | Copyright: %s", pkg.PackageName, pkg.PackageCopyrightText))
-	}
-	return summary
-}
-
-func RenderSummaryCpeFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok {
-			continue
-		}
-		for _, ref := range pkg.PackageExternalReferences {
-			if strings.ToLower(ref.RefType) == "cpe" {
-				summary = append(summary, fmt.Sprintf("Component: %s | CPE: %s", pkg.PackageName, ref.Locator))
-			}
-		}
-	}
-	return summary
-}
-
-func RenderSummaryDescriptionFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || pkg.PackageDescription == "" {
-			continue
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | Description: %s", pkg.PackageName, pkg.PackageDescription))
-	}
-	return summary
-}
-
-func RenderSummaryHashFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || len(pkg.PackageChecksums) == 0 {
-			continue
-		}
-		var checksums []string
-		for _, checksum := range pkg.PackageChecksums {
-			checksums = append(checksums, fmt.Sprintf("%s: %s", checksum.Algorithm, checksum.Value))
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | Hashes: %s", pkg.PackageName, strings.Join(checksums, "; ")))
-	}
-	return summary
-}
-
-func RenderSummaryLicenseFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || len(pkg.PackageLicenseConcluded) == 0 {
-			continue
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | License(s): %s", pkg.PackageName, pkg.PackageLicenseConcluded))
-	}
-	return summary
-}
-
-func RenderSummaryRepoFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || pkg.PackageDownloadLocation == "" {
-			continue
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | Repo: %s", pkg.PackageName, pkg.PackageDownloadLocation))
-	}
-	return summary
-}
-
-func RenderSummaryTypeFromComponent(entries []interface{}) []string {
-	var summary []string
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || pkg.PrimaryPackagePurpose == "" {
-			continue
-		}
-		summary = append(summary, fmt.Sprintf("Component: %s | Type: %s", pkg.PackageName, pkg.PrimaryPackagePurpose))
-	}
-	return summary
-}
-
-func RenderSummarySupplierFromComponent(entries []interface{}) string {
-	var b strings.Builder
-
-	b.WriteString("Suppliers to be removed:\n")
-	b.WriteString("-------------------------\n")
-
-	for _, e := range entries {
-		pkg, ok := e.(*spdx.Package)
-		if !ok || pkg.PackageSupplier == nil {
-			continue
-		}
-
-		fmt.Fprintf(&b, "Component: %s@%s\n", pkg.PackageName, pkg.PackageVersion)
-		fmt.Fprintf(&b, "Supplier : %s\n", pkg.PackageSupplier.Supplier)
-		b.WriteString("-------------------------\n")
+	fmt.Println("Summary of purl entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No purl entries selected for removal")
+		return
 	}
 
-	return b.String()
+	for _, e := range entries {
+		entry, ok := e.(PurlEntry)
+		if !ok || entry.Ref == nil || entry.Ref.RefType != "purl" {
+			fmt.Println("Skipping invalid purl entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, PURL: %s\n",
+			entry.Package.PackageName,
+			entry.Package.PackageVersion,
+			entry.Ref.Locator)
+	}
 }

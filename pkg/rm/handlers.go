@@ -45,15 +45,15 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 
 	// CDX Component-level handlers
 	// handlerRegistry["cdx:component:author"] = &cdxcomp.CdxComponentAuthorHandler{Doc: spdxDoc}
-	handlerRegistry["cdx:component:supplier"] = &cdxcomp.CdxComponentSupplierHandler{Doc: spdxDoc}
-	handlerRegistry["cdx:component:repository"] = &cdxcomp.CdxComponentRepoHandler{Doc: spdxDoc}
-	handlerRegistry["cdx:component:license"] = &cdxcomp.CdxComponentLicenseHandler{Doc: spdxDoc}
-	handlerRegistry["cdx:component:type"] = &cdxcomp.CdxComponentTypeHandler{Doc: spdxDoc}
-	handlerRegistry["cdx:component:description"] = &cdxcomp.CdxComponentDescriptionHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:component:copyright"] = &spdxcomp.SpdxComponentCopyrightHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:component:cpe"] = &spdxcomp.SpdxComponentCpeHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:component:purl"] = &spdxcomp.SpdxComponentPurlHandler{Doc: spdxDoc}
-	handlerRegistry["spdx:component:hash"] = &spdxcomp.SpdxComponentHashHandler{Doc: spdxDoc}
+	handlerRegistry["cdx:component:supplier"] = &cdxcomp.CdxComponentSupplierHandler{Bom: bom}
+	handlerRegistry["cdx:component:repository"] = &cdxcomp.CdxComponentRepoHandler{Bom: bom}
+	handlerRegistry["cdx:component:license"] = &cdxcomp.CdxComponentLicenseHandler{Bom: bom}
+	handlerRegistry["cdx:component:type"] = &cdxcomp.CdxComponentTypeHandler{Bom: bom}
+	handlerRegistry["cdx:component:description"] = &cdxcomp.CdxComponentDescriptionHandler{Bom: bom}
+	handlerRegistry["cdx:component:copyright"] = &cdxcomp.CdxComponentCopyrightHandler{Bom: bom}
+	handlerRegistry["cdx:component:cpe"] = &cdxcomp.CdxComponentCpeHandler{Bom: bom}
+	handlerRegistry["cdx:component:purl"] = &cdxcomp.CdxComponentPurlHandler{Bom: bom}
+	handlerRegistry["cdx:component:hash"] = &cdxcomp.CdxComponentHashHandler{Bom: bom}
 
 	// SPDX Document-level handlers
 	handlerRegistry["spdx:document:author"] = &spdxmeta.SpdxDocAuthorHandler{Doc: spdxDoc}

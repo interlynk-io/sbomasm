@@ -35,7 +35,7 @@ func (h *SpdxComponentLicenseHandler) Filter(selected []interface{}, params *typ
 }
 
 func (h *SpdxComponentLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveLicenseFromComponent(targets, params)
+	return spdx.RemoveLicenseFromComponent(h.Doc, targets, params)
 }
 
 func (h *SpdxComponentLicenseHandler) Summary(selected []interface{}) {
