@@ -229,3 +229,278 @@ func matchTool(name, version string, params *types.RmParams) bool {
 		return false
 	}
 }
+
+func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "author" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Authors == nil {
+			continue
+		}
+
+		for _, author := range *comp.Authors {
+			if params.IsKeyAndValuePresent && (author.Name == params.Value || author.Email == params.Value) {
+				filtered = append(filtered, comp)
+				break
+			} else if params.IsKeyPresent {
+				filtered = append(filtered, comp)
+				break
+			} else if params.IsValuePresent && (author.Name == params.Value || author.Email == params.Value) {
+				filtered = append(filtered, comp)
+				break
+			}
+		}
+	}
+	fmt.Println("Filtered authors from component:", filtered)
+	return filtered, nil
+}
+
+func FilterCopyrightFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "copyright" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Copyright == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && comp.Copyright == params.Value {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && comp.Copyright == params.Value {
+			filtered = append(filtered, comp)
+		}
+	}
+
+	fmt.Println("Filtered copyrights from component:", filtered)
+	return filtered, nil
+}
+
+func FilterCpeFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "cpe" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.CPE == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && comp.CPE == params.Value {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && comp.CPE == params.Value {
+			filtered = append(filtered, comp)
+		}
+	}
+
+	fmt.Println("Filtered CPEs from component:", filtered)
+	return filtered, nil
+}
+
+func FilterPurlFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "purl" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.PackageURL == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && comp.PackageURL == params.Value {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && comp.PackageURL == params.Value {
+			filtered = append(filtered, comp)
+		}
+	}
+
+	fmt.Println("Filtered Package URLs from component:", filtered)
+	return filtered, nil
+}
+
+func FilterDescriptionFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "description" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Description == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && comp.Description == params.Value {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && comp.Description == params.Value {
+			filtered = append(filtered, comp)
+		}
+	}
+
+	fmt.Println("Filtered descriptions from component:", filtered)
+	return filtered, nil
+}
+
+func FilterHashFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "hash" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Hashes == nil || len(*comp.Hashes) == 0 {
+			continue
+		}
+
+		for _, hash := range *comp.Hashes {
+			if params.IsKeyAndValuePresent && hash.Value == params.Value {
+				filtered = append(filtered, comp)
+			} else if params.IsKeyPresent {
+				filtered = append(filtered, comp)
+			} else if params.IsValuePresent && hash.Value == params.Value {
+				filtered = append(filtered, comp)
+			}
+		}
+	}
+
+	fmt.Println("Filtered hashes from component:", filtered)
+	return filtered, nil
+}
+
+func FilterLicenseFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "license" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Licenses == nil || len(*comp.Licenses) == 0 {
+			continue
+		}
+
+		for _, license := range *comp.Licenses {
+			if params.IsKeyAndValuePresent && license.Expression == params.Value {
+				filtered = append(filtered, comp)
+			} else if params.IsKeyPresent {
+				filtered = append(filtered, comp)
+			} else if params.IsValuePresent && license.Expression == params.Value {
+				filtered = append(filtered, comp)
+			}
+		}
+	}
+
+	fmt.Println("Filtered licenses from component:", filtered)
+	return filtered, nil
+}
+
+func FilterRepoFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "repository" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.ExternalReferences == nil {
+			continue
+		}
+
+		for _, ref := range *comp.ExternalReferences {
+			if ref.Type != "vcs" && ref.Type != "distribution" {
+				continue
+			}
+
+			if params.IsKeyAndValuePresent && ref.URL == params.Value {
+				filtered = append(filtered, comp)
+			} else if params.IsKeyPresent {
+				filtered = append(filtered, comp)
+			} else if params.IsValuePresent && ref.URL == params.Value {
+				filtered = append(filtered, comp)
+			}
+		}
+	}
+
+	fmt.Println("Filtered repositories from component:", filtered)
+	return filtered, nil
+}
+
+func FilterSupplierFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "supplier" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Supplier == nil {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && (comp.Supplier.Name == params.Value) {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && (comp.Supplier.Name == params.Value) {
+			filtered = append(filtered, comp)
+		}
+
+	}
+
+	fmt.Println("Filtered suppliers from component:", filtered)
+	return filtered, nil
+}
+
+func FilterTypeFromComponent(_ *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	var filtered []interface{}
+
+	if params.Key != "type" {
+		return selected, nil
+	}
+
+	for _, entry := range selected {
+		comp, ok := entry.(*cydx.Component)
+		if !ok || comp.Type == "" {
+			continue
+		}
+
+		if params.IsKeyAndValuePresent && string(comp.Type) == params.Value {
+			filtered = append(filtered, comp)
+		} else if params.IsKeyPresent {
+			filtered = append(filtered, comp)
+		} else if params.IsValuePresent && string(comp.Type) == params.Value {
+			filtered = append(filtered, comp)
+		}
+	}
+
+	fmt.Println("Filtered types from component:", filtered)
+	return filtered, nil
+}

@@ -1,3 +1,19 @@
+// Copyright 2025 Interlynk.io
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package comp
 
 import (
@@ -6,24 +22,22 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-type CdxCompTypeHandler struct {
-	Component *cydx.Component
+type CdxComponentTypeHandler struct {
+	Bom *cydx.BOM
 }
 
-func (h *CdxCompTypeHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectTypeFromComponent(h.Component)
+func (h *CdxComponentTypeHandler) Select(params *types.RmParams) ([]interface{}, error) {
+	return cdx.SelectTypeFromComponent(h.Bom, params)
 }
 
-func (h *CdxCompTypeHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	// return cdx.FilterTypeFromComponents(selected, params)
-	return nil, nil // Filtering not implemented yet
+func (h *CdxComponentTypeHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	return cdx.FilterTypeFromComponent(h.Bom, selected, params)
 }
 
-func (h *CdxCompTypeHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	// return cdx.RemoveTypeFromComponents(h.Component, targets)
-	return nil // Removal not implemented yet
+func (h *CdxComponentTypeHandler) Remove(targets []interface{}, params *types.RmParams) error {
+	return cdx.RemoveTypeFromComponent(targets, params)
 }
 
-func (h *CdxCompTypeHandler) Summary(selected []interface{}) {
-	// cdx.RenderSummaryTypeFromComponents(selected)
+func (h *CdxComponentTypeHandler) Summary(selected []interface{}) {
+	cdx.RenderSummaryTypeFromComponent(selected)
 }

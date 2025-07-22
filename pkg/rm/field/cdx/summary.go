@@ -127,3 +127,151 @@ func RenderSummaryTimestampFromMetadata(selected []interface{}) {
 		fmt.Printf("  - Timestamp: %s\n", timestamp)
 	}
 }
+
+func RenderSummaryAuthorFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.Author != "" {
+			summary = append(summary, comp.Author)
+		}
+	}
+	return summary
+}
+
+func RenderSummarySupplierFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.Supplier != nil && comp.Supplier.Name != "" {
+			summary = append(summary, comp.Supplier.Name)
+		}
+	}
+	return summary
+}
+
+func RenderSummaryTypeFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.Type != "" {
+			summary = append(summary, string(comp.Type))
+		}
+	}
+	return summary
+}
+
+func RenderSummaryRepoFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.ExternalReferences != nil {
+			for _, ref := range *comp.ExternalReferences {
+				if ref.Type == cydx.ERTypeVCS || ref.Type == cydx.ERTypeDistribution {
+					summary = append(summary, ref.URL)
+				}
+			}
+		}
+	}
+	return summary
+}
+
+func RenderSummaryLicenseFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok || comp.Licenses == nil {
+			continue
+		}
+		for _, lic := range *comp.Licenses {
+			if lic.Expression != "" {
+				summary = append(summary, lic.Expression)
+			} else if lic.License != nil {
+				summary = append(summary, lic.License.ID)
+			}
+		}
+	}
+	return summary
+}
+
+// func RenderSummaryHashFromComponent(entries []interface{}) []string {
+// 	var summary []string
+// 	for _, e := range entries {
+// 		comp, ok := e.(cydx.Component)
+// 		if !ok {
+// 			continue
+// 		}
+// 		for _, hash := range comp.Hashes {
+// 			summary = append(summary, fmt.Sprintf("%s: %s", hash.Algorithm, hash.Value))
+// 		}
+// 	}
+// 	return summary
+// }
+
+func RenderSummaryDescriptionFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.Description != "" {
+			summary = append(summary, comp.Description)
+		}
+	}
+	return summary
+}
+
+func RenderSummaryCpeFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.CPE != "" {
+			summary = append(summary, comp.CPE)
+		}
+	}
+	return summary
+}
+
+func RenderSummaryPurlFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.PackageURL != "" {
+			summary = append(summary, comp.PackageURL)
+		}
+	}
+	return summary
+}
+
+func RenderSummaryCopyrightFromComponent(entries []interface{}) []string {
+	var summary []string
+	for _, e := range entries {
+		comp, ok := e.(cydx.Component)
+		if !ok {
+			continue
+		}
+		if comp.Copyright != "" {
+			summary = append(summary, comp.Copyright)
+		}
+	}
+	return summary
+}

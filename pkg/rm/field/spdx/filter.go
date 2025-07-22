@@ -209,7 +209,7 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 	return filtered, nil
 }
 
-func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+func FilterCopyrightFromComponent(_ *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -225,9 +225,9 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 			continue
 		}
 
-		if params.IsKeyAndValuePresent && pkg.PackageCopyrightText == params.Key && pkg.PackageCopyrightText == params.Value {
+		if params.IsKeyAndValuePresent && pkg.PackageCopyrightText == params.Value {
 			filtered = append(filtered, pkg)
-		} else if params.IsKeyPresent && pkg.PackageCopyrightText == params.Key {
+		} else if params.IsKeyPresent {
 			filtered = append(filtered, pkg)
 		} else if params.IsValuePresent && pkg.PackageCopyrightText == params.Value {
 			filtered = append(filtered, pkg)

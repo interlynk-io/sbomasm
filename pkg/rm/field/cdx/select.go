@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
 // func selectFromCDXDependency(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
@@ -35,104 +36,249 @@ func SelectAuthorFromMetadata(bom *cydx.BOM) ([]interface{}, error) {
 	return []interface{}{*bom.Metadata.Authors}, nil
 }
 
-func SelectAuthorFromComponents(component *cydx.Component) ([]interface{}, error) {
-	if component.Authors == nil || len(*component.Authors) == 0 {
+func SelectAuthorFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *doc.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Authors != nil && len(*originalComp.Authors) > 0 {
+				fmt.Println("Selecting authors from component: ", *originalComp.Authors)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
-
-	fmt.Println("Selecting authors from component: ", component.Authors)
-	return []interface{}{*component.Authors}, nil
+	fmt.Println("Selecting authors from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectCopyrightFromComponents(component *cydx.Component) ([]interface{}, error) {
-	if component.Copyright == "" {
+func SelectCopyrightFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *doc.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Copyright != "" {
+				fmt.Println("Selecting copyright from component: ", originalComp.Copyright)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
-
-	fmt.Println("Selecting copyright from component: ", component.Copyright)
-	return []interface{}{component.Copyright}, nil
+	fmt.Println("Selecting copyright from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectCPEFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.CPE == "" {
-		return nil, nil
+func SelectCpeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *doc.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.CPE != "" {
+				fmt.Println("Selecting CPE from component: ", originalComp.CPE)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
 	}
 
-	fmt.Println("Selecting CPE from component: ", component.CPE)
-	return []interface{}{component.CPE}, nil
+	if len(finalComponents) == 0 {
+		return nil, nil
+	}
+	fmt.Println("Selecting CPE from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectDescriptionFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.Description == "" {
-		return nil, nil
+func SelectDescriptionFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Description != "" {
+				fmt.Println("Selecting description from component: ", originalComp.Description)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
 	}
 
-	fmt.Println("Selecting description from component: ", component.Description)
-	return []interface{}{component.Description}, nil
+	if len(finalComponents) == 0 {
+		return nil, nil
+	}
+	fmt.Println("Selecting description from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectLicenseFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.Licenses == nil || len(*component.Licenses) == 0 {
+func SelectLicenseFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Licenses != nil && len(*originalComp.Licenses) > 0 {
+				fmt.Println("Selecting licenses from component: ", originalComp.Licenses)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
 
-	var selected []interface{}
-	for _, licenseChoice := range *component.Licenses {
-		selected = append(selected, licenseChoice)
-	}
-
-	fmt.Println("Selecting licenses from component: ", selected)
-	return selected, nil
+	fmt.Println("Selecting licenses from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectHashFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.Hashes == nil || len(*component.Hashes) == 0 {
+func SelectHashFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Hashes != nil && len(*originalComp.Hashes) > 0 {
+				fmt.Println("Selecting hashes from component: ", originalComp.Hashes)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
 
-	var selected []interface{}
-	for _, hash := range *component.Hashes {
-		selected = append(selected, hash)
-	}
-
-	fmt.Println("Selecting hashes from component: ", selected)
-	return selected, nil
+	return finalComponents, nil
 }
 
-func SelectPurlFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.PackageURL == "" {
-		return nil, nil
+func SelectPurlFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.PackageURL != "" {
+				fmt.Println("Selecting PURL from component: ", originalComp.PackageURL)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
 	}
 
-	fmt.Println("Selecting PURL from component: ", component.PackageURL)
-	return []interface{}{component.PackageURL}, nil
+	if len(finalComponents) == 0 {
+		return nil, nil
+	}
+	fmt.Println("Selecting PURL from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectSupplierFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.Supplier == nil {
+func SelectSupplierFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Supplier != nil {
+				fmt.Println("Selecting supplier from component: ", originalComp.Supplier)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
 
-	fmt.Println("Selecting supplier from component: ", component.Supplier)
-	return []interface{}{*component.Supplier}, nil
+	fmt.Println("Selecting supplier from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectRepoFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.ExternalReferences == nil || len(*component.ExternalReferences) == 0 {
+func SelectRepoFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.ExternalReferences != nil && len(*originalComp.ExternalReferences) > 0 {
+				for _, ref := range *originalComp.ExternalReferences {
+					if ref.Type == "vcs" || ref.Type == "distribution" {
+						fmt.Println("Selecting repository from component: ", ref)
+						finalComponents = append(finalComponents, originalComp)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
 
-	fmt.Println("Selecting repositories from component: ", component.ExternalReferences)
-	return []interface{}{*component.ExternalReferences}, nil
+	fmt.Println("Selecting repositories from component: ", finalComponents)
+	return finalComponents, nil
 }
 
-func SelectTypeFromComponent(component *cydx.Component) ([]interface{}, error) {
-	if component.Type == "" {
+func SelectTypeFromComponent(bom *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	var finalComponents []interface{}
+
+	for _, originalComp := range *bom.Components {
+		for _, sel := range params.SelectedComponents {
+			selectedComp, ok := sel.(*cydx.Component)
+			if !ok {
+				continue
+			}
+
+			if *selectedComp == originalComp && originalComp.Type != "" {
+				fmt.Println("Selecting type from component: ", originalComp.Type)
+				finalComponents = append(finalComponents, originalComp)
+			}
+		}
+	}
+
+	if len(finalComponents) == 0 {
 		return nil, nil
 	}
 
-	fmt.Println("Selecting type from component: ", component.Type)
-	return []interface{}{component.Type}, nil
+	return finalComponents, nil
 }
 
 func SelectSupplierFromMetadata(bom *cydx.BOM) ([]interface{}, error) {

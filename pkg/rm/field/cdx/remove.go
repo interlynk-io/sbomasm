@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
 func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
@@ -313,5 +314,194 @@ func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	fmt.Printf("🧹 Removed %d tool(s) from metadata.\n", removedCount)
+	return nil
+}
+
+func RemoveAuthorFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		var newAuthors []cydx.OrganizationalContact
+
+		for _, author := range *comp.Authors {
+			if author.Name != params.Value || author.Email != params.Value {
+				newAuthors = append(newAuthors, author)
+			}
+		}
+		comp.Authors = &newAuthors
+	}
+
+	return nil
+}
+
+func RemoveCopyrightFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		if comp.Copyright == params.Value {
+			comp.Copyright = ""
+			fmt.Println("🧹 Removed copyright from component:", comp.Name)
+		}
+	}
+
+	return nil
+}
+
+func RemoveCpeFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		var newCpes []string
+
+		if comp.CPE != params.Value {
+			newCpes = append(newCpes, comp.CPE)
+		}
+
+		comp.CPE = ""
+	}
+
+	return nil
+}
+
+func RemoveDescriptionFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		if comp.Description == params.Value {
+			comp.Description = ""
+			fmt.Println("🧹 Removed description from component:", comp.Name)
+		}
+	}
+
+	return nil
+}
+
+func RemoveHashFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		var newHashes []cydx.Hash
+		for _, hash := range *comp.Hashes {
+			if hash.Value != params.Value {
+				newHashes = append(newHashes, hash)
+			}
+		}
+		comp.Hashes = &newHashes
+	}
+
+	return nil
+}
+
+func RemoveLicenseFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(*cydx.Component)
+		if !ok {
+			continue
+		}
+
+		// var newLicenses []cydx.LicenseChoice
+		newLicenses := cydx.Licenses{}
+		for _, license := range *comp.Licenses {
+			if license.Expression != params.Value {
+				newLicenses = append(newLicenses, license)
+			}
+		}
+		comp.Licenses = &newLicenses
+	}
+
+	return nil
+}
+
+func RemovePurlFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		if comp.PackageURL == params.Value {
+			comp.PackageURL = ""
+			fmt.Println("🧹 Removed PackageURL from component:", comp.Name)
+		}
+	}
+
+	return nil
+}
+
+func RemoveTypeFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(cydx.Component)
+		if !ok {
+			continue
+		}
+
+		if string(comp.Type) == params.Value {
+			comp.Type = ""
+			fmt.Println("🧹 Removed type from component:", comp.Name)
+		}
+	}
+
+	return nil
+}
+
+func RemoveSupplierFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(*cydx.Component)
+		if !ok {
+			continue
+		}
+
+		var newSuppliers cydx.OrganizationalEntity
+
+		if comp.Supplier.Name != params.Value {
+			newSuppliers = *comp.Supplier
+		}
+
+		comp.Supplier = &newSuppliers
+	}
+
+	return nil
+}
+
+func RemoveRepoFromComponent(entries []interface{}, params *types.RmParams) error {
+	for _, entry := range entries {
+		comp, ok := entry.(*cydx.Component)
+		if !ok {
+			continue
+		}
+
+		for _, ref := range *comp.ExternalReferences {
+			if ref.Type == "vcs" || ref.Type == "distribution" {
+				if ref.URL == params.Value {
+					fmt.Println("🧹 Removed external reference from component:", comp.Name)
+					// Remove the reference by filtering it out
+					var newRefs []cydx.ExternalReference
+					for _, r := range *comp.ExternalReferences {
+						if r.URL != params.Value {
+							newRefs = append(newRefs, r)
+						}
+					}
+					comp.ExternalReferences = &newRefs
+				}
+			}
+		}
+	}
+
 	return nil
 }

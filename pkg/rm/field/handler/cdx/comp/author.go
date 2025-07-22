@@ -1,3 +1,19 @@
+// Copyright 2025 Interlynk.io
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package comp
 
 import (
@@ -7,23 +23,21 @@ import (
 )
 
 type CdxCompAuthorHandler struct {
-	Component *cydx.Component
+	Bom *cydx.BOM
 }
 
 func (h *CdxCompAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectAuthorFromComponents(h.Component)
+	return cdx.SelectAuthorFromComponent(h.Bom, params)
 }
 
 func (h *CdxCompAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	// return cdx.FilterAuthorFromComponents(selected, params)
-	return nil, nil // Filtering not implemented yet
+	return cdx.FilterAuthorFromComponent(h.Bom, selected, params)
 }
 
 func (h *CdxCompAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	// return cdx.RemoveAuthorFromComponents(h.Bom, targets)
-	return nil // Removal not implemented yet
+	return cdx.RemoveAuthorFromComponent(targets, params)
 }
 
 func (h *CdxCompAuthorHandler) Summary(selected []interface{}) {
-	// cdx.RenderSummaryAuthorFromComponents(selected)
+	cdx.RenderSummaryAuthorFromComponent(selected)
 }
