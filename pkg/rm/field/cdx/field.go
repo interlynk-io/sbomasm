@@ -63,7 +63,7 @@ type CopyrightEntry struct {
 // CpeEntry for ExternalReferences with Type "security" (for CPEs)
 type CpeEntry struct {
 	Component *cydx.Component
-	Ref       *cydx.ExternalReference
+	Ref       string
 }
 
 // HashEntry for Hashes

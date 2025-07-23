@@ -164,18 +164,9 @@ func SelectCpeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{
 		if !ok {
 			continue
 		}
-		if c.ExternalReferences != nil {
-			for _, ref := range *c.ExternalReferences {
-				if ref.Type == cydx.ERTypeSecurityContact {
-					fmt.Printf("Selecting CPE from component: %s@%s, CPE: %s\n", c.Name, c.Version, ref.URL)
-					selected = append(selected, CpeEntry{Component: c, Ref: &ref})
-				}
-			}
-		}
-		// Fallback to Component.CPE (deprecated but supported)
+
 		if c.CPE != "" {
-			fmt.Printf("Selecting CPE from component: %s@%s, CPE: %s\n", c.Name, c.Version, c.CPE)
-			selected = append(selected, CpeEntry{Component: c, Ref: &cydx.ExternalReference{Type: cydx.ERTypeSecurityContact, URL: c.CPE}})
+			selected = append(selected, CpeEntry{Component: c, Ref: c.CPE})
 		}
 	}
 	if len(selected) == 0 {
@@ -192,7 +183,6 @@ func SelectDescriptionFromComponent(doc *cydx.BOM, params *types.RmParams) ([]in
 			continue
 		}
 		if c.Description != "" {
-			fmt.Printf("Selecting description from component: %s@%s, Description: %s\n", c.Name, c.Version, c.Description)
 			selected = append(selected, DescriptionEntry{Component: c, Value: c.Description})
 		}
 	}
@@ -210,9 +200,9 @@ func SelectHashFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 			continue
 		}
 		if c.Hashes != nil {
-			for _, hash := range *c.Hashes {
-				fmt.Printf("Selecting hash from component: %s@%s, Hash: %s (%s)\n", c.Name, c.Version, hash.Value, hash.Algorithm)
-				selected = append(selected, HashEntry{Component: c, Hash: &hash})
+			for i := range *c.Hashes {
+				hash := &(*c.Hashes)[i]
+				selected = append(selected, HashEntry{Component: c, Hash: hash})
 			}
 		}
 	}
@@ -231,16 +221,19 @@ func SelectLicenseFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interf
 		}
 		if c.Licenses != nil {
 			for _, license := range *c.Licenses {
-				var licenseValue string
-				if license.License.ID != "" {
-					licenseValue = license.License.ID
-				} else if license.License.Name != "" {
+				licenseValue := license.License.ID
+				field := "ID"
+				if licenseValue == "" {
 					licenseValue = license.License.Name
-				} else if license.Expression != "" {
+					field = "Name"
+				}
+				if licenseValue == "" {
 					licenseValue = license.Expression
+					field = "Expression"
 				}
 				if licenseValue != "" {
-					fmt.Printf("Selecting license from component: %s@%s, License: %s\n", c.Name, c.Version, licenseValue)
+					fmt.Printf("Selecting license from component: %s@%s, License: %s (Field: %s)\n",
+						c.Name, c.Version, licenseValue, field)
 					selected = append(selected, LicenseEntry{Component: c, Value: licenseValue})
 				}
 			}
@@ -260,18 +253,9 @@ func SelectPurlFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 			continue
 		}
 		if c.PackageURL != "" {
-			fmt.Printf("Selecting PURL from component: %s@%s, PURL: %s\n", c.Name, c.Version, c.PackageURL)
 			selected = append(selected, PurlEntry{Component: c, Value: c.PackageURL})
 		}
-		// Check ExternalReferences for purl
-		if c.ExternalReferences != nil {
-			for _, ref := range *c.ExternalReferences {
-				if ref.Type == "purl" {
-					fmt.Printf("Selecting PURL from component: %s@%s, PURL: %s\n", c.Name, c.Version, ref.URL)
-					selected = append(selected, PurlEntry{Component: c, Value: ref.URL})
-				}
-			}
-		}
+
 	}
 	if len(selected) == 0 {
 		fmt.Println("No PURL entries found in selected components")
@@ -309,7 +293,6 @@ func SelectTypeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 			continue
 		}
 		if c.Type != "" {
-			fmt.Printf("Selecting type from component: %s@%s, Type: %s\n", c.Name, c.Version, c.Type)
 			selected = append(selected, TypeEntry{Component: c, Value: c.Type})
 		}
 	}

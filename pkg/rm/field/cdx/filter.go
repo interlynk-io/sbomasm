@@ -337,13 +337,14 @@ func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params 
 
 func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		fmt.Println("No CPE value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
 	var filtered []interface{}
 	for _, e := range selected {
 		entry, ok := e.(CpeEntry)
-		if !ok || entry.Ref == nil || entry.Ref.Type != cydx.ERTypeSecurityContact {
+		if !ok || entry.Ref == "" {
 			fmt.Println("Skipping invalid CPE entry:", e)
 			continue
 		}
@@ -351,17 +352,14 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 		match := false
 		switch {
 		case params.IsValuePresent:
-			if strings.EqualFold(entry.Ref.URL, params.Value) {
+			if strings.EqualFold(entry.Ref, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
 				fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
 			}
-		case params.IsKeyPresent:
-			if entry.Ref.Type == cydx.ExternalReferenceType(params.Key) && params.Key == string(cydx.ERTypeSecurityContact) {
-				match = true
-			}
 		default:
+			fmt.Println("No specific value filter applied, including all CPE entries")
 			match = true
 		}
 
@@ -410,7 +408,8 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 }
 
 func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All {
+		fmt.Println("No hash value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
@@ -431,10 +430,6 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 			if params.Value == "NOASSERTION" {
 				fmt.Println("Warning: NOASSERTION is unlikely for hash field")
 			}
-		case params.IsKeyPresent:
-			if strings.EqualFold(string(entry.Hash.Algorithm), params.Key) {
-				match = true
-			}
 		default:
 			match = true
 		}
@@ -449,7 +444,8 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 }
 
 func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All {
+		fmt.Println("No license value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
@@ -468,7 +464,7 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Printf("Matched NOASSERTION for license in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
+				fmt.Println("Warning: NOASSERTION is unlikely for license field")
 			}
 		default:
 			match = true
@@ -502,9 +498,9 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
-			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for PURL field")
-			}
+			// if params.Value == "NOASSERTION" {
+			// 	fmt.Println("Warning: NOASSERTION is unlikely for PURL field")
+			// }
 		default:
 			match = true
 		}

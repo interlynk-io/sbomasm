@@ -81,8 +81,14 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 		}
 
 		if params.AllComponents {
-			for _, comp := range *raw.Components {
-				result = append(result, comp)
+			fmt.Println("Selecting all components from CycloneDX BOM")
+			if raw.Metadata.Component != nil {
+				result = append(result, raw.Metadata.Component)
+			}
+
+			for i := range *raw.Components {
+				fmt.Println("Selecting component Pointer:", &(*raw.Components)[i])
+				result = append(result, &(*raw.Components)[i])
 			}
 			return result, nil
 		}
@@ -93,10 +99,16 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 			return nil, fmt.Errorf("component name and version are required unless --all-components is set")
 		}
 
-		for _, comp := range *raw.Components {
-			if strings.EqualFold(comp.Name, name) && strings.EqualFold(comp.Version, version) {
-				result = append(result, comp)
-				break
+		if raw.Metadata.Component != nil && strings.EqualFold(raw.Metadata.Component.Name, name) && strings.EqualFold(raw.Metadata.Component.Version, version) {
+			result = append(result, raw.Metadata.Component)
+		}
+		if raw.Components != nil {
+			for i := range *raw.Components {
+				comp := &(*raw.Components)[i]
+				if strings.EqualFold(comp.Name, name) && strings.EqualFold(comp.Version, version) {
+					result = append(result, comp)
+					break
+				}
 			}
 		}
 		return result, nil

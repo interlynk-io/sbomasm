@@ -163,8 +163,9 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		fmt.Println("No matching components found.")
 		return nil
 	}
-	fmt.Println("Selected components for field removal:", len(selectedComponents))
-	fmt.Println("Selected components:", selectedComponents)
+
+	fmt.Println("Total selected components for field removal:", len(selectedComponents))
+	// fmt.Println("Selected components:", selectedComponents)
 
 	// Step 2: For each selected component, operate on field
 	spec, field := f.doc.SpecType(), strings.ToLower(params.Field)

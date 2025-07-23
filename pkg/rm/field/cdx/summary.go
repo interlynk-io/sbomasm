@@ -209,14 +209,14 @@ func RenderSummaryCpeFromComponent(entries []interface{}) {
 
 	for _, e := range entries {
 		entry, ok := e.(CpeEntry)
-		if !ok || entry.Ref == nil || entry.Ref.Type != cydx.ERTypeSecurityContact {
+		if !ok || entry.Ref == "" {
 			fmt.Println("Skipping invalid CPE entry:", e)
 			continue
 		}
 		fmt.Printf("  - Component: %s@%s, CPE: %s\n",
 			entry.Component.Name,
 			entry.Component.Version,
-			entry.Ref.URL)
+			entry.Ref)
 	}
 }
 
