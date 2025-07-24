@@ -27,7 +27,7 @@ type CdxDocSupplierHandler struct {
 }
 
 func (h *CdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectSupplierFromMetadata(h.Bom)
+	return cdx.SelectSupplierFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmP
 }
 
 func (h *CdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveSupplierFromMetadata(h.Bom, targets)
+	return cdx.RemoveSupplierFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocSupplierHandler) Summary(selected []interface{}) {

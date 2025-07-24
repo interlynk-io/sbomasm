@@ -44,7 +44,7 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	handlerRegistry["cdx:document:lifecycle"] = &cdxmeta.CdxDocLifecycleHandler{Bom: bom}
 
 	// CDX Component-level handlers
-	// handlerRegistry["cdx:component:author"] = &cdxcomp.CdxComponentAuthorHandler{Doc: spdxDoc}
+	handlerRegistry["cdx:component:author"] = &cdxcomp.CdxCompAuthorHandler{Bom: bom}
 	handlerRegistry["cdx:component:supplier"] = &cdxcomp.CdxComponentSupplierHandler{Bom: bom}
 	handlerRegistry["cdx:component:repository"] = &cdxcomp.CdxComponentRepoHandler{Bom: bom}
 	handlerRegistry["cdx:component:license"] = &cdxcomp.CdxComponentLicenseHandler{Bom: bom}

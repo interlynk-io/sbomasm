@@ -27,7 +27,7 @@ type SpdxDocLifecycleHandler struct {
 }
 
 func (h *SpdxDocLifecycleHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectLifecycleFromMetadata(h.Doc)
+	return spdx.SelectLifecycleFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocLifecycleHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocLifecycleHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *SpdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveLifecycleFromMetadata(h.Doc, targets)
+	return spdx.RemoveLifecycleFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocLifecycleHandler) Summary(selected []interface{}) {

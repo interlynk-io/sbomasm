@@ -21,58 +21,52 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
 func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filtered []interface{}
 	for _, s := range selected {
-		fmt.Println("Processing author entry:", s)
 		authors, ok := s.([]cydx.OrganizationalContact)
 		if !ok {
-			fmt.Println("Skipping non-author entry:", s)
+			log.Warn("Skipping non-author entry:", s)
 			continue
 		}
 
 		for _, author := range authors {
 			if params.IsKeyAndValuePresent {
-				fmt.Println("Checking author:", author.Name, "with email:", author.Email)
-				// match both key and value
 				if author.Name == params.Key && author.Email == params.Value {
 					filtered = append(filtered, author)
 				}
 			} else if params.IsKeyPresent {
-				fmt.Println("Checking author name:", author.Name, "against key:", params.Key)
-				// match only key
 				if author.Name == params.Key {
 					filtered = append(filtered, author)
 				}
 			} else if params.IsValuePresent {
-				fmt.Println("Checking author email:", author.Email, "against value:", params.Value)
-				// match only value
 				if author.Email == params.Value {
 					filtered = append(filtered, author)
 				}
 			} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
-				fmt.Println("Adding author without specific filters:", author)
 				filtered = append(filtered, author)
 			}
 		}
 		// }
 	}
-	fmt.Println("Filtered authors:", filtered)
+	log.Debugf("Filtered authors: %v", filtered)
 	return filtered, nil
 }
 
 func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+
 	var filtered []interface{}
 	for _, entry := range selected {
-		fmt.Println("Processing supplier entry:", entry)
 		supplier, ok := entry.(cydx.OrganizationalEntity)
 		if !ok {
 			continue
 		}
-		fmt.Println("Processing supplier:", supplier.Name, "with URL:", *supplier.URL)
 		if params.IsKeyAndValuePresent && supplier.Name == params.Key && containsEmail(supplier.Contact, params.Value) {
 			filtered = append(filtered, supplier)
 		} else if params.IsKeyPresent && supplier.Name == params.Key {
@@ -83,6 +77,7 @@ func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) 
 			filtered = append(filtered, supplier)
 		}
 	}
+	log.Debugf("Filtered suppliers: %v", filtered)
 	return filtered, nil
 }
 
@@ -99,6 +94,7 @@ func containsEmail(contacts *[]cydx.OrganizationalContact, email string) bool {
 }
 
 func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filtered []interface{}
 	for _, entry := range selected {
 		license, ok := entry.(cydx.LicenseChoice)
@@ -111,25 +107,24 @@ func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) (
 			filtered = append(filtered, license)
 		}
 	}
-	fmt.Println("Filtered licenses:", filtered)
+	log.Debugf("Filtered licenses: %v", filtered)
 	return filtered, nil
 }
 
 func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filtered []interface{}
 
 	for _, s := range selected {
-		fmt.Println("Processing lifecycle entry:", s)
 
 		lifecycles, ok := s.([]cydx.Lifecycle)
 		if !ok {
-			fmt.Println("Skipping non-lifecycle entry:", s)
+			log.Warn("Skipping non-lifecycle entry:", s)
 			continue
 		}
 
 		for _, lc := range lifecycles {
 			phase := string(lc.Phase) // convert to string for comparison
-			fmt.Println("Lifecycle phase:", phase)
 
 			if params.IsKeyAndValuePresent || params.IsKeyPresent || params.IsValuePresent {
 				if phase == params.Key || phase == params.Value {
@@ -141,14 +136,15 @@ func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams)
 		}
 	}
 
-	fmt.Println("Filtered lifecycles:", filtered)
+	log.Debugf("Filtered lifecycles: %v", filtered)
 	return filtered, nil
 }
 
 func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+
 	var filtered []interface{}
 	for _, entry := range selected {
-		fmt.Println("Processing repository entry:", entry)
 		extRefs, ok := entry.([]cydx.ExternalReference)
 		if !ok || strings.ToLower(string(extRefs[0].Type)) != "vcs" {
 			continue
@@ -166,11 +162,12 @@ func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams
 			}
 		}
 	}
-	fmt.Println("Filtered repositories:", filtered)
+	log.Debugf("Filtered repositories: %v", filtered)
 	return filtered, nil
 }
 
 func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filtered []interface{}
 
 	timestamp, ok := selected[0].(string)
@@ -180,11 +177,12 @@ func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams)
 	if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
 		filtered = append(filtered, timestamp)
 	}
-	fmt.Println("Filtered timestamps:", filtered)
+	log.Debugf("Filtered timestamps: %v", filtered)
 	return filtered, nil
 }
 
 func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filtered []interface{}
 
 	for _, s := range selected {
@@ -212,6 +210,7 @@ func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]i
 		}
 	}
 
+	log.Debugf("Filtered tools: %v", filtered)
 	return filtered, nil
 }
 
@@ -231,6 +230,8 @@ func matchTool(name, version string, params *types.RmParams) bool {
 }
 
 func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -239,7 +240,7 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 	for _, e := range selected {
 		entry, ok := e.(AuthorEntry)
 		if !ok || entry.Author == nil {
-			fmt.Println("Skipping invalid author entry:", e)
+			log.Warn("Skipping invalid author entry:", e)
 			continue
 		}
 
@@ -250,7 +251,7 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for author field")
+				log.Warn("Warning: NOASSERTION is unlikely for author field")
 			}
 		default:
 			match = true
@@ -261,11 +262,12 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 		}
 	}
 
-	fmt.Printf("Filtered %d author entries\n", len(filtered))
+	log.Debugf("Filtered %d author entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -274,7 +276,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 	for _, e := range selected {
 		entry, ok := e.(SupplierEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid supplier entry:", e)
+			log.Warn("Skipping invalid supplier entry:", e)
 			continue
 		}
 
@@ -285,7 +287,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Printf("Matched NOASSERTION for supplier in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
+				log.Warnf("Matched NOASSERTION for supplier in component: %s@%s\n", entry.Component.Name, entry.Component.Version)
 			}
 		default:
 			match = true
@@ -296,11 +298,12 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 		}
 	}
 
-	fmt.Printf("Filtered %d supplier entries\n", len(filtered))
+	log.Debugf("Filtered %d supplier entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -309,7 +312,7 @@ func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params 
 	for _, e := range selected {
 		entry, ok := e.(CopyrightEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid copyright entry:", e)
+			log.Warn("Skipping invalid copyright entry:", e)
 			continue
 		}
 
@@ -331,13 +334,15 @@ func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params 
 		}
 	}
 
-	fmt.Printf("Filtered %d copyright entries\n", len(filtered))
+	log.Debugf("Filtered %d copyright entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
-		fmt.Println("No CPE value provided, returning selected entries without filtering")
+		log.Warn("No CPE value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
@@ -345,7 +350,7 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 	for _, e := range selected {
 		entry, ok := e.(CpeEntry)
 		if !ok || entry.Ref == "" {
-			fmt.Println("Skipping invalid CPE entry:", e)
+			log.Warn("Skipping invalid CPE entry:", e)
 			continue
 		}
 
@@ -356,10 +361,9 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+				log.Warn("Warning: NOASSERTION is unlikely for CPE field")
 			}
 		default:
-			fmt.Println("No specific value filter applied, including all CPE entries")
 			match = true
 		}
 
@@ -368,11 +372,12 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 		}
 	}
 
-	fmt.Printf("Filtered %d CPE entries\n", len(filtered))
+	log.Debugf("Filtered %d CPE entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -381,7 +386,7 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 	for _, e := range selected {
 		entry, ok := e.(DescriptionEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid description entry:", e)
+			log.Warn("Skipping invalid description entry:", e)
 			continue
 		}
 
@@ -392,7 +397,7 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+				log.Warn("Warning: NOASSERTION is unlikely for description field")
 			}
 		default:
 			match = true
@@ -403,13 +408,14 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 		}
 	}
 
-	fmt.Printf("Filtered %d description entries\n", len(filtered))
+	log.Debugf("Filtered %d description entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All {
-		fmt.Println("No hash value provided, returning selected entries without filtering")
+		log.Warn("No hash value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
@@ -417,7 +423,7 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	for _, e := range selected {
 		entry, ok := e.(HashEntry)
 		if !ok || entry.Hash == nil {
-			fmt.Println("Skipping invalid hash entry:", e)
+			log.Warn("Skipping invalid hash entry:", e)
 			continue
 		}
 
@@ -428,7 +434,7 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+				log.Warn("Warning: NOASSERTION is unlikely for hash field")
 			}
 		default:
 			match = true
@@ -439,13 +445,13 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	fmt.Printf("Filtered %d hash entries\n", len(filtered))
+	log.Debugf("Filtered %d hash entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All {
-		fmt.Println("No license value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 
@@ -453,7 +459,7 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 	for _, e := range selected {
 		entry, ok := e.(LicenseEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid license entry:", e)
+			log.Warn("Skipping invalid license entry:", e)
 			continue
 		}
 
@@ -464,7 +470,7 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for license field")
+				log.Warn("Warning: NOASSERTION is unlikely for license field")
 			}
 		default:
 			match = true
@@ -475,11 +481,12 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 		}
 	}
 
-	fmt.Printf("Filtered %d license entries\n", len(filtered))
+	log.Debugf("Filtered %d license entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -488,7 +495,7 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	for _, e := range selected {
 		entry, ok := e.(PurlEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid PURL entry:", e)
+			log.Warn("Skipping invalid PURL entry:", e)
 			continue
 		}
 
@@ -498,9 +505,9 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
-			// if params.Value == "NOASSERTION" {
-			// 	fmt.Println("Warning: NOASSERTION is unlikely for PURL field")
-			// }
+			if params.Value == "NOASSERTION" {
+				log.Warn("Warning: NOASSERTION is unlikely for PURL field")
+			}
 		default:
 			match = true
 		}
@@ -510,11 +517,12 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	fmt.Printf("Filtered %d PURL entries\n", len(filtered))
+	log.Debugf("Filtered %d PURL entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -523,7 +531,7 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	for _, e := range selected {
 		entry, ok := e.(RepositoryEntry)
 		if !ok || entry.Ref == nil || (entry.Ref.Type != cydx.ERTypeVCS && entry.Ref.Type != cydx.ERTypeDistribution) {
-			fmt.Println("Skipping invalid repository entry:", e)
+			log.Warn("Skipping invalid repository entry:", e)
 			continue
 		}
 
@@ -534,7 +542,7 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+				log.Warn("Warning: NOASSERTION is unlikely for repository field")
 			}
 		case params.IsKeyPresent:
 			if entry.Ref.Type == cydx.ExternalReferenceType(params.Key) && (params.Key == string(cydx.ERTypeVCS) || params.Key == string(cydx.ERTypeDistribution)) {
@@ -549,11 +557,12 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	fmt.Printf("Filtered %d repository entries\n", len(filtered))
+	log.Debugf("Filtered %d repository entries\n", len(filtered))
 	return filtered, nil
 }
 
 func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -562,7 +571,7 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	for _, e := range selected {
 		entry, ok := e.(TypeEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid type entry:", e)
+			log.Warn("Skipping invalid type entry:", e)
 			continue
 		}
 
@@ -573,7 +582,7 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for type field")
+				log.Warn("Warning: NOASSERTION is unlikely for type field")
 			}
 		default:
 			match = true
@@ -584,6 +593,6 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	fmt.Printf("Filtered %d type entries\n", len(filtered))
+	log.Debugf("Filtered %d type entries\n", len(filtered))
 	return filtered, nil
 }

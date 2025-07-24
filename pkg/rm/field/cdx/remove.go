@@ -17,14 +17,16 @@
 package cdx
 
 import (
-	"fmt"
+	"context"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 )
 
-func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveSupplierFromMetadata(c context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(c)
 	if bom.Metadata == nil || bom.Metadata.Supplier == nil {
 		return nil
 	}
@@ -45,7 +47,7 @@ func RemoveSupplierFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	if removed {
-		fmt.Println("🧹 Removed 1 supplier from metadata.")
+		log.Debugf("Removed 1 supplier from metadata.")
 	}
 	return nil
 }
@@ -63,7 +65,8 @@ func matchSupplier(a, b cydx.OrganizationalEntity) bool {
 	return false
 }
 
-func RemoveLicenseFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveLicenseFromMetadata(c context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(c)
 	if bom.Metadata == nil || bom.Metadata.Licenses == nil {
 		return nil
 	}
@@ -85,15 +88,13 @@ func RemoveLicenseFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	removedCount := originalCount - len(filtered)
-	if removedCount > 0 {
-		fmt.Printf("🧹 Removed %d license(s) from metadata.\n", removedCount)
-	}
 
 	if len(filtered) == 0 {
 		bom.Metadata.Licenses = nil
 	} else {
 		bom.Metadata.Licenses = &filtered
 	}
+	log.Debugf("Removed %d license(s) from metadata.\n", removedCount)
 
 	return nil
 }
@@ -122,7 +123,8 @@ func matchLicense(tar interface{}, lic cydx.LicenseChoice) bool {
 	return false
 }
 
-func RemoveAuthorFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveAuthorFromMetadata(c context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(c)
 	if bom.Metadata == nil || bom.Metadata.Authors == nil {
 		return nil
 	}
@@ -138,14 +140,13 @@ func RemoveAuthorFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 
 	// Optional: log change
 	removedCount := len(original) - len(filtered)
-	fmt.Printf("🧹 Removed %d author(s) from metadata.\n", removedCount)
 
 	if len(filtered) == 0 {
 		bom.Metadata.Authors = nil
 	} else {
 		bom.Metadata.Authors = &filtered
 	}
-
+	log.Debugf("Removed %d author(s) from metadata.\n", removedCount)
 	return nil
 }
 
@@ -160,7 +161,8 @@ func isAuthorInTargets(author cydx.OrganizationalContact, targets []interface{})
 	return false
 }
 
-func RemoveLifecycleFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveLifecycleFromMetadata(c context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(c)
 	if bom.Metadata == nil || bom.Metadata.Lifecycles == nil {
 		return nil
 	}
@@ -175,7 +177,7 @@ func RemoveLifecycleFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	}
 
 	removedCount := len(original) - len(filtered)
-	fmt.Printf("🧹 Removed %d lifecycle(s) from metadata.\n", removedCount)
+	log.Debugf("Removed %d lifecycle(s) from metadata.\n", removedCount)
 
 	if len(filtered) == 0 {
 		bom.Metadata.Lifecycles = nil
@@ -195,7 +197,8 @@ func isLifecycleInTargets(candidate cydx.Lifecycle, targets []interface{}) bool 
 	return false
 }
 
-func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveRepositoryFromMetadata(ctx context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if bom.Metadata == nil || bom.ExternalReferences == nil {
 		return nil
 	}
@@ -206,7 +209,6 @@ func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 	)
 
 	for _, ref := range *bom.ExternalReferences {
-		// Only consider VCS-type references
 		if strings.ToLower(string(ref.Type)) != "vcs" {
 			filtered = append(filtered, ref)
 			continue
@@ -234,7 +236,7 @@ func RemoveRepositoryFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 		bom.ExternalReferences = &filtered
 	}
 
-	fmt.Printf("🧹 Removed %d repository (VCS) reference(s) from metadata.\n", removed)
+	log.Debugf("Removed %d repository (VCS) reference(s) from metadata.\n", removed)
 	return nil
 }
 
@@ -242,15 +244,18 @@ func matchExternalReference(a, b cydx.ExternalReference) bool {
 	return a.Type == b.Type && a.URL == b.URL && a.Comment == b.Comment
 }
 
-func RemoveTimestampFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveTimestampFromMetadata(ctx context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if bom.Metadata == nil {
 		return nil
 	}
 	bom.Metadata.Timestamp = ""
+	log.Debugf("Removed timestamp from metadata.")
 	return nil
 }
 
-func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
+func RemoveToolFromMetadata(ctx context.Context, bom *cydx.BOM, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if bom.Metadata == nil || bom.Metadata.Tools == nil {
 		return nil
 	}
@@ -313,21 +318,21 @@ func RemoveToolFromMetadata(bom *cydx.BOM, targets []interface{}) error {
 		bom.Metadata.Tools = nil
 	}
 
-	fmt.Printf("🧹 Removed %d tool(s) from metadata.\n", removedCount)
+	log.Debugf("Removed %d tool(s) from metadata.\n", removedCount)
 	return nil
 }
 
 func RemoveAuthorFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(AuthorEntry)
 		if !ok || entry.Author == nil {
-			fmt.Println("Skipping invalid author entry:", e)
+			log.Debugf("Skipping invalid author entry: %v", e)
 			continue
 		}
 
 		comp := entry.Component
-		// Verify component is in doc.Components
 		found := false
 		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
 			found = true
@@ -340,7 +345,7 @@ func RemoveAuthorFromComponent(doc *cydx.BOM, entries []interface{}, params *typ
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Debugf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
@@ -356,26 +361,26 @@ func RemoveAuthorFromComponent(doc *cydx.BOM, entries []interface{}, params *typ
 				comp.Authors = nil
 			}
 			removedCount++
-			fmt.Printf("Removed author from component: %s@%s, Author: %s (%s)\n", comp.Name, comp.Version, entry.Author.Name, entry.Author.Email)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for author field")
+				log.Warnf("Warning: NOASSERTION is unlikely for author field")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d author entries from components\n", removedCount)
+	log.Debugf("Removed %d author entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No author entries removed")
+		log.Debugf("No author entries removed")
 	}
 	return nil
 }
 
 func RemoveSupplierFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(SupplierEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid supplier entry:", e)
+			log.Debugf("Skipping invalid supplier entry: %v", e)
 			continue
 		}
 
@@ -392,33 +397,34 @@ func RemoveSupplierFromComponent(doc *cydx.BOM, entries []interface{}, params *t
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if comp.Supplier != nil && strings.EqualFold(comp.Supplier.Name, entry.Value) {
 			comp.Supplier = nil
 			removedCount++
-			fmt.Printf("Removed supplier from component: %s@%s, Supplier: %s\n", comp.Name, comp.Version, entry.Value)
+			log.Debugf("Removed supplier from component: %s@%s, Supplier: %s\n", comp.Name, comp.Version, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for supplier")
+				log.Warnf("Matched NOASSERTION for supplier")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d supplier entries from components\n", removedCount)
+	log.Debugf("Removed %d supplier entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No supplier entries removed")
+		log.Debugf("No supplier entries removed")
 	}
 	return nil
 }
 
 func RemoveCopyrightFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(CopyrightEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid copyright entry:", e)
+			log.Debugf("Skipping invalid copyright entry: %v", e)
 			continue
 		}
 
@@ -435,33 +441,34 @@ func RemoveCopyrightFromComponent(doc *cydx.BOM, entries []interface{}, params *
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if strings.EqualFold(comp.Copyright, entry.Value) {
 			comp.Copyright = ""
 			removedCount++
-			fmt.Printf("Removed copyright from component: %s@%s, Copyright: %s\n", comp.Name, comp.Version, entry.Value)
+			log.Debugf("Removed copyright from component: %s@%s, Copyright: %s\n", comp.Name, comp.Version, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for copyright")
+				log.Warnf("Matched NOASSERTION for copyright")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d copyright entries from components\n", removedCount)
+	log.Debugf("Removed %d copyright entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No copyright entries removed")
+		log.Debugf("No copyright entries removed")
 	}
 	return nil
 }
 
 func RemoveCpeFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(CpeEntry)
 		if !ok || entry.Ref == "" {
-			fmt.Println("Skipping invalid CPE entry:", e)
+			log.Debugf("Skipping invalid CPE entry: %v", e)
 			continue
 		}
 
@@ -478,7 +485,7 @@ func RemoveCpeFromComponent(doc *cydx.BOM, entries []interface{}, params *types.
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
@@ -486,29 +493,30 @@ func RemoveCpeFromComponent(doc *cydx.BOM, entries []interface{}, params *types.
 			if strings.EqualFold(comp.CPE, entry.Ref) {
 				comp.CPE = ""
 				removedCount++
-				fmt.Printf("Removed legacy CPE from component: %s@%s, CPE: %s\n", comp.Name, comp.Version, entry.Ref)
+				log.Debugf("Removed legacy CPE from component: %s@%s, CPE: %s\n", comp.Name, comp.Version, entry.Ref)
 				if params.Value == "NOASSERTION" {
-					fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+					log.Warnf("Warning: NOASSERTION is unlikely for CPE field")
 				}
 			}
-			fmt.Println("New value of comp.CPE:", comp.CPE)
+			log.Debugf("New value of comp.CPE: %s\n", comp.CPE)
 		}
 	}
 
-	fmt.Printf("Removed %d CPE entries from components\n", removedCount)
+	log.Debugf("Removed %d CPE entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No CPE entries removed")
+		log.Debugf("No CPE entries removed\n")
 	}
 
 	return nil
 }
 
 func RemoveDescriptionFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(DescriptionEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid description entry:", e)
+			log.Debugf("Skipping invalid description entry: %v", e)
 			continue
 		}
 
@@ -526,33 +534,34 @@ func RemoveDescriptionFromComponent(doc *cydx.BOM, entries []interface{}, params
 		}
 
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if comp.Description != "" && strings.EqualFold(comp.Description, entry.Value) {
 			comp.Description = ""
 			removedCount++
-			fmt.Printf("Removed description from component: %s@%s, Description: %s\n", comp.Name, comp.Version, entry.Value)
+			log.Debugf("Removed description from component: %s@%s, Description: %s\n", comp.Name, comp.Version, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+				log.Warnf("Warning: NOASSERTION is unlikely for description field")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d description entries from components\n", removedCount)
+	log.Debugf("Removed %d description entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No description entries removed")
+		log.Debugf("No description entries removed\n")
 	}
 	return nil
 }
 
 func RemoveHashFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(HashEntry)
 		if !ok || entry.Hash == nil {
-			fmt.Println("Skipping invalid hash entry:", e)
+			log.Debugf("Skipping invalid hash entry: %v", e)
 			continue
 		}
 
@@ -569,12 +578,12 @@ func RemoveHashFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+			log.Warnf("Warning: NOASSERTION is unlikely for hash field")
 		}
 
 		if comp.Hashes != nil {
@@ -584,7 +593,7 @@ func RemoveHashFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 					newHashes = append(newHashes, hash)
 				} else {
 					removedCount++
-					fmt.Printf("Removed hash from component: %s@%s, Hash: %s (%s)\n",
+					log.Debugf("Removed hash from component: %s@%s, Hash: %s (%s)\n",
 						comp.Name, comp.Version, hash.Value, hash.Algorithm)
 				}
 			}
@@ -592,28 +601,27 @@ func RemoveHashFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 			if len(newHashes) == 0 {
 				comp.Hashes = nil
 			}
-			fmt.Printf("Debug: comp.Hashes after removal for %s@%s: %v\n", comp.Name, comp.Version, comp.Hashes)
 		}
 	}
 
-	fmt.Printf("Removed %d hash entries from components\n", removedCount)
+	log.Debugf("Removed %d hash entries from components\n", removedCount)
 	if len(entries) > 0 && removedCount == 0 {
-		fmt.Println("No hash entries removed")
+		log.Debugf("No hash entries removed\n")
 	}
 	return nil
 }
 
 func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(LicenseEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid license entry:", e)
+			log.Debugf("Skipping invalid license entry: %v", e)
 			continue
 		}
 
 		comp := entry.Component
-		// Verify component is in doc.Components or doc.Metadata.Component
 		found := false
 		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
 			found = true
@@ -626,12 +634,12 @@ func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *ty
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for license field")
+			log.Warnf("Warning: NOASSERTION is unlikely for license field")
 		}
 
 		if comp.Licenses != nil {
@@ -651,7 +659,7 @@ func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *ty
 					newLicenses = append(newLicenses, license)
 				} else {
 					removedCount++
-					fmt.Printf("Removed license from component: %s@%s, License: %s (Field: %s)\n",
+					log.Debugf("Removed license from component: %s@%s, License: %s (Field: %s)\n",
 						comp.Name, comp.Version, licenseValue, field)
 				}
 			}
@@ -659,24 +667,24 @@ func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *ty
 			if len(newLicenses) == 0 {
 				comp.Licenses = nil
 			}
-			fmt.Printf("Debug: comp.Licenses after removal for %s@%s: %v\n", comp.Name, comp.Version, comp.Licenses)
 		}
 	}
 
-	fmt.Printf("Removed %d license entries from components\n", removedCount)
+	log.Debugf("Removed %d license entries from components\n", removedCount)
 	if len(entries) > 0 && removedCount == 0 {
-		fmt.Println("No license entries removed")
+		log.Debugf("No license entries removed\n")
 	}
 	return nil
 }
 
 func RemovePurlFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 
 	for _, e := range entries {
 		entry, ok := e.(PurlEntry)
 		if !ok {
-			fmt.Println("Skipping invalid PURL entry:", e)
+			log.Debugf("Skipping invalid PURL entry: %v", e)
 			continue
 		}
 
@@ -695,38 +703,38 @@ func RemovePurlFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 		}
 
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if comp.PackageURL != "" && strings.EqualFold(comp.PackageURL, entry.Value) {
 			comp.PackageURL = ""
 			removedCount++
-			fmt.Printf("Removed PURL from component: %s@%s, PURL: %s\n", comp.Name, comp.Version, entry.Value)
+			log.Debugf("Removed PURL from component: %s@%s, PURL: %s\n", comp.Name, comp.Version, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for PURL field")
+				log.Warnf("Warning: NOASSERTION is unlikely for PURL field")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d PURL entries from components\n", removedCount)
+	log.Debugf("Removed %d PURL entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No PURL entries removed")
+		log.Debugf("No PURL entries removed\n")
 	}
 	return nil
 }
 
 func RemoveRepoFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(RepositoryEntry)
 		if !ok || entry.Ref == nil || (entry.Ref.Type != cydx.ERTypeVCS && entry.Ref.Type != cydx.ERTypeDistribution) {
-			fmt.Println("Skipping invalid repository entry:", e)
+			log.Debugf("Skipping invalid repository entry: %v", e)
 			continue
 		}
 
 		comp := entry.Component
-		// Verify component is in doc.Components or doc.Metadata.Component
 		found := false
 		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
 			found = true
@@ -739,12 +747,12 @@ func RemoveRepoFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+			log.Warnf("Warning: NOASSERTION is unlikely for repository field")
 		}
 
 		if comp.ExternalReferences != nil {
@@ -754,7 +762,7 @@ func RemoveRepoFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 					newRefs = append(newRefs, ref)
 				} else {
 					removedCount++
-					fmt.Printf("Removed repository from component: %s@%s, Repository: %s (Type: %s)\n",
+					log.Debugf("Removed repository from component: %s@%s, Repository: %s (Type: %s)\n",
 						comp.Name, comp.Version, ref.URL, ref.Type)
 				}
 			}
@@ -762,28 +770,27 @@ func RemoveRepoFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 			if len(newRefs) == 0 {
 				comp.ExternalReferences = nil
 			}
-			fmt.Printf("Debug: comp.ExternalReferences after removal for %s@%s: %v\n", comp.Name, comp.Version, comp.ExternalReferences)
 		}
 	}
 
-	fmt.Printf("Removed %d repository entries from components\n", removedCount)
+	log.Debugf("Removed %d repository entries from components\n", removedCount)
 	if len(entries) > 0 && removedCount == 0 {
-		fmt.Println("No repository entries removed")
+		log.Debugf("No repository entries removed\n")
 	}
 	return nil
 }
 
 func RemoveTypeFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(TypeEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid type entry:", e)
+			log.Debugf("Skipping invalid type entry: %v", e)
 			continue
 		}
 
 		comp := entry.Component
-		// Verify component is in doc.Components or doc.Metadata.Component
 		found := false
 		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
 			found = true
@@ -796,25 +803,24 @@ func RemoveTypeFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
 			continue
 		}
 
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for type field")
+			log.Warnf("Warning: NOASSERTION is unlikely for type field\n")
 		}
 
 		if strings.EqualFold(string(comp.Type), string(entry.Value)) {
 			comp.Type = "" // Default type
 			removedCount++
-			fmt.Printf("Removed type from component: %s@%s, Type: %s\n", comp.Name, comp.Version, entry.Value)
-			fmt.Printf("Debug: comp.Type after removal for %s@%s: %s\n", comp.Name, comp.Version, comp.Type)
+			log.Debugf("Removed type from component: %s@%s, Type: %s\n", comp.Name, comp.Version, entry.Value)
 		}
 	}
 
-	fmt.Printf("Removed %d type entries from components\n", removedCount)
+	log.Debugf("Removed %d type entries from components\n", removedCount)
 	if len(entries) > 0 && removedCount == 0 {
-		fmt.Println("No type entries removed")
+		log.Debugf("No type entries removed\n")
 	}
 	return nil
 }

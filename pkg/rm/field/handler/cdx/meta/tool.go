@@ -27,7 +27,7 @@ type CdxDocToolHandler struct {
 }
 
 func (h *CdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectToolFromMetadata(h.Bom)
+	return cdx.SelectToolFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocToolHandler) Filter(selected []interface{}, params *types.RmParam
 }
 
 func (h *CdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveToolFromMetadata(h.Bom, targets)
+	return cdx.RemoveToolFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocToolHandler) Summary(selected []interface{}) {

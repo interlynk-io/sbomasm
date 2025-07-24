@@ -27,7 +27,7 @@ type SpdxDocLicenseHandler struct {
 }
 
 func (h *SpdxDocLicenseHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectLicenseFromMetadata(h.Doc)
+	return spdx.SelectLicenseFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmP
 }
 
 func (h *SpdxDocLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveLicenseFromMetadata(h.Doc, targets)
+	return spdx.RemoveLicenseFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocLicenseHandler) Summary(selected []interface{}) {

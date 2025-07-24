@@ -27,7 +27,7 @@ type SpdxDocToolHandler struct {
 }
 
 func (h *SpdxDocToolHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectToolFromMetadata(h.Doc)
+	return spdx.SelectToolFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocToolHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocToolHandler) Filter(selected []interface{}, params *types.RmPara
 }
 
 func (h *SpdxDocToolHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveToolFromMetadata(h.Doc, targets)
+	return spdx.RemoveToolFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocToolHandler) Summary(selected []interface{}) {

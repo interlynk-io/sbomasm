@@ -16,6 +16,8 @@
 
 package types
 
+import "context"
+
 type RemovalKind string
 
 const (
@@ -33,23 +35,26 @@ const (
 )
 
 type RmParams struct {
-	Kind                 RemovalKind
-	Field                string
-	Scope                string
-	Key                  string
-	Value                string
-	All                  bool
-	ComponentName        string
-	ComponentVersion     string
-	DependencyID         string
-	IsComponent          bool
-	IsDependency         bool
-	IsKeyPresent         bool
-	IsValuePresent       bool
-	IsKeyAndValuePresent bool
-	DryRun               bool
-	Summary              bool
-	OutputFile           string
-	SelectedComponents   []interface{}
-	AllComponents        bool
+	Kind                   RemovalKind
+	Field                  string
+	Scope                  string
+	Key                    string
+	Value                  string
+	All                    bool
+	ComponentName          string
+	ComponentVersion       string
+	DependencyID           string
+	IsComponent            bool
+	IsDependency           bool
+	IsFieldPresent         bool
+	IsKeyPresent           bool
+	IsValuePresent         bool
+	IsFieldAndValuePresent bool
+	IsKeyAndValuePresent   bool
+	DryRun                 bool
+	Summary                bool
+	OutputFile             string
+	SelectedComponents     []interface{}
+	AllComponents          bool
+	Ctx                    *context.Context
 }

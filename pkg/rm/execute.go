@@ -19,10 +19,10 @@ package rm
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
@@ -40,6 +40,10 @@ type ComponentsOperationEngine struct {
 }
 
 func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(ctx)
+
+	log.Debugf("Selecting components")
+
 	var result []interface{}
 
 	switch c.doc.SpecType() {
@@ -53,6 +57,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 			for _, pkg := range raw.Packages {
 				result = append(result, pkg)
 			}
+			log.Debugf("Selected all components from SPDX document")
 			return result, nil
 		}
 
@@ -81,13 +86,12 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 		}
 
 		if params.AllComponents {
-			fmt.Println("Selecting all components from CycloneDX BOM")
+			log.Debugf("Selecting all components from CycloneDX BOM")
 			if raw.Metadata.Component != nil {
 				result = append(result, raw.Metadata.Component)
 			}
 
 			for i := range *raw.Components {
-				fmt.Println("Selecting component Pointer:", &(*raw.Components)[i])
 				result = append(result, &(*raw.Components)[i])
 			}
 			return result, nil
@@ -119,6 +123,8 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 }
 
 func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmParams) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("Executing field removal")
 	if f.doc.Raw() == nil {
 		return nil
 	}
@@ -126,7 +132,7 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
 
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
-	fmt.Println("Handler Key:", key)
+	log.Debugf("Handler Key: %s", key)
 	handler, ok := handlerRegistry[key]
 	if !ok {
 		return fmt.Errorf("no handler registered for key: %s", key)
@@ -139,7 +145,7 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 	}
 
 	if len(selected) == 0 {
-		fmt.Println("No matching entries found.")
+		log.Debugf("No matching entries found.")
 		return nil
 	}
 
@@ -150,7 +156,7 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 	}
 
 	if len(targets) == 0 {
-		fmt.Println("No matching entries found.")
+		log.Debugf("No matching entries found.")
 		return nil
 	}
 
@@ -160,7 +166,7 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 		return nil
 	}
 	if params.DryRun {
-		fmt.Println("Dry-run: matched entries:")
+		log.Infof("Dry-run: matched entries:")
 		for _, entry := range targets {
 			fmt.Printf("  - %v\n", entry)
 		}
@@ -172,29 +178,34 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 }
 
 func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.RmParams) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("Executing components removal")
+
 	// Step 1: Select components based on filter criteria
 	selectedComponents, err := c.selectComponents(ctx, params)
 	if err != nil {
 		return fmt.Errorf("error selecting components: %w", err)
 	}
+	log.Debugf("Selected components: %d", len(selectedComponents))
 
 	// Step 2: Find corresponding dependencies
 	selectedDeps, err := c.findDependenciesForComponents(selectedComponents)
 	if err != nil {
 		return fmt.Errorf("error selecting dependencies: %w", err)
 	}
-	// fmt.Println("Selected dependencies:", selectedDeps)
+	log.Debugf("Selected dependencies: %d", len(selectedDeps))
 
 	// Step 3: Remove components
 	if err := c.removeComponents(selectedComponents); err != nil {
 		return fmt.Errorf("error removing components: %w", err)
 	}
+	log.Debugf("Removed %d components", len(selectedComponents))
 
 	// Step 4: Remove dependencies
 	if err := c.removeDependencies(selectedDeps); err != nil {
 		return fmt.Errorf("error removing dependencies: %w", err)
 	}
+	log.Debugf("Removed %d dependencies", len(selectedDeps))
 
-	log.Printf("Removed %d components and %d dependencies", len(selectedComponents), len(selectedDeps))
 	return nil
 }

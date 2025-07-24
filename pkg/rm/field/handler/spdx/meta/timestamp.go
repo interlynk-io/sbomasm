@@ -27,7 +27,7 @@ type SpdxDocTimestampHandler struct {
 }
 
 func (h *SpdxDocTimestampHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectTimestampFromMetadata(h.Doc)
+	return spdx.SelectTimestampFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocTimestampHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocTimestampHandler) Filter(selected []interface{}, params *types.R
 }
 
 func (h *SpdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveTimestampFromMetadata(h.Doc, targets)
+	return spdx.RemoveTimestampFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocTimestampHandler) Summary(selected []interface{}) {

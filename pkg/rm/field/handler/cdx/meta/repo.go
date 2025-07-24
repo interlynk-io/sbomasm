@@ -27,7 +27,7 @@ type CdxDocRepoHandler struct {
 }
 
 func (h *CdxDocRepoHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectRepositoryFromMetadata(h.Bom)
+	return cdx.SelectRepositoryFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocRepoHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocRepoHandler) Filter(selected []interface{}, params *types.RmParam
 }
 
 func (h *CdxDocRepoHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveRepositoryFromMetadata(h.Bom, targets)
+	return cdx.RemoveRepositoryFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocRepoHandler) Summary(selected []interface{}) {

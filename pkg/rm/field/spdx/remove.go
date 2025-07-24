@@ -17,14 +17,17 @@
 package spdx
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/spdx/tools-golang/spdx"
 )
 
-func RemoveAuthorFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveAuthorFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if doc.CreationInfo == nil || len(doc.CreationInfo.Creators) == 0 {
 		return nil
 	}
@@ -50,11 +53,12 @@ func RemoveAuthorFromMetadata(doc *spdx.Document, targets []interface{}) error {
 
 	removedCount := len(original) - len(filtered)
 	doc.CreationInfo.Creators = filtered
-	fmt.Printf("🧹 Removed %d SPDX author(s) from CreationInfo.\n", removedCount)
+	log.Debugf("Removed %d SPDX author(s) from CreationInfo.\n", removedCount)
 	return nil
 }
 
-func RemoveLicenseFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveLicenseFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	removed := false
 	for _, t := range targets {
 		val, ok := t.(string)
@@ -67,12 +71,13 @@ func RemoveLicenseFromMetadata(doc *spdx.Document, targets []interface{}) error 
 		}
 	}
 	if removed {
-		fmt.Println("🧹 Removed SPDX document-level license (dataLicense).")
+		log.Debugf("Removed SPDX document-level license (dataLicense).")
 	}
 	return nil
 }
 
-func RemoveLifecycleFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveLifecycleFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if doc == nil || doc.CreationInfo == nil {
 		return nil
 	}
@@ -84,14 +89,15 @@ func RemoveLifecycleFromMetadata(doc *spdx.Document, targets []interface{}) erro
 		}
 		if doc.CreationInfo.CreatorComment == val {
 			doc.CreationInfo.CreatorComment = ""
-			fmt.Println("🧹 Removed SPDX lifecycle entry from CreatorComment.")
+			log.Debugf("Removed SPDX lifecycle entry from CreatorComment.")
 			return nil
 		}
 	}
 	return nil
 }
 
-func RemoveSupplierFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveSupplierFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if doc == nil || doc.CreationInfo == nil {
 		return nil
 	}
@@ -118,12 +124,13 @@ func RemoveSupplierFromMetadata(doc *spdx.Document, targets []interface{}) error
 
 	removedCount := len(original) - len(filtered)
 	if removedCount > 0 {
-		fmt.Printf("🧹 Removed %d SPDX supplier(s) from CreatorInfo.\n", removedCount)
+		log.Debugf("Removed %d SPDX supplier(s) from CreatorInfo.\n", removedCount)
 	}
 	return nil
 }
 
-func RemoveToolFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveToolFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if doc == nil || doc.CreationInfo == nil {
 		return nil
 	}
@@ -151,12 +158,13 @@ func RemoveToolFromMetadata(doc *spdx.Document, targets []interface{}) error {
 
 	removed := len(original) - len(filtered)
 	if removed > 0 {
-		fmt.Printf("🧹 Removed %d SPDX tool(s) from CreationInfo.\n", removed)
+		log.Debugf("Removed %d SPDX tool(s) from CreationInfo.\n", removed)
 	}
 	return nil
 }
 
-func RemoveTimestampFromMetadata(doc *spdx.Document, targets []interface{}) error {
+func RemoveTimestampFromMetadata(ctx context.Context, doc *spdx.Document, targets []interface{}) error {
+	log := logger.FromContext(ctx)
 	if doc.CreationInfo == nil || doc.CreationInfo.Created == "" {
 		return nil
 	}
@@ -164,21 +172,22 @@ func RemoveTimestampFromMetadata(doc *spdx.Document, targets []interface{}) erro
 	for _, target := range targets {
 		if ts, ok := target.(string); ok && ts == doc.CreationInfo.Created {
 			doc.CreationInfo.Created = ""
-			fmt.Println("🧹 Removed SPDX timestamp from CreationInfo.")
 			break
 		}
 	}
 
+	log.Debugf("Removed SPDX document creation timestamp.")
 	return nil
 }
 
 func RemovePurlFromComponent(doc *spdx.Document, targets []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 
 	for _, e := range targets {
 		entry, ok := e.(PurlEntry)
 		if !ok || entry.Ref.RefType != "purl" {
-			fmt.Println("Skipping invalid PURL entry:", e)
+			log.Debugf("Skipping invalid PURL entry: %v", e)
 			continue
 		}
 
@@ -192,7 +201,7 @@ func RemovePurlFromComponent(doc *spdx.Document, targets []interface{}, params *
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
@@ -208,38 +217,23 @@ func RemovePurlFromComponent(doc *spdx.Document, targets []interface{}, params *
 		if len(pkg.PackageExternalReferences) == 0 {
 			pkg.PackageExternalReferences = nil
 		}
-		fmt.Printf("Removed PURL %s from component %s@%s\n", entry.Ref.Locator, pkg.PackageName, pkg.PackageVersion)
 	}
 
-	fmt.Printf("Removed %d PURL entries from components\n", removedCount)
+	log.Debugf("Removed %d PURL entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No PURL entries removed")
+		log.Debugf("No PURL entries removed\n")
 	}
 
-	// Optional: Validate document state
-	if err := validatePackageReferences(doc); err != nil {
-		fmt.Printf("Warning: Document validation failed: %v\n", err)
-	}
-
-	return nil
-}
-
-// validatePackageReferences checks if packages have required identifiers
-func validatePackageReferences(doc *spdx.Document) error {
-	for _, pkg := range doc.Packages {
-		if pkg.PackageExternalReferences == nil && pkg.PackageSPDXIdentifier == "" {
-			return fmt.Errorf("package %s@%s has no identifiers after removal", pkg.PackageName, pkg.PackageVersion)
-		}
-	}
 	return nil
 }
 
 func RemoveAuthorFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(AuthorEntry)
 		if !ok || entry.Originator == nil {
-			fmt.Println("Skipping invalid author entry:", e)
+			log.Debugf("Skipping invalid author entry: %v", e)
 			continue
 		}
 
@@ -253,35 +247,34 @@ func RemoveAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if pkg.PackageOriginator == entry.Originator {
 			pkg.PackageOriginator = nil
 			removedCount++
-			fmt.Printf("Removed author from component: %s@%s, Author: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Originator.Originator)
 		}
 	}
 
-	fmt.Printf("Removed %d author entries from components\n", removedCount)
+	log.Debugf("Removed %d author entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No author entries removed")
+		log.Debugf("No author entries removed\n")
 	}
 	return nil
 }
 
 func RemoveSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(SupplierEntry)
 		if !ok || entry.Supplier == nil {
-			fmt.Println("Skipping invalid supplier entry:", e)
+			log.Debugf("Skipping invalid supplier entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -290,38 +283,37 @@ func RemoveSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if pkg.PackageSupplier == entry.Supplier {
 			pkg.PackageSupplier = nil
 			removedCount++
-			fmt.Printf("Removed supplier from component: %s@%s, Supplier: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Supplier.Supplier)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for supplier")
+				log.Debugf("Matched NOASSERTION for supplier\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d supplier entries from components\n", removedCount)
+	log.Debugf("Removed %d supplier entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No supplier entries removed")
+		log.Debugf("No supplier entries removed\n")
 	}
 	return nil
 }
 
 func RemoveCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(CopyrightEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid copyright entry:", e)
+			log.Debugf("Skipping invalid copyright entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -330,38 +322,37 @@ func RemoveCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if strings.EqualFold(pkg.PackageCopyrightText, entry.Value) {
 			pkg.PackageCopyrightText = ""
 			removedCount++
-			fmt.Printf("Removed copyright from component: %s@%s, Copyright: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for copyright")
+				log.Debugf("Matched NOASSERTION for copyright\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d copyright entries from components\n", removedCount)
+	log.Debugf("Removed %d copyright entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No copyright entries removed")
+		log.Debugf("No copyright entries removed\n")
 	}
 	return nil
 }
 
 func RemoveCpeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(CpeEntry)
 		if !ok || entry.Ref == nil || (entry.Ref.RefType != "cpe22Type" && entry.Ref.RefType != "cpe23Type") {
-			fmt.Println("Skipping invalid CPE entry:", e)
+			log.Debugf("Skipping invalid CPE entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -370,7 +361,7 @@ func RemoveCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
@@ -385,30 +376,29 @@ func RemoveCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 		if len(newRefs) == 0 {
 			pkg.PackageExternalReferences = nil
 		}
-		fmt.Printf("Removed CPE from component: %s@%s, CPE: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Ref.Locator)
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+			log.Debugf("Warning: NOASSERTION is unlikely for CPE field\n")
 		}
 	}
 
-	fmt.Printf("Removed %d CPE entries from components\n", removedCount)
+	log.Debugf("Removed %d CPE entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No CPE entries removed")
+		log.Debugf("No CPE entries removed\n")
 	}
 	return nil
 }
 
 func RemoveDescriptionFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(DescriptionEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid description entry:", e)
+			log.Debugf("Skipping invalid description entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -417,38 +407,37 @@ func RemoveDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if strings.EqualFold(pkg.PackageDescription, entry.Value) {
 			pkg.PackageDescription = ""
 			removedCount++
-			fmt.Printf("Removed description from component: %s@%s, Description: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+				log.Debugf("Warning: NOASSERTION is unlikely for description field\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d description entries from components\n", removedCount)
+	log.Debugf("Removed %d description entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No description entries removed")
+		log.Debugf("No description entries removed\n")
 	}
 	return nil
 }
 
 func RemoveHashFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(HashEntry)
 		if !ok || entry.Checksum == nil {
-			fmt.Println("Skipping invalid hash entry:", e)
+			log.Debugf("Skipping invalid hash entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -457,7 +446,7 @@ func RemoveHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
@@ -472,30 +461,29 @@ func RemoveHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 		if len(newChecksums) == 0 {
 			pkg.PackageChecksums = nil
 		}
-		fmt.Printf("Removed hash from component: %s@%s, Hash: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Checksum.Value)
 		if params.Value == "NOASSERTION" {
-			fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+			log.Debugf("Warning: NOASSERTION is unlikely for hash field\n")
 		}
 	}
 
-	fmt.Printf("Removed %d hash entries from components\n", removedCount)
+	log.Debugf("Removed %d hash entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No hash entries removed")
+		log.Debugf("No hash entries removed\n")
 	}
 	return nil
 }
 
 func RemoveLicenseFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(LicenseEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid license entry:", e)
+			log.Debugf("Skipping invalid license entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -511,31 +499,30 @@ func RemoveLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 		if strings.EqualFold(pkg.PackageLicenseConcluded, entry.Value) {
 			pkg.PackageLicenseConcluded = ""
 			removedCount++
-			fmt.Printf("Removed license from component: %s@%s, License: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for license")
+				log.Debugf("Matched NOASSERTION for license\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d license entries from components\n", removedCount)
+	log.Debugf("Removed %d license entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No license entries removed")
+		log.Debugf("No license entries removed\n")
 	}
 	return nil
 }
 
 func RemoveRepoFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(RepositoryEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid repository entry:", e)
+			log.Debugf("Skipping invalid repository entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -544,38 +531,37 @@ func RemoveRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if strings.EqualFold(pkg.PackageDownloadLocation, entry.Value) {
 			pkg.PackageDownloadLocation = ""
 			removedCount++
-			fmt.Printf("Removed repository from component: %s@%s, Repository: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+				log.Debugf("Warning: NOASSERTION is unlikely for repository field\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d repository entries from components\n", removedCount)
+	log.Debugf("Removed %d repository entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No repository entries removed")
+		log.Debugf("No repository entries removed\n")
 	}
 	return nil
 }
 
 func RemoveTypeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(TypeEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid type entry:", e)
+			log.Debugf("Skipping invalid type entry: %v", e)
 			continue
 		}
 
 		pkg := entry.Package
-		// Verify package is in doc.Packages
 		found := false
 		for _, docPkg := range doc.Packages {
 			if docPkg == pkg {
@@ -584,23 +570,22 @@ func RemoveTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 			}
 		}
 		if !found {
-			fmt.Printf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
+			log.Debugf("Warning: Package %s@%s not found in document\n", pkg.PackageName, pkg.PackageVersion)
 			continue
 		}
 
 		if strings.EqualFold(pkg.PrimaryPackagePurpose, entry.Value) {
 			pkg.PrimaryPackagePurpose = ""
 			removedCount++
-			fmt.Printf("Removed type from component: %s@%s, Type: %s\n", pkg.PackageName, pkg.PackageVersion, entry.Value)
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for type field")
+				log.Debugf("Warning: NOASSERTION is unlikely for type field\n")
 			}
 		}
 	}
 
-	fmt.Printf("Removed %d type entries from components\n", removedCount)
+	log.Debugf("Removed %d type entries from components\n", removedCount)
 	if removedCount == 0 {
-		fmt.Println("No type entries removed")
+		log.Debugf("No type entries removed\n")
 	}
 	return nil
 }

@@ -49,23 +49,29 @@ var ValidFields = map[string][]string{
 
 // Validate checks if the removal parameters are valid.
 func (p *RmParams) Validate() error {
-	// conflict Checks First
+	// field removal with scope is grouped together, but
+	// component emoval can't be clubbed with scope
 	if p.Field != "" && p.IsComponent && p.Scope != "" {
 		return fmt.Errorf("conflicting flags: '--field' and '--component' cannot be used together")
 	}
 
+	// field removal with scope is grouped together, but
+	// dependency removal can't be clubbed with scope
 	if p.Field != "" && p.IsDependency && p.Scope != "" {
 		return fmt.Errorf("conflicting flags: '--field' and '--dependency' cannot be used together")
 	}
 
+	// for entire component removal, scope is not required
 	if p.IsComponent && p.Scope != "" {
 		return fmt.Errorf("conflicting flags: '--component' and '--scope' cannot be used together")
 	}
 
+	// for entire dependency removal, scope is not required
 	if p.Field != "" && p.IsDependency {
 		return fmt.Errorf("conflicting flags: '--field' and '--dependency' cannot be used together")
 	}
 
+	// component removal and dependency removal can't be clubbed together
 	if p.IsComponent && p.IsDependency {
 		return fmt.Errorf("conflicting flags: '--component' and '--dependency' cannot be used together")
 	}

@@ -33,8 +33,8 @@ var rmCmd = &cobra.Command{
 	Long: `Remove fields, components, or dependencies from an SBOM.
 
 This command supports high-level removal operations, such as:
-- Removing metadata fields (e.g., author, license)
-- Removing entire components
+- Removing fields from metadata, components (e.g., author, license, purl, cpe, tool, etc.)
+- Removing entire components (remove whole particular components and their related dependencies)
 - Removing specific dependency relationships
 
 The command follows a structured pattern:
@@ -128,7 +128,7 @@ Global Flags:
 
 // extractRemoveParams extracts parameters from the command flags for the removal operation.
 func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
-	// Extract Field Removal Parameters
+	// extract Field Removal Parameters
 	field, _ := cmd.Flags().GetString("field")
 	scope, _ := cmd.Flags().GetString("scope")
 	key, _ := cmd.Flags().GetString("key")
@@ -138,39 +138,44 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	summary, _ := cmd.Flags().GetBool("summary")
 	outputFile, _ := cmd.Flags().GetString("output")
 
-	// Extract Component Removal Parameters
+	// extract Component Removal Parameters
 	name, _ := cmd.Flags().GetString("name")
 	version, _ := cmd.Flags().GetString("version")
 
-	// Extract Dependency Removal Parameters
+	// extract Dependency Removal Parameters
 	dependencyID, _ := cmd.Flags().GetString("id")
 
 	isComponentRemoval, _ := cmd.Flags().GetBool("components")
 
 	isDependencyRemoval, _ := cmd.Flags().GetBool("dependency")
 
+	isFieldPresent := field != ""
 	isKeyPresent := key != ""
 	isValuePresent := value != ""
+	isFieldAndValuePresent := isFieldPresent && isValuePresent
+
 	isKeyAndValuePresent := isKeyPresent && isValuePresent
 
 	params := &types.RmParams{
-		Field:                field,
-		Scope:                scope,
-		Key:                  key,
-		Value:                value,
-		All:                  all,
-		ComponentName:        name,
-		ComponentVersion:     version,
-		DependencyID:         dependencyID,
-		IsComponent:          isComponentRemoval,
-		IsDependency:         isDependencyRemoval,
-		IsKeyPresent:         isKeyPresent,
-		IsValuePresent:       isValuePresent,
-		IsKeyAndValuePresent: isKeyAndValuePresent,
-		DryRun:               dryRun,
-		Summary:              summary,
-		OutputFile:           outputFile,
-		AllComponents:        all,
+		Field:                  field,
+		Scope:                  scope,
+		Key:                    key,
+		Value:                  value,
+		All:                    all,
+		ComponentName:          name,
+		ComponentVersion:       version,
+		DependencyID:           dependencyID,
+		IsComponent:            isComponentRemoval,
+		IsDependency:           isDependencyRemoval,
+		IsFieldPresent:         isFieldPresent,
+		IsKeyPresent:           isKeyPresent,
+		IsValuePresent:         isValuePresent,
+		IsFieldAndValuePresent: isFieldAndValuePresent,
+		IsKeyAndValuePresent:   isKeyAndValuePresent,
+		DryRun:                 dryRun,
+		Summary:                summary,
+		OutputFile:             outputFile,
+		AllComponents:          all,
 	}
 
 	switch {
@@ -179,7 +184,7 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	case isComponentRemoval:
 		params.Kind = types.ComponentRemoval
 		if params.ComponentName == "" && params.ComponentVersion == "" {
-			params.All = true // If no specific component filters, treat as all components
+			params.All = true
 		}
 	case isDependencyRemoval:
 		params.Kind = types.DependencyRemoval

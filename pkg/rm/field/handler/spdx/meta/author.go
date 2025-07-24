@@ -27,7 +27,7 @@ type SpdxDocAuthorHandler struct {
 }
 
 func (h *SpdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectAuthorFromMetadata(h.Doc)
+	return spdx.SelectAuthorFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmPa
 }
 
 func (h *SpdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveAuthorFromMetadata(h.Doc, targets)
+	return spdx.RemoveAuthorFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocAuthorHandler) Summary(selected []interface{}) {

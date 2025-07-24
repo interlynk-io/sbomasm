@@ -27,7 +27,7 @@ type CdxDocAuthorHandler struct {
 }
 
 func (h *CdxDocAuthorHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectAuthorFromMetadata(h.Bom)
+	return cdx.SelectAuthorFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocAuthorHandler) Filter(selected []interface{}, params *types.RmPar
 }
 
 func (h *CdxDocAuthorHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveAuthorFromMetadata(h.Bom, targets)
+	return cdx.RemoveAuthorFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocAuthorHandler) Summary(selected []interface{}) {

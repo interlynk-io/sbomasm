@@ -27,7 +27,7 @@ type CdxDocLicenseHandler struct {
 }
 
 func (h *CdxDocLicenseHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectLicenseFromMetadata(h.Bom)
+	return cdx.SelectLicenseFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocLicenseHandler) Filter(selected []interface{}, params *types.RmPa
 }
 
 func (h *CdxDocLicenseHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveLicenseFromMetadata(h.Bom, targets)
+	return cdx.RemoveLicenseFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocLicenseHandler) Summary(selected []interface{}) {

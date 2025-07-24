@@ -27,7 +27,7 @@ type CdxDocLifecycleHandler struct {
 }
 
 func (h *CdxDocLifecycleHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectLifecycleFromMetadata(h.Bom)
+	return cdx.SelectLifecycleFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocLifecycleHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocLifecycleHandler) Filter(selected []interface{}, params *types.Rm
 }
 
 func (h *CdxDocLifecycleHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveLifecycleFromMetadata(h.Bom, targets)
+	return cdx.RemoveLifecycleFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocLifecycleHandler) Summary(selected []interface{}) {

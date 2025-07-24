@@ -21,17 +21,21 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 )
 
 func Engine(ctx context.Context, args []string, params *types.RmParams) error {
+	log := logger.FromContext(ctx)
+
+	log.Debugf("Executing removal with params: %+v", params)
+
 	inputFile := args[0]
 	if inputFile == "" {
 		return errors.New("input file path not provided")
@@ -50,8 +54,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	fmt.Println("Detected SBOM format:", format)
-	fmt.Println("Detected SBOM spec:", spec)
+	log.Debugf("Detected SBOM format: %s, spec: %s", format, spec)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -67,13 +70,19 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	// Cast the underlying raw doc to correct type for registration
 	switch spec {
 	case sbom.SBOMSpecCDX:
-		RegisterHandlers(sbomDoc.Raw().(*cydx.BOM), nil)
+		bom, ok := sbomDoc.Raw().(*cydx.BOM)
+		if !ok {
+			return fmt.Errorf("expected CycloneDX BOM, got %T", sbomDoc.Raw())
+		}
+		log.Debugf("CycloneDX BOM detected, registering handlers")
+
+		RegisterHandlers(bom, nil)
 	case sbom.SBOMSpecSPDX:
 		doc, ok := sbomDoc.Raw().(*spdx.Document)
 		if !ok {
-			// handle error, maybe return or panic, depending on your use case
-			log.Println("Could not assert SPDX document")
+			return fmt.Errorf("expected SPDX doc, got %T", sbomDoc.Raw())
 		}
+		log.Debugf("SPDX Doc detected, registering handlers")
 		RegisterHandlers(nil, doc)
 	default:
 		return fmt.Errorf("unsupported spec: %s", spec)
@@ -84,10 +93,9 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return err
 	}
 
-	// 🧾 Step: Output the modified SBOM
 	if params.OutputFile != "" {
-		fmt.Println("Writing updated SBOM to file:", params.OutputFile)
-		// Write to file
+		log.Infof("Writing updated SBOM to file: %s", params.OutputFile)
+
 		f, err := os.Create(params.OutputFile)
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %w", err)
@@ -97,9 +105,12 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		if err := sbom.WriteSBOM(f, sbomDoc); err != nil {
 			return fmt.Errorf("failed to write SBOM to file: %w", err)
 		}
-		fmt.Printf("✅ Updated SBOM written to file: %s\n", params.OutputFile)
+
+		log.Infof("Updated SBOM written to file: %s", params.OutputFile)
 	} else {
-		// Write to stdout
+
+		log.Infof("No output file specified, writing to stdout")
+
 		if err := sbom.WriteSBOM(os.Stdout, sbomDoc); err != nil {
 			return fmt.Errorf("failed to write SBOM to stdout: %w", err)
 		}
@@ -109,8 +120,12 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 }
 
 func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, params *types.RmParams) error {
+	log := logger.FromContext(ctx)
+
 	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
+
+	log.Debugf("Handler key: %s", key)
 
 	handler, ok := handlerRegistry[key]
 	if !ok {
@@ -123,7 +138,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 	}
 
 	if len(selected) == 0 {
-		fmt.Println("No matching entries found.")
+		log.Debugf("No matching entries found.")
 		return nil
 	}
 
@@ -133,7 +148,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 	}
 
 	if len(targets) == 0 {
-		fmt.Println("No matching entries found.")
+		log.Debugf("No matching entries found.")
 		return nil
 	}
 
@@ -142,7 +157,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 		return nil
 	}
 	if params.DryRun {
-		fmt.Println("Dry-run: matched entries:")
+		log.Debugf("Dry-run: matched entries:")
 		for _, entry := range targets {
 			fmt.Printf("  - %v\n", entry)
 		}
@@ -153,30 +168,31 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 }
 
 func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context, params *types.RmParams) error {
-	// Step 1: Select relevant components
+	log := logger.FromContext(ctx)
+
 	compEngine := &FieldOperationComponentEngine{doc: f.doc}
 	selectedComponents, err := compEngine.SelectComponents(ctx, params)
 	if err != nil {
 		return fmt.Errorf("failed to select components: %w", err)
 	}
 	if len(selectedComponents) == 0 {
-		fmt.Println("No matching components found.")
+		log.Debugf("No matching components found.")
 		return nil
 	}
 
-	fmt.Println("Total selected components for field removal:", len(selectedComponents))
-	// fmt.Println("Selected components:", selectedComponents)
+	log.Infof("Total selected components for field removal: %d", len(selectedComponents))
 
 	// Step 2: For each selected component, operate on field
 	spec, field := f.doc.SpecType(), strings.ToLower(params.Field)
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), "component", field)
+
+	log.Debugf("Handler key for field removal: %s", key)
 
 	handler, ok := handlerRegistry[key]
 	if !ok {
 		return fmt.Errorf("no handler registered for key: %s", key)
 	}
 
-	// Set selected components for field handler to operate on
 	params.SelectedComponents = selectedComponents
 
 	// Step 3: Select field entries from components
@@ -185,7 +201,7 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		return err
 	}
 	if len(selected) == 0 {
-		fmt.Println("No matching fields found in selected components.")
+		log.Debugf("No matching fields found in selected components.")
 		return nil
 	}
 
@@ -195,7 +211,7 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		return err
 	}
 	if len(targets) == 0 {
-		fmt.Println("No matching field entries after filtering.")
+		log.Debugf("No matching field entries after filtering.")
 		return nil
 	}
 
@@ -204,7 +220,7 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		return nil
 	}
 	if params.DryRun {
-		fmt.Println("Dry-run: matched field entries:")
+		log.Infof("Dry-run: matched field entries:")
 		for _, entry := range targets {
 			fmt.Printf("  - %v\n", entry)
 		}

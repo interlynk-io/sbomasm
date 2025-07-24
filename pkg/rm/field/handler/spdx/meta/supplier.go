@@ -27,7 +27,7 @@ type SpdxDocSupplierHandler struct {
 }
 
 func (h *SpdxDocSupplierHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return spdx.SelectSupplierFromMetadata(h.Doc)
+	return spdx.SelectSupplierFromMetadata(*params.Ctx, h.Doc)
 }
 
 func (h *SpdxDocSupplierHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *SpdxDocSupplierHandler) Filter(selected []interface{}, params *types.Rm
 }
 
 func (h *SpdxDocSupplierHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return spdx.RemoveSupplierFromMetadata(h.Doc, targets)
+	return spdx.RemoveSupplierFromMetadata(*params.Ctx, h.Doc, targets)
 }
 
 func (h *SpdxDocSupplierHandler) Summary(selected []interface{}) {

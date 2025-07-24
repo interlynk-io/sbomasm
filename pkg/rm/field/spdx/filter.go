@@ -17,22 +17,22 @@
 package spdx
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/spdx/tools-golang/spdx"
 )
 
 func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredAuthors []interface{}
 
 	for _, s := range allAuthors {
-		fmt.Println("Processing author entry:", s)
 		author, ok := s.(spdx.Creator)
 		if !ok || author.CreatorType != "Person" {
-			fmt.Println("Skipping non-author entry:", s)
+			log.Debugf("Skipping non-author entry: %v", s)
 			continue
 		}
 
@@ -54,11 +54,12 @@ func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) 
 		}
 	}
 
-	fmt.Println("Filtered SPDX authors:", filteredAuthors)
+	log.Debugf("Filtered SPDX authors: %v", filteredAuthors)
 	return filteredAuthors, nil
 }
 
 func FilterLicenseFromMetadata(allLicenses []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredLicenses []interface{}
 
 	for _, s := range allLicenses {
@@ -82,10 +83,12 @@ func FilterLicenseFromMetadata(allLicenses []interface{}, params *types.RmParams
 			filteredLicenses = append(filteredLicenses, licenseStr)
 		}
 	}
+	log.Debugf("Filtered SPDX licenses: %v", filteredLicenses)
 	return filteredLicenses, nil
 }
 
 func FilterLifecycleFromMetadata(allLifecycles []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredLifecycles []interface{}
 
 	for _, s := range allLifecycles {
@@ -106,10 +109,12 @@ func FilterLifecycleFromMetadata(allLifecycles []interface{}, params *types.RmPa
 		}
 	}
 
+	log.Debugf("Filtered SPDX lifecycles: %v", filteredLifecycles)
 	return filteredLifecycles, nil
 }
 
 func FilterSupplierFromMetadata(allSuppliers []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredSuppliers []interface{}
 
 	for _, s := range allSuppliers {
@@ -131,10 +136,12 @@ func FilterSupplierFromMetadata(allSuppliers []interface{}, params *types.RmPara
 		}
 	}
 
+	log.Debugf("Filtered SPDX suppliers: %v", filteredSuppliers)
 	return filteredSuppliers, nil
 }
 
 func FilterToolFromMetadata(allTools []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredTools []interface{}
 
 	for _, s := range allTools {
@@ -156,12 +163,12 @@ func FilterToolFromMetadata(allTools []interface{}, params *types.RmParams) ([]i
 		}
 	}
 
-	fmt.Println("Filtered SPDX tools:", filteredTools)
-
+	log.Debugf("Filtered SPDX tools: %v", filteredTools)
 	return filteredTools, nil
 }
 
 func FilterTimestampFromMetadata(allTimestamps []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	var filteredTimestamps []interface{}
 
 	for _, entry := range allTimestamps {
@@ -174,11 +181,12 @@ func FilterTimestampFromMetadata(allTimestamps []interface{}, params *types.RmPa
 
 	}
 
-	fmt.Println("Filtered SPDX timestamps:", filteredTimestamps)
+	log.Debugf("Filtered SPDX timestamps: %v", filteredTimestamps)
 	return filteredTimestamps, nil
 }
 
 func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil // No filtering criteria, return all
 	}
@@ -187,7 +195,6 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 	for _, e := range entries {
 		entry, ok := e.(PurlEntry)
 		if !ok || entry.Ref.RefType != "purl" {
-			// Log: "Skipping invalid PURL entry: %v", e
 			continue
 		}
 
@@ -205,10 +212,12 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 			filtered = append(filtered, entry)
 		}
 	}
+	log.Debugf("Filtered SPDX PURL entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -217,18 +226,16 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 	for _, e := range entries {
 		entry, ok := e.(AuthorEntry)
 		if !ok || entry.Originator == nil {
-			fmt.Println("Skipping invalid author entry:", e)
+			log.Debugf("Skipping invalid author entry: %v", e)
 			continue
 		}
 
 		match := false
 		switch {
 		case params.IsValuePresent:
-			// Match against Originator or email
 			if strings.EqualFold(entry.Originator.Originator, params.Value) {
 				match = true
 			} else {
-				// Extract email (e.g., "Person: John Doe (john@example.com)")
 				re := regexp.MustCompile(`\(([^)]+)\)`)
 				if matches := re.FindStringSubmatch(entry.Originator.Originator); len(matches) > 1 {
 					if strings.EqualFold(matches[1], params.Value) {
@@ -237,7 +244,7 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 				}
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for author field")
+				log.Warnf("NOASSERTION is unlikely for author field")
 			}
 		default:
 			match = true
@@ -248,11 +255,12 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 		}
 	}
 
-	fmt.Println("Filtered SPDX author entries:", len(filtered))
+	log.Debugf("Filtered SPDX author entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -261,7 +269,7 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 	for _, e := range entries {
 		entry, ok := e.(SupplierEntry)
 		if !ok || entry.Supplier == nil {
-			fmt.Println("Skipping invalid supplier entry:", e)
+			log.Debugf("Skipping invalid supplier entry: %v", e)
 			continue
 		}
 
@@ -272,7 +280,7 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for supplier in component:", entry.Package.PackageName)
+				log.Warnf("Matched NOASSERTION for supplier in component: %v", entry.Package.PackageName)
 			}
 		default:
 			match = true
@@ -283,11 +291,12 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 		}
 	}
 
-	fmt.Println("Filtered SPDX supplier entries:", len(filtered))
+	log.Debugf("Filtered SPDX supplier entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -296,7 +305,7 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 	for _, e := range entries {
 		entry, ok := e.(CopyrightEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid copyright entry:", e)
+			log.Debugf("Skipping invalid copyright entry: %v", e)
 			continue
 		}
 
@@ -307,7 +316,7 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for copyright in component:", entry.Package.PackageName)
+				log.Warnf("Matched NOASSERTION for copyright in component: %v", entry.Package.PackageName)
 			}
 		default:
 			match = true
@@ -318,11 +327,12 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 		}
 	}
 
-	fmt.Println("Filtered SPDX copyright entries:", len(filtered))
+	log.Debugf("Filtered SPDX copyright entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -331,7 +341,7 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 	for _, e := range entries {
 		entry, ok := e.(CpeEntry)
 		if !ok || entry.Ref == nil || (entry.Ref.RefType != "cpe22Type" && entry.Ref.RefType != "cpe23Type") {
-			fmt.Println("Skipping invalid CPE entry:", e)
+			log.Debugf("Skipping invalid CPE entry: %v", e)
 			continue
 		}
 
@@ -342,7 +352,7 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for CPE field")
+				log.Warnf("NOASSERTION is unlikely for CPE field")
 			}
 		case params.IsKeyPresent:
 			if entry.Ref.RefType == params.Key && (params.Key == "cpe22Type" || params.Key == "cpe23Type") {
@@ -357,11 +367,12 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 		}
 	}
 
-	fmt.Println("Filtered SPDX CPE entries:", len(filtered))
+	log.Debugf("Filtered SPDX CPE entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -370,7 +381,7 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 	for _, e := range entries {
 		entry, ok := e.(DescriptionEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid description entry:", e)
+			log.Debugf("Skipping invalid description entry: %v", e)
 			continue
 		}
 
@@ -381,7 +392,7 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for description field")
+				log.Warnf("NOASSERTION is unlikely for description field")
 			}
 		default:
 			match = true
@@ -392,11 +403,12 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 		}
 	}
 
-	fmt.Println("Filtered SPDX description entries:", len(filtered))
+	log.Debugf("Filtered SPDX description entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -405,7 +417,7 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 	for _, e := range entries {
 		entry, ok := e.(HashEntry)
 		if !ok || entry.Checksum == nil {
-			fmt.Println("Skipping invalid hash entry:", e)
+			log.Debugf("Skipping invalid hash entry: %v", e)
 			continue
 		}
 
@@ -416,7 +428,7 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for hash field")
+				log.Warnf("NOASSERTION is unlikely for hash field")
 			}
 		case params.IsKeyPresent:
 			if strings.EqualFold(string(entry.Checksum.Algorithm), params.Key) {
@@ -431,11 +443,12 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	fmt.Println("Filtered SPDX hash entries:", len(filtered))
+	log.Debugf("Filtered SPDX hash entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -444,7 +457,7 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 	for _, e := range entries {
 		entry, ok := e.(LicenseEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid license entry:", e)
+			log.Debugf("Skipping invalid license entry: %v", e)
 			continue
 		}
 
@@ -455,7 +468,7 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Matched NOASSERTION for license in component:", entry.Package.PackageName)
+				log.Warnf("NOASSERTION is unlikely for license in component: %v", entry.Package.PackageName)
 			}
 		default:
 			match = true
@@ -466,11 +479,12 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 		}
 	}
 
-	fmt.Println("Filtered SPDX license entries:", len(filtered))
+	log.Debugf("Filtered SPDX license entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -479,7 +493,7 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 	for _, e := range entries {
 		entry, ok := e.(RepositoryEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid repository entry:", e)
+			log.Debugf("Skipping invalid repository entry: %v", e)
 			continue
 		}
 
@@ -490,7 +504,7 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for repository field")
+				log.Warnf("NOASSERTION is unlikely for repository field")
 			}
 		default:
 			match = true
@@ -501,11 +515,12 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	fmt.Println("Filtered SPDX repository entries:", len(filtered))
+	log.Debugf("Filtered SPDX repository entries: %d", len(filtered))
 	return filtered, nil
 }
 
 func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -514,7 +529,7 @@ func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 	for _, e := range entries {
 		entry, ok := e.(TypeEntry)
 		if !ok || entry.Value == "" {
-			fmt.Println("Skipping invalid type entry:", e)
+			log.Debugf("Skipping invalid type entry: %v", e)
 			continue
 		}
 
@@ -525,7 +540,7 @@ func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
-				fmt.Println("Warning: NOASSERTION is unlikely for type field")
+				log.Warnf("NOASSERTION is unlikely for type field")
 			}
 		default:
 			match = true
@@ -536,6 +551,6 @@ func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	fmt.Println("Filtered SPDX type entries:", len(filtered))
+	log.Debugf("Filtered SPDX type entries: %d", len(filtered))
 	return filtered, nil
 }

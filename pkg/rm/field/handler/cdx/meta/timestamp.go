@@ -27,7 +27,7 @@ type CdxDocTimestampHandler struct {
 }
 
 func (h *CdxDocTimestampHandler) Select(params *types.RmParams) ([]interface{}, error) {
-	return cdx.SelectTimestampFromMetadata(h.Bom)
+	return cdx.SelectTimestampFromMetadata(*params.Ctx, h.Bom)
 }
 
 func (h *CdxDocTimestampHandler) Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -35,7 +35,7 @@ func (h *CdxDocTimestampHandler) Filter(selected []interface{}, params *types.Rm
 }
 
 func (h *CdxDocTimestampHandler) Remove(targets []interface{}, params *types.RmParams) error {
-	return cdx.RemoveTimestampFromMetadata(h.Bom, targets)
+	return cdx.RemoveTimestampFromMetadata(*params.Ctx, h.Bom, targets)
 }
 
 func (h *CdxDocTimestampHandler) Summary(selected []interface{}) {
