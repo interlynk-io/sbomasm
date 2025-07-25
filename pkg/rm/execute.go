@@ -179,33 +179,29 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 
 func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
-	log.Debugf("Executing components removal")
+	log.Debugf("Executing components removal process")
 
 	// Step 1: Select components based on filter criteria
 	selectedComponents, err := c.selectComponents(ctx, params)
 	if err != nil {
 		return fmt.Errorf("error selecting components: %w", err)
 	}
-	log.Debugf("Selected components: %d", len(selectedComponents))
 
 	// Step 2: Find corresponding dependencies
-	selectedDeps, err := c.findDependenciesForComponents(selectedComponents)
+	selectedDeps, err := c.findDependenciesForComponents(ctx, selectedComponents)
 	if err != nil {
 		return fmt.Errorf("error selecting dependencies: %w", err)
 	}
-	log.Debugf("Selected dependencies: %d", len(selectedDeps))
 
 	// Step 3: Remove components
-	if err := c.removeComponents(selectedComponents); err != nil {
+	if err := c.removeComponents(ctx, selectedComponents); err != nil {
 		return fmt.Errorf("error removing components: %w", err)
 	}
-	log.Debugf("Removed %d components", len(selectedComponents))
 
 	// Step 4: Remove dependencies
-	if err := c.removeDependencies(selectedDeps); err != nil {
+	if err := c.removeDependencies(ctx, selectedDeps); err != nil {
 		return fmt.Errorf("error removing dependencies: %w", err)
 	}
-	log.Debugf("Removed %d dependencies", len(selectedDeps))
 
 	return nil
 }

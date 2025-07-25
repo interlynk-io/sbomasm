@@ -35,7 +35,7 @@ const (
 
 func Remove(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
-	log.Debugf("Starting removal process with params: %+v", params)
+	log.Debugf("Initializing removal process")
 	params.Ctx = &ctx
 
 	switch params.Kind {
@@ -56,22 +56,19 @@ func Remove(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmPara
 
 func fieldRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
-	log.Debugf("Executing field removal")
+	log.Debugf("Initializing field removal process")
 
 	engine := &FieldOperationEngine{doc: sbomDoc}
 
 	switch params.Scope {
 
 	case string(DOCUMENT):
-		log.Debugf("Executing document field removal")
 		return engine.ExecuteDocumentFieldRemoval(ctx, params)
 
 	case string(COMPONENT):
-		log.Debugf("Executing component field removal")
 		return engine.ExecuteComponentFieldRemoval(ctx, params)
 
 	case string(DEPENDENCY):
-		log.Debugf("Executing dependency field removal")
 		// return engine.ExecuteDependencyFieldRemoval(ctx, params)
 
 	default:
@@ -82,6 +79,9 @@ func fieldRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.
 }
 
 func componentsRemoval(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("Initializing components removal process")
+
 	componentsRemoval := &ComponentsOperationEngine{
 		doc: sbomDoc,
 	}

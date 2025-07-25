@@ -22,31 +22,52 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 	v2_3 "github.com/spdx/tools-golang/spdx/v2/v2_3"
 )
 
-func RemoveDependencies(sbomDoc sbom.SBOMDocument, selectedDependencies []interface{}) error {
-	toRemove := make(map[string]bool)
-	for _, dep := range selectedDependencies {
-		if depRef, ok := dep.(string); ok {
-			toRemove[depRef] = true
-		}
-	}
+func RemoveDependencies(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedDependencies []interface{}) error {
+	log := logger.FromContext(ctx)
+
+	var totalSelectedDependencies int
+	var totalRemovedDependencies int
 
 	switch doc := sbomDoc.Raw().(type) {
 	case *spdx.Document:
+
+		toRemove := make(map[string]bool)
+		for _, dep := range selectedDependencies {
+			if depRef, ok := dep.(string); ok {
+				toRemove[depRef] = true
+			}
+		}
+
 		var filtered []*v2_3.Relationship
 		for _, rel := range doc.Relationships {
 			if !toRemove[string(rel.RefB.ElementRefID)] {
 				filtered = append(filtered, rel)
 			}
+			totalRemovedDependencies++
 		}
 		doc.Relationships = filtered
 
 	case *cydx.BOM:
+		toRemove := make(map[string]bool)
+		for _, dep := range selectedDependencies {
+			depRef, ok := dep.(cydx.Dependency)
+
+			if !ok {
+				log.Debugf("Skipping non-CDX dependency: %T\n", dep)
+				continue
+			}
+
+			totalSelectedDependencies++
+			toRemove[depRef.Ref] = true
+		}
+
 		if doc.Dependencies == nil {
 			return nil
 		}
@@ -55,6 +76,7 @@ func RemoveDependencies(sbomDoc sbom.SBOMDocument, selectedDependencies []interf
 			if !toRemove[dep.Ref] {
 				filtered = append(filtered, dep)
 			}
+			totalRemovedDependencies++
 		}
 		doc.Dependencies = &filtered
 
@@ -62,16 +84,23 @@ func RemoveDependencies(sbomDoc sbom.SBOMDocument, selectedDependencies []interf
 		return fmt.Errorf("unsupported SBOM format for dependency removal")
 	}
 
+	log.Debugf("Total selected dependencies: %d, Total removed dependencies: %d", totalSelectedDependencies, totalRemovedDependencies)
 	return nil
 }
 
-func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{}) error {
+func RemoveComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedComponents []interface{}) error {
+	log := logger.FromContext(ctx)
+
+	var totalSelectedComponents int
+	var totalRemovedComponents int
+
 	switch doc := sbomDoc.Raw().(type) {
 	case *spdx.Document:
 		var filtered []*v2_3.Package
 		toRemove := make(map[string]bool)
 		for _, comp := range selectedComponents {
 			if pkg, ok := comp.(spdx.Package); ok {
+				totalSelectedComponents++
 				toRemove[string(pkg.PackageSPDXIdentifier)] = true
 			}
 		}
@@ -79,6 +108,7 @@ func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{
 			if !toRemove[string(p.PackageSPDXIdentifier)] {
 				filtered = append(filtered, p)
 			}
+			totalRemovedComponents++
 		}
 
 		doc.Packages = filtered
@@ -87,6 +117,7 @@ func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{
 		var filtered []cydx.Component
 		toRemove := make(map[string]bool)
 		for _, comp := range selectedComponents {
+			totalSelectedComponents++
 			if cdxComp, ok := comp.(cydx.Component); ok {
 				toRemove[cdxComp.BOMRef] = true
 			}
@@ -95,11 +126,12 @@ func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{
 			if !toRemove[c.BOMRef] {
 				filtered = append(filtered, c)
 			}
+			totalRemovedComponents++
 		}
-
 		if doc.Metadata != nil && doc.Metadata.Component != nil {
 			metaRef := doc.Metadata.Component.BOMRef
 			if _, ok := toRemove[metaRef]; ok {
+				totalRemovedComponents++
 				doc.Metadata.Component = nil
 			}
 		}
@@ -109,14 +141,21 @@ func RemoveComponents(sbomDoc sbom.SBOMDocument, selectedComponents []interface{
 		return fmt.Errorf("unsupported SBOM format for component removal")
 	}
 
+	log.Debugf("Total selected components: %d, Total removed components: %d", totalSelectedComponents, totalRemovedComponents)
 	return nil
 }
 
-func FindAllDependenciesForComponents(doc sbom.SBOMDocument, selectedComponents []interface{}) []interface{} {
+func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument, selectedComponents []interface{}) []interface{} {
+	log := logger.FromContext(ctx)
+
+	var totalDependencies int
+	var totalSelectedDependencies int
+
 	var dependencies []interface{}
 
 	switch sbomDoc := doc.Raw().(type) {
 	case *spdx.Document:
+
 		pkgIDs := make(map[string]bool)
 		for _, comp := range selectedComponents {
 			if pkg, ok := comp.(spdx.Package); ok {
@@ -125,70 +164,79 @@ func FindAllDependenciesForComponents(doc sbom.SBOMDocument, selectedComponents 
 		}
 
 		for _, rel := range sbomDoc.Relationships {
+			totalDependencies++
 			if pkgIDs[string(rel.RefA.ElementRefID)] && (rel.Relationship == "DEPENDS_ON" || rel.Relationship == "CONTAINS") {
-				fmt.Println("Found Dependency A:", rel.RefA.ElementRefID)
-				fmt.Println("Found Dependency B:", rel.RefB.ElementRefID)
-
+				totalSelectedDependencies++
 				dependencies = append(dependencies, string(rel.RefB.ElementRefID))
-
 			}
 
 			// remove describes relationships for primary components
 			if rel.Relationship == "DESCRIBES" && pkgIDs[string(rel.RefB.ElementRefID)] {
-				fmt.Println("Found Describes Relationship:", rel.RefB.ElementRefID)
-				fmt.Println("Dep A: ", rel.RefA.ElementRefID)
-				// We don't add these to dependencies, just skip them
+				totalSelectedDependencies++
 				dependencies = append(dependencies, string(rel.RefB.ElementRefID))
 			}
 		}
 	case *cydx.BOM:
-		selectedRefs := make(map[string]bool)
+
+		compRefs := make(map[string]bool)
 		for _, comp := range selectedComponents {
 			if cdxComp, ok := comp.(cydx.Component); ok {
-				selectedRefs[cdxComp.BOMRef] = true
+				compRefs[cdxComp.BOMRef] = true
 			}
 		}
 
-		if sbomDoc.Dependencies != nil {
-			for _, dep := range *sbomDoc.Dependencies {
-				if selectedRefs[dep.Ref] {
-					for _, d := range *dep.Dependencies {
-						dependencies = append(dependencies, d)
-					}
-				}
+		for _, dep := range *sbomDoc.Dependencies {
+			totalDependencies++
+			if compRefs[dep.Ref] {
+				totalSelectedDependencies++
+				dependencies = append(dependencies, dep)
+
+				// for _, d := range *dep.Dependencies {
+				// 	totalSelectedDependencies++
+				// 	dependencies = append(dependencies, d)
+				// }
 			}
 		}
+
 	default:
 		fmt.Println("Unsupported SBOM format")
 	}
 
-	for _, dep := range dependencies {
-		fmt.Printf("- Found Dependency: %s\n", dep)
-	}
+	log.Debugf("Total dependencies found: %d, Total selected dependencies: %d", totalDependencies, totalSelectedDependencies)
 
 	return dependencies
 }
 
 func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(ctx)
+
 	var selectedComponents []interface{}
+	var totalComponents int
+	var totalSelectedComponents int
 
 	switch doc := sbomDoc.Raw().(type) {
 	case *spdx.Document:
 		for _, p := range doc.Packages {
+			totalComponents++
 			if shouldSelectSPDXComponent(*p, params) {
 				selectedComponents = append(selectedComponents, *p)
+				totalSelectedComponents++
 			}
 		}
 	case *cydx.BOM:
 		for _, component := range *doc.Components {
+			totalComponents++
 			if shouldSelectCDXComponent(&component, params) {
 				selectedComponents = append(selectedComponents, component)
+				totalSelectedComponents++
 			}
 		}
 
 		// Also check metadata.component
 		if doc.Metadata != nil && doc.Metadata.Component != nil {
+			totalComponents++
 			if shouldSelectCDXComponent(doc.Metadata.Component, params) {
+				totalSelectedComponents++
 				selectedComponents = append(selectedComponents, *doc.Metadata.Component)
 			}
 		}
@@ -198,209 +246,608 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	if len(selectedComponents) == 0 {
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
-	fmt.Printf("Selected %d components based on criteria: %+v\n", len(selectedComponents), params)
-	for _, comp := range selectedComponents {
-		switch c := comp.(type) {
-		case spdx.Package:
-			fmt.Printf("  - SPDX Package: %s %s\n", c.PackageName, c.PackageVersion)
-		case cydx.Component:
-			fmt.Printf("  - CycloneDX Component: %s %s\n", c.Name, c.Version)
-		default:
-			fmt.Printf("  - Unknown Component Type: %T\n", c)
-		}
-	}
+	log.Infof("Total components: %d, Total selected components: %d", totalComponents, totalSelectedComponents)
+
 	// fmt.Println("Selected components:", selectedComponents)
 	return selectedComponents, nil
 }
 
 func shouldSelectSPDXComponent(pkg spdx.Package, params *types.RmParams) bool {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Checking component: %s@%s to be added to selection list", pkg.PackageName, pkg.PackageVersion)
+
 	// Case: specific name + version
 	if params.ComponentName != "" && params.ComponentVersion != "" {
 		return pkg.PackageName == params.ComponentName && pkg.PackageVersion == params.ComponentVersion
 	}
 
-	// Case: -a is true and no specific filters
+	// case: simply to remove all components
 	if params.All && params.Field == "" && params.Value == "" {
+		log.Debugf("Selecting all components from CycloneDX BOM")
 		return true
+	}
+
+	// case: match field presence, key and value present
+	// key is present when field is a key-value pair (e.g. field:supplier, key name, value "John Doe")
+	if params.Field != "" && params.Key != "" && params.Value != "" {
+		return getSPDXComponentFieldKeyValue(*params.Ctx, pkg, params.Field, params.Key) != ""
 	}
 
 	// Case: match field presence
 	if params.Field != "" && params.Value == "" {
-		return getSPDXPackageFieldValue(pkg, params.Field) != ""
+		return getSPDXPackageFieldValue(*params.Ctx, pkg, params.Field) != ""
 	}
 
 	// Case: match field + value
 	if params.Field != "" && params.Value != "" {
-		return getSPDXPackageFieldValue(pkg, params.Field) == params.Value
+		return strings.Contains(getSPDXPackageFieldValue(*params.Ctx, pkg, params.Field), params.Value)
 	}
 
-	// Case: match value only (field unspecified)
-	if params.Field == "" && params.Value != "" {
-		return doesSPDXPackageContainValue(pkg, params.Value)
-	}
+	// // Case: match value only (field unspecified)
+	// if params.Field == "" && params.Value != "" {
+	// 	return doesSPDXPackageContainValue(pkg, params.Value)
+	// }
 	return true
 }
 
 func shouldSelectCDXComponent(comp *cydx.Component, params *types.RmParams) bool {
-	// Case: specific name + version
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Checking component: %s@%s to be added to selection list", comp.Name, comp.Version)
+
+	// Case: to remove a single component with specific name + version
 	if params.ComponentName != "" && params.ComponentVersion != "" {
 		return comp.Name == params.ComponentName && comp.Version == params.ComponentVersion
 	}
 
-	// Case: -a is true and no specific filters
+	// case: simply to remove all components
 	if params.All && params.Field == "" && params.Value == "" {
+		log.Debugf("Selecting all components from CycloneDX BOM")
 		return true
 	}
 
-	// Case: match field presence
+	// case: match field presence, key and value present
+	// key is present when field is a key-value pair (e.g. field:supplier, key name, value "John Doe")
+	if params.Field != "" && params.Key != "" && params.Value != "" {
+		log.Debugf("Checking field presence for key and value for %s: %s", comp.Name, params.Field)
+		return getCDXComponentFieldKeyValue(*params.Ctx, *comp, params.Field, params.Key) != ""
+	}
+
+	// Case: when field is present only
 	if params.Field != "" && params.Value == "" {
-		return getCDXComponentFieldValue(*comp, params.Field) != ""
+		log.Debugf("Checking field presence for %s: %s", comp.Name, params.Field)
+		return getCDXComponentFieldValue(*params.Ctx, *comp, params.Field) != ""
 	}
 
-	// Case: match field + value
+	// Case: when field is present as well as it's direct value
 	if params.Field != "" && params.Value != "" {
-		return getCDXComponentFieldValue(*comp, params.Field) == params.Value
-	}
-
-	// Case: match value only (field unspecified)
-	if params.Field == "" && params.Value != "" {
-		return doesCDXComponentContainValue(*comp, params.Field, params.Value)
+		log.Debugf("Checking field presence and it's value for %s: %s", comp.Name, params.Field)
+		return strings.Contains(getCDXComponentFieldValue(*params.Ctx, *comp, params.Field), params.Value)
 	}
 
 	return false
 }
 
-func doesSPDXPackageContainValue(pkg spdx.Package, value string) bool {
-	fieldValue := getSPDXPackageFieldValue(pkg, "name")
+func getSPDXPackageFieldValue(ctx context.Context, pkg spdx.Package, field string) string {
+	log := logger.FromContext(ctx)
+	log.Debugf("Checking field presence")
 
-	values := strings.Split(fieldValue, ",")
-	for _, v := range values {
-		if strings.TrimSpace(v) == value {
-			return true
-		}
-	}
-	return false
-}
-
-func doesCDXComponentContainValue(comp cydx.Component, field, value string) bool {
-	fieldValue := getCDXComponentFieldValue(comp, field)
-
-	values := strings.Split(fieldValue, ",")
-	for _, v := range values {
-		if strings.TrimSpace(v) == value {
-			return true
-		}
-	}
-	return false
-}
-
-func getSPDXPackageFieldValue(pkg spdx.Package, field string) string {
 	switch strings.ToLower(field) {
+
 	case "name":
-		return pkg.PackageName
+		if pkg.PackageName != "" && pkg.PackageName != "NOASSERTION" {
+			log.Debugf("Found name value for %s: %s", pkg.PackageName, pkg.PackageName)
+			return pkg.PackageName
+		}
+
 	case "version":
-		return pkg.PackageVersion
+		if pkg.PackageVersion != "" && pkg.PackageVersion != "NOASSERTION" {
+			log.Debugf("Found version value for %s: %s", pkg.PackageName, pkg.PackageVersion)
+			return pkg.PackageVersion
+		}
+
 	case "description":
-		return pkg.PackageDescription
+		if pkg.PackageDescription != "" && pkg.PackageDescription != "NOASSERTION" {
+			log.Debugf("Found description value for %s: %s", pkg.PackageName, pkg.PackageDescription)
+			return pkg.PackageDescription
+		}
+
 	case "copyright":
-		return pkg.PackageCopyrightText
+		if pkg.PackageCopyrightText != "" && pkg.PackageCopyrightText != "NOASSERTION" {
+			log.Debugf("Found copyright value for %s: %s", pkg.PackageName, pkg.PackageCopyrightText)
+			return pkg.PackageCopyrightText
+		}
+
 	case "supplier":
-		if pkg.PackageSupplier != nil {
-			return pkg.PackageSupplier.Supplier
+		var values []string
+		if pkg.PackageSupplier != nil && pkg.PackageSupplier.Supplier != "" && pkg.PackageSupplier.Supplier != "NOASSERTION" {
+			values = append(values, pkg.PackageSupplier.Supplier)
 		}
+		if len(values) > 0 {
+			log.Debugf("Found supplier values for %s: %s", pkg.PackageName, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "author":
+		var values []string
+		if pkg.PackageOriginator != nil && pkg.PackageOriginator.Originator != "" && pkg.PackageOriginator.Originator != "NOASSERTION" {
+			values = append(values, pkg.PackageOriginator.Originator)
+		}
+		if len(values) > 0 {
+			log.Debugf("Found author value for %s: %s", pkg.PackageName, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
 	case "type":
-		return string(pkg.PrimaryPackagePurpose)
+		if pkg.PrimaryPackagePurpose != "" && pkg.PrimaryPackagePurpose != "NOASSERTION" {
+			log.Debugf("Found type value for %s: %s", pkg.PackageName, pkg.PrimaryPackagePurpose)
+			return strings.ToLower(pkg.PrimaryPackagePurpose)
+		}
+
 	case "repository":
-		return pkg.PackageDownloadLocation
+		if pkg.PackageDownloadLocation != "" && pkg.PackageDownloadLocation != "NOASSERTION" {
+			log.Debugf("Found repository value for %s: %s", pkg.PackageName, pkg.PackageDownloadLocation)
+			return pkg.PackageDownloadLocation
+		}
+
 	case "license":
-		return string(pkg.PackageLicenseConcluded)
+		if pkg.PackageLicenseConcluded != "" && pkg.PackageLicenseConcluded != "NOASSERTION" {
+			log.Debugf("Found license values for %s: %s", pkg.PackageName, pkg.PackageLicenseConcluded)
+			return string(pkg.PackageLicenseConcluded)
+		}
+
 	case "purl":
-		var purls []string
-		for _, ref := range pkg.PackageExternalReferences {
-			if ref.RefType == "purl" {
-				purls = append(purls, ref.Locator)
+		var values []string
+		if pkg.PackageExternalReferences != nil {
+			for _, ref := range pkg.PackageExternalReferences {
+				if ref.RefType == "purl" && ref.Locator != "" && ref.Locator != "NOASSERTION" {
+					values = append(values, ref.Locator)
+				}
 			}
 		}
-		if len(purls) > 0 {
-			return strings.Join(purls, ", ")
+		if len(values) > 0 {
+			log.Debugf("Found purl values for %s: %s", pkg.PackageName, strings.Join(values, ","))
+			return strings.Join(values, ",")
 		}
+
 	case "cpe":
-		var cpes []string
-		for _, ref := range pkg.PackageExternalReferences {
-			if ref.RefType == "cpe23Type" {
-				cpes = append(cpes, ref.Locator)
+		var values []string
+		if pkg.PackageExternalReferences != nil {
+			for _, ref := range pkg.PackageExternalReferences {
+				if ref.RefType == "cpe23Type" && ref.Locator != "" && ref.Locator != "NOASSERTION" {
+					values = append(values, ref.Locator)
+				}
 			}
 		}
-		if len(cpes) > 0 {
-			return strings.Join(cpes, ", ")
+		if len(values) > 0 {
+			log.Debugf("Found CPE values for %s: %s", pkg.PackageName, strings.Join(values, ","))
+			return strings.Join(values, ",")
 		}
+
 	case "hash":
-		var hashes []string
-		for _, ch := range pkg.PackageChecksums {
-			hashes = append(hashes, fmt.Sprintf("%s (%s)", ch.Algorithm, ch.Value))
+		var values []string
+		if pkg.PackageChecksums != nil {
+			for _, ch := range pkg.PackageChecksums {
+				if ch.Algorithm != "" && ch.Algorithm != "NOASSERTION" {
+					values = append(values, string(ch.Algorithm))
+				}
+				if ch.Value != "" && ch.Value != "NOASSERTION" {
+					values = append(values, ch.Value)
+				}
+			}
 		}
-		if len(hashes) > 0 {
-			return strings.Join(hashes, ",")
+		if len(values) > 0 {
+			log.Debugf("Found hash values for %s: %s", pkg.PackageName, strings.Join(values, ","))
+			return strings.Join(values, ",")
 		}
 	}
 	return ""
 }
 
-func getCDXComponentFieldValue(comp cydx.Component, field string) string {
-	switch strings.ToLower(field) {
+func getSPDXComponentFieldKeyValue(ctx context.Context, pkg spdx.Package, field, key string) string {
+	log := logger.FromContext(ctx)
+	log.Debugf("Checking field presence for key and value")
+
+	field = strings.ToLower(field)
+	key = strings.ToLower(key)
+
+	switch field {
 	case "name":
-		return comp.Name
+		if key == "name" || key == "" {
+			if pkg.PackageName != "" && pkg.PackageName != "NOASSERTION" {
+				log.Debugf("Found name value for %s: %s", pkg.PackageName, pkg.PackageName)
+				return pkg.PackageName
+			}
+		}
+
 	case "version":
-		return comp.Version
+		if key == "version" || key == "" {
+			if pkg.PackageVersion != "" && pkg.PackageVersion != "NOASSERTION" {
+				log.Debugf("Found version value for %s: %s", pkg.PackageName, pkg.PackageVersion)
+				return pkg.PackageVersion
+			}
+		}
+
 	case "description":
-		return comp.Description
+		if key == "description" || key == "" {
+			if pkg.PackageDescription != "" && pkg.PackageDescription != "NOASSERTION" {
+				log.Debugf("Found description value for %s: %s", pkg.PackageName, pkg.PackageDescription)
+				return pkg.PackageDescription
+			}
+		}
+
 	case "copyright":
-		return comp.Copyright
+		if key == "copyright" || key == "" {
+			if pkg.PackageCopyrightText != "" && pkg.PackageCopyrightText != "NOASSERTION" {
+				log.Debugf("Found copyright value for %s: %s", pkg.PackageName, pkg.PackageCopyrightText)
+				return pkg.PackageCopyrightText
+			}
+		}
+
+	case "supplier":
+		if key == "supplier" && pkg.PackageSupplier != nil && pkg.PackageSupplier.Supplier != "" && pkg.PackageSupplier.Supplier != "NOASSERTION" {
+			log.Debugf("Found supplier values for %s: %s", pkg.PackageName, pkg.PackageSupplier.Supplier)
+			return pkg.PackageSupplier.Supplier
+		}
+
+	case "author":
+		if key == "originator" && pkg.PackageOriginator != nil && pkg.PackageOriginator.Originator != "" && pkg.PackageOriginator.Originator != "NOASSERTION" {
+			log.Debugf("Found author value for %s: %s", pkg.PackageName, pkg.PackageOriginator.Originator)
+			return pkg.PackageOriginator.Originator
+		}
+
+	case "type":
+		if key == "type" || key == "" {
+			if pkg.PrimaryPackagePurpose != "" && pkg.PrimaryPackagePurpose != "NOASSERTION" {
+				log.Debugf("Found type value for %s: %s", pkg.PackageName, pkg.PrimaryPackagePurpose)
+				return string(pkg.PrimaryPackagePurpose)
+			}
+		}
+
+	case "repository":
+		if key == "url" || key == "" {
+			if pkg.PackageDownloadLocation != "" && pkg.PackageDownloadLocation != "NOASSERTION" {
+				log.Debugf("Found repository value for %s: %s", pkg.PackageName, pkg.PackageDownloadLocation)
+				return pkg.PackageDownloadLocation
+			}
+		}
+
+	case "license":
+		if key == "license" || key == "" {
+			if pkg.PackageLicenseConcluded != "" && pkg.PackageLicenseConcluded != "NOASSERTION" {
+				log.Debugf("Found license value for %s: %s", pkg.PackageName, pkg.PackageLicenseConcluded)
+				return string(pkg.PackageLicenseConcluded)
+			}
+		}
+
+	case "purl":
+		if key == "purl" || key == "" {
+			var values []string
+			if pkg.PackageExternalReferences != nil {
+				for _, ref := range pkg.PackageExternalReferences {
+					if ref.RefType == "purl" && ref.Locator != "" && ref.Locator != "NOASSERTION" {
+						log.Debugf("Found purl value for %s: %s", pkg.PackageName, ref.Locator)
+						values = append(values, ref.Locator)
+					}
+				}
+			}
+			if len(values) > 0 {
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "cpe":
+		if key == "cpe" || key == "" {
+			var values []string
+			if pkg.PackageExternalReferences != nil {
+				for _, ref := range pkg.PackageExternalReferences {
+					if ref.RefType == "cpe23Type" && ref.Locator != "" && ref.Locator != "NOASSERTION" {
+						log.Debugf("Found cpe value for %s: %s", pkg.PackageName, ref.Locator)
+						values = append(values, ref.Locator)
+					}
+				}
+			}
+			if len(values) > 0 {
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "hash":
+		if pkg.PackageChecksums != nil {
+			var values []string
+			for _, ch := range pkg.PackageChecksums {
+				if key == "alg" && ch.Algorithm != "" && ch.Algorithm != "NOASSERTION" {
+					values = append(values, string(ch.Algorithm))
+				}
+				if key == "content" && ch.Value != "" && ch.Value != "NOASSERTION" {
+					values = append(values, ch.Value)
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found hash values for %s: %s", pkg.PackageName, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
+	}
+
+	return ""
+}
+
+func getCDXComponentFieldKeyValue(ctx context.Context, comp cydx.Component, field, key string) string {
+	log := logger.FromContext(ctx)
+	log.Debugf("Getting field %s key %s value for %s", field, key, comp.BOMRef)
+
+	field = strings.ToLower(field)
+	key = strings.ToLower(key)
+
+	switch field {
+	case "name":
+		if key == "name" || key == "" {
+			log.Debugf("Found name value for %s: %s", comp.BOMRef, comp.Name)
+			return comp.Name
+		}
+
+	case "version":
+		if key == "version" || key == "" {
+			log.Debugf("Found version value for %s: %s", comp.BOMRef, comp.Version)
+			return comp.Version
+		}
+
+	case "description":
+		if key == "description" || key == "" {
+			log.Debugf("Found description value for %s: %s", comp.BOMRef, comp.Description)
+			return comp.Description
+		}
+
+	case "copyright":
+		if key == "copyright" || key == "" {
+			log.Debugf("Found copyright value for %s: %s", comp.BOMRef, comp.Copyright)
+			return comp.Copyright
+		}
+
 	case "supplier":
 		if comp.Supplier != nil {
-			return comp.Supplier.Name
+			switch key {
+			case "name":
+				log.Debugf("Found supplier name for %s: %s", comp.BOMRef, comp.Supplier.Name)
+				return comp.Supplier.Name
+			case "url":
+				if comp.Supplier.URL != nil && len(*comp.Supplier.URL) > 0 {
+					log.Debugf("Found supplier URL for %s: %s", comp.BOMRef, strings.Join(*comp.Supplier.URL, ","))
+					return strings.Join(*comp.Supplier.URL, ",")
+				}
+			}
 		}
+
 	case "author":
-		var authors []string
-		for _, a := range *comp.Authors {
-			authors = append(authors, a.Name)
+		if comp.Authors != nil {
+			var values []string
+			for _, a := range *comp.Authors {
+				switch key {
+				case "name":
+					if a.Name != "" {
+						values = append(values, a.Name)
+					}
+				case "email":
+					if a.Email != "" {
+						values = append(values, a.Email)
+					}
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found author values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
 		}
-		if len(authors) > 0 {
-			return strings.Join(authors, ",")
-		}
+
 	case "type":
-		return string(comp.Type)
+		if key == "type" || key == "" {
+			log.Debugf("Found type value for %s: %s", comp.BOMRef, comp.Type)
+			return string(comp.Type)
+		}
+
 	case "repository":
-		var repos []string
-		for _, ext := range *comp.ExternalReferences {
-			if ext.Type == cydx.ERTypeVCS {
-				repos = append(repos, ext.URL)
+		if comp.ExternalReferences != nil {
+			var values []string
+			for _, ref := range *comp.ExternalReferences {
+				if ref.Type == cydx.ERTypeVCS || ref.Type == cydx.ERTypeDistribution {
+					if key == "url" && ref.URL != "" {
+						values = append(values, ref.URL)
+					}
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found repository values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+				return strings.Join(values, ",")
 			}
 		}
-		if len(repos) > 0 {
-			return strings.Join(repos, ",")
-		}
+
 	case "license":
-		var licenses []string
-		for _, l := range *comp.Licenses {
-			if l.License != nil {
-				licenses = append(licenses, l.License.ID)
+		if comp.Licenses != nil {
+			var values []string
+			for _, l := range *comp.Licenses {
+				if l.License != nil {
+					if key == "id" && l.License.ID != "" {
+						values = append(values, l.License.ID)
+					}
+					if key == "name" && l.License.Name != "" {
+						values = append(values, l.License.Name)
+					}
+				}
+				if key == "expression" && l.Expression != "" {
+					values = append(values, l.Expression)
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found license values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+				return strings.Join(values, ",")
 			}
 		}
-		if len(licenses) > 0 {
-			return strings.Join(licenses, ",")
-		}
+
 	case "purl":
-		return comp.PackageURL
-	case "cpe":
-		return comp.CPE
-	case "hash":
-		var hashes []string
-		for _, h := range *comp.Hashes {
-			hashes = append(hashes, fmt.Sprintf("%s (%s)", h.Algorithm, h.Value))
+		if key == "purl" || key == "" {
+			log.Debugf("Found purl value for %s: %s", comp.BOMRef, comp.PackageURL)
+			return comp.PackageURL
 		}
-		if len(hashes) > 0 {
-			return strings.Join(hashes, ",")
+
+	case "cpe":
+		if key == "cpe" || key == "" {
+			log.Debugf("Found CPE value for %s: %s", comp.BOMRef, comp.CPE)
+			return comp.CPE
+		}
+
+	case "hash":
+		if comp.Hashes != nil {
+			var values []string
+			for _, h := range *comp.Hashes {
+				if key == "alg" && h.Algorithm != "" {
+					values = append(values, string(h.Algorithm))
+				}
+				if key == "content" && h.Value != "" {
+					values = append(values, h.Value)
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found hash values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
+	}
+
+	return ""
+}
+
+func getCDXComponentFieldValue(ctx context.Context, comp cydx.Component, field string) string {
+	log := logger.FromContext(ctx)
+
+	switch strings.ToLower(field) {
+
+	case "name":
+		if comp.Name != "" {
+			log.Debugf("Found name value for %s: %s", comp.BOMRef, comp.Name)
+			return comp.Name
+		}
+
+	case "version":
+		if comp.Version != "" {
+			log.Debugf("Found version value for %s: %s", comp.BOMRef, comp.Version)
+			return comp.Version
+		}
+
+	case "description":
+		if comp.Description != "" {
+			log.Debugf("Found description value for %s: %s", comp.BOMRef, comp.Description)
+			return comp.Description
+		}
+
+	case "copyright":
+		if comp.Copyright != "" {
+			log.Debugf("Found copyright value for %s: %s", comp.BOMRef, comp.Copyright)
+			return comp.Copyright
+		}
+
+	case "supplier":
+		var values []string
+		if comp.Supplier != nil {
+			if comp.Supplier.Name != "" {
+				values = append(values, comp.Supplier.Name)
+			}
+			if len(*comp.Supplier.URL) > 0 {
+				values = append(values, (*comp.Supplier.URL)...)
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found supplier values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "author":
+		var values []string
+		if comp.Authors != nil {
+			for _, a := range *comp.Authors {
+				if a.Name != "" {
+					values = append(values, a.Name)
+				}
+				if a.Email != "" {
+					values = append(values, a.Email)
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found author values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "type":
+		if comp.Type != "" {
+			log.Debugf("Found type value for %s: %s", comp.BOMRef, comp.Type)
+			return string(comp.Type)
+		}
+
+	case "repository":
+		var values []string
+		if comp.ExternalReferences != nil {
+			for _, ref := range *comp.ExternalReferences {
+				if ref.Type == cydx.ERTypeVCS || ref.Type == cydx.ERTypeDistribution {
+					if ref.URL != "" {
+						values = append(values, ref.URL)
+					}
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found repository values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "license":
+		var values []string
+		if comp.Licenses != nil {
+			for _, l := range *comp.Licenses {
+				if l.License != nil {
+					if l.License.ID != "" {
+						values = append(values, l.License.ID)
+					}
+					if l.License.Name != "" {
+						values = append(values, l.License.Name)
+					}
+				}
+				if l.Expression != "" {
+					values = append(values, l.Expression)
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found license values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "purl":
+		if comp.PackageURL != "" {
+			log.Debugf("Found purl value for %s: %s", comp.BOMRef, comp.PackageURL)
+			return comp.PackageURL
+		}
+
+	case "cpe":
+		if comp.CPE != "" {
+			log.Debugf("Found CPE value for %s: %s", comp.BOMRef, comp.CPE)
+			return comp.CPE
+		}
+
+	case "hash":
+		var values []string
+		if comp.Hashes != nil {
+			for _, h := range *comp.Hashes {
+				if h.Algorithm != "" {
+					values = append(values, string(h.Algorithm))
+				}
+				if h.Value != "" {
+					values = append(values, h.Value)
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found hash values for %s: %s", comp.BOMRef, strings.Join(values, ","))
+			return strings.Join(values, ",")
 		}
 	}
 	return ""

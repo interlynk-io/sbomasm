@@ -34,7 +34,7 @@ import (
 func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
 
-	log.Debugf("Executing removal with params: %+v", params)
+	log.Debugf("Executing engine")
 
 	inputFile := args[0]
 	if inputFile == "" {
@@ -67,7 +67,6 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return err
 	}
 
-	// Cast the underlying raw doc to correct type for registration
 	switch spec {
 	case sbom.SBOMSpecCDX:
 		bom, ok := sbomDoc.Raw().(*cydx.BOM)
@@ -121,6 +120,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 
 func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
+	log.Debugf("Initializing field removal process for document metadata")
 
 	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
@@ -169,6 +169,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 
 func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
+	log.Debugf("Initializing field removal process for components")
 
 	compEngine := &FieldOperationComponentEngine{doc: f.doc}
 	selectedComponents, err := compEngine.SelectComponents(ctx, params)

@@ -84,6 +84,8 @@ Examples:
 		if err := removalParams.Validate(); err != nil {
 			return err
 		}
+		log := logger.FromContext(ctx)
+		log.Debugf("Parsed removal parameters: %+v", removalParams)
 
 		return rm.Engine(ctx, args, removalParams)
 	},

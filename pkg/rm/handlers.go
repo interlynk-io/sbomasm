@@ -19,8 +19,10 @@ package rm
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/rm/cmps"
 	cdxcomp "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/comp"
 	cdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/meta"
@@ -80,27 +82,40 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 }
 
 func (c *ComponentsOperationEngine) selectComponents(ctx context.Context, params *types.RmParams) ([]interface{}, error) {
-	// TODO: Implement component selection logic
+	log := logger.FromContext(ctx)
+	log.Debugf("Initialized component selection process")
+
 	selectedComponents, err := cmps.SelectComponents(ctx, c.doc, params)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("Selected components:", selectedComponents)
+	var listOfSelectedComponents []string
+	for _, comp := range selectedComponents {
+		switch c := comp.(type) {
+		case spdxdoc.Package:
+			listOfSelectedComponents = append(listOfSelectedComponents, fmt.Sprintf("%s@%s", c.PackageName, c.PackageVersion))
+		case cydx.Component:
+			listOfSelectedComponents = append(listOfSelectedComponents, fmt.Sprintf("%s@%s", c.Name, c.Version))
+		default:
+		}
+	}
+
+	strings.Split(strings.Join(listOfSelectedComponents, ", "), ", ")
+
+	log.Debugf("Selected components: %s", strings.Join(listOfSelectedComponents, ", "))
 
 	return selectedComponents, nil
 }
 
-func (c *ComponentsOperationEngine) findDependenciesForComponents(components []interface{}) ([]interface{}, error) {
-	return cmps.FindAllDependenciesForComponents(c.doc, components), nil
+func (c *ComponentsOperationEngine) findDependenciesForComponents(ctx context.Context, components []interface{}) ([]interface{}, error) {
+	return cmps.FindAllDependenciesForComponents(ctx, c.doc, components), nil
 }
 
-func (c *ComponentsOperationEngine) removeComponents(components []interface{}) error {
-	// TODO: Implement component removal logic
-	return cmps.RemoveComponents(c.doc, components)
+func (c *ComponentsOperationEngine) removeComponents(ctx context.Context, components []interface{}) error {
+	return cmps.RemoveComponents(ctx, c.doc, components)
 }
 
-func (c *ComponentsOperationEngine) removeDependencies(dependencies []interface{}) error {
-	// TODO: Implement dependency removal logic
-	return cmps.RemoveDependencies(c.doc, dependencies)
+func (c *ComponentsOperationEngine) removeDependencies(ctx context.Context, dependencies []interface{}) error {
+	return cmps.RemoveDependencies(ctx, c.doc, dependencies)
 }
