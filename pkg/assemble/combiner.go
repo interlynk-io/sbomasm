@@ -23,6 +23,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/assemble/cdx"
 	"github.com/interlynk-io/sbomasm/pkg/assemble/spdx"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/samber/lo"
 )
 
@@ -66,7 +67,7 @@ func (c *combiner) canCombine() error {
 	specs := []string{}
 
 	for _, doc := range c.c.input.files {
-		spec, _, err := detectSbom(doc)
+		spec, _, err := sbom.DetectSbom(doc)
 		if err != nil {
 			return fmt.Errorf("unable to detect sbom format for %s: %v", doc, err)
 		}

@@ -14,21 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package edit
+package rm
 
-import (
-	"errors"
-	"time"
+import "github.com/interlynk-io/sbomasm/pkg/rm/types"
+
+type DOCFIELD string
+
+const (
+	AUTHOR      DOCFIELD = "author"
+	SUPPLIER    DOCFIELD = "supplier"
+	TIMESTAMP   DOCFIELD = "timestamp"
+	TOOL        DOCFIELD = "tool"
+	LICENSE     DOCFIELD = "license"
+	LIFECYCLE   DOCFIELD = "lifecycle"
+	DESCRIPTION DOCFIELD = "description"
+	REPOSITORY  DOCFIELD = "repository"
 )
 
-var (
-	errNoConfiguration = errors.New("no configuration provided")
-	errNotSupported    = errors.New("not supported")
-	errInvalidInput    = errors.New("invalid input data")
-)
-
-func utcNowTime() string {
-	location, _ := time.LoadLocation("UTC")
-	locationTime := time.Now().In(location)
-	return locationTime.Format(time.RFC3339)
+type FieldHandler interface {
+	Select(params *types.RmParams) ([]interface{}, error)
+	Filter(selected []interface{}, params *types.RmParams) ([]interface{}, error)
+	Remove(targets []interface{}, params *types.RmParams) error
+	Summary(selected []interface{})
 }
