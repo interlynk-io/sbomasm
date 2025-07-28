@@ -91,9 +91,9 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("successfully removed...")
 
 	if params.OutputFile != "" {
-		log.Infof("Writing updated SBOM to file: %s", params.OutputFile)
 
 		f, err := os.Create(params.OutputFile)
 		if err != nil {
@@ -105,17 +105,17 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 			return fmt.Errorf("failed to write SBOM to file: %w", err)
 		}
 
-		log.Infof("Updated SBOM written to file: %s", params.OutputFile)
+		fmt.Printf("updated SBOM written to file: %s", params.OutputFile)
 	} else {
-
-		log.Infof("No output file specified, writing to stdout")
 
 		if err := sbom.WriteSBOM(os.Stdout, sbomDoc); err != nil {
 			return fmt.Errorf("failed to write SBOM to stdout: %w", err)
 		}
+		fmt.Printf("no output file specified, writing to stdout")
+
 	}
 
-	return fmt.Errorf("unsupported SBOM spec type: %s", spec)
+	return nil
 }
 
 func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, params *types.RmParams) error {

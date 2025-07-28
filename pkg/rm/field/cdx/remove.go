@@ -266,53 +266,48 @@ func RemoveToolFromMetadata(ctx context.Context, bom *cydx.BOM, targets []interf
 		return aName == bName && aVersion == bVersion
 	}
 
-	if bom.SpecVersion > cydx.SpecVersion1_4 {
-		// v1.5+ tools as components
-		if bom.Metadata.Tools.Components != nil {
-			var filtered []cydx.Component
-			for _, tool := range *bom.Metadata.Tools.Components {
-				match := false
-				for _, tar := range targets {
-					if candidate, ok := tar.(cydx.Component); ok {
-						if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
-							match = true
-							break
-						}
+	if bom.Metadata.Tools.Components != nil {
+		var filtered []cydx.Component
+		for _, tool := range *bom.Metadata.Tools.Components {
+			match := false
+			for _, tar := range targets {
+				if candidate, ok := tar.(cydx.Component); ok {
+					if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
+						match = true
+						break
 					}
 				}
-				if match {
-					removedCount++
-				} else {
-					filtered = append(filtered, tool)
-				}
 			}
-			bom.Metadata.Tools.Components = &filtered
-		}
-	} else {
-		// v1.4 and earlier: tools are of type Tool
-		if bom.Metadata.Tools.Tools != nil {
-			var filtered []cydx.Tool
-			for _, tool := range *bom.Metadata.Tools.Tools {
-				match := false
-				for _, tar := range targets {
-					if candidate, ok := tar.(cydx.Tool); ok {
-						if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
-							match = true
-							break
-						}
-					}
-				}
-				if match {
-					removedCount++
-				} else {
-					filtered = append(filtered, tool)
-				}
+			if match {
+				removedCount++
+			} else {
+				filtered = append(filtered, tool)
 			}
-			bom.Metadata.Tools.Tools = &filtered
 		}
+		bom.Metadata.Tools.Components = &filtered
 	}
 
-	// Cleanup: If both Tools and Components are empty or nil, remove the Tools block entirely
+	if bom.Metadata.Tools.Tools != nil {
+		var filtered []cydx.Tool
+		for _, tool := range *bom.Metadata.Tools.Tools {
+			match := false
+			for _, tar := range targets {
+				if candidate, ok := tar.(cydx.Tool); ok {
+					if matchToolByNameAndVersion(tool.Name, tool.Version, candidate.Name, candidate.Version) {
+						match = true
+						break
+					}
+				}
+			}
+			if match {
+				removedCount++
+			} else {
+				filtered = append(filtered, tool)
+			}
+		}
+		bom.Metadata.Tools.Tools = &filtered
+	}
+
 	if (bom.Metadata.Tools.Tools == nil || len(*bom.Metadata.Tools.Tools) == 0) &&
 		(bom.Metadata.Tools.Components == nil || len(*bom.Metadata.Tools.Components) == 0) {
 		bom.Metadata.Tools = nil

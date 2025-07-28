@@ -26,6 +26,8 @@ import (
 
 func SelectAuthorFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting authors from metadata")
+
 	if bom.Metadata.Authors == nil || len(*bom.Metadata.Authors) == 0 {
 		return nil, nil
 	}
@@ -36,6 +38,8 @@ func SelectAuthorFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}
 
 func SelectSupplierFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting supplier from metadata")
+
 	if bom.Metadata.Supplier == nil {
 		return nil, nil
 	}
@@ -45,6 +49,8 @@ func SelectSupplierFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface
 
 func SelectTimestampFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting timestamp from metadata")
+
 	if bom.Metadata.Timestamp == "" {
 		return nil, nil
 	}
@@ -55,26 +61,30 @@ func SelectTimestampFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interfac
 
 func SelectToolFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting tool from metadata")
+
+	log.Debugf("Selecting tools from metadata")
 	if bom.Metadata.Tools == nil {
 		return nil, nil
 	}
 
-	if bom.SpecVersion > cydx.SpecVersion1_4 {
-		if bom.Metadata.Tools.Components == nil {
-			return nil, nil
-		}
+	if bom.Metadata.Tools.Components != nil {
+		log.Debugf("Selected tools from metadata: %v", bom.Metadata.Tools.Components)
 		return []interface{}{*bom.Metadata.Tools.Components}, nil
 	}
 
-	if *bom.Metadata.Tools.Tools == nil {
-		return nil, nil
+	if bom.Metadata.Tools.Tools != nil {
+		log.Debugf("Selected tools from metadata: %v", bom.Metadata.Tools.Tools)
+		return []interface{}{*bom.Metadata.Tools.Tools}, nil
 	}
-	log.Debugf("Selecting tools from metadata: %v", bom.Metadata.Tools.Tools)
-	return []interface{}{*bom.Metadata.Tools.Tools}, nil
+
+	return nil, nil
 }
 
 func SelectLicenseFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting licenses from metadata")
+
 	if bom.Metadata.Licenses == nil {
 		return nil, nil
 	}
@@ -84,31 +94,38 @@ func SelectLicenseFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{
 		selected = append(selected, licenseChoice)
 	}
 
-	log.Debugf("Selecting licenses from metadata: %v", selected)
+	log.Debugf("Selected licenses from metadata: %v", selected)
 	return selected, nil
 }
 
 func SelectLifecycleFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting lifecycles from metadata")
+
 	if bom.Metadata.Lifecycles == nil {
 		return nil, nil
 	}
-	log.Debugf("Selecting lifecycles from metadata: %v", *bom.Metadata.Lifecycles)
+
+	log.Debugf("Selected lifecycles from metadata: %v", *bom.Metadata.Lifecycles)
 	return []interface{}{*bom.Metadata.Lifecycles}, nil
 }
 
 func SelectRepositoryFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting repository from metadata")
+
 	if bom.ExternalReferences == nil || len(*bom.ExternalReferences) == 0 {
 		return nil, nil
 	}
 
-	log.Debugf("Selecting repositories from metadata: %v", bom.ExternalReferences)
+	log.Debugf("Selected repositories from metadata: %v", bom.ExternalReferences)
 	return []interface{}{*bom.ExternalReferences}, nil
 }
 
 func SelectAuthorFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting authors from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -131,6 +148,8 @@ func SelectAuthorFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interfa
 
 func SelectSupplierFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting suppliers from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -145,12 +164,15 @@ func SelectSupplierFromComponent(doc *cydx.BOM, params *types.RmParams) ([]inter
 	if len(selected) == 0 {
 		log.Debugf("No supplier entries found in selected components")
 	}
+
 	log.Debugf("Selected suppliers from component: %v", selected)
 	return selected, nil
 }
 
 func SelectCopyrightFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting copyright from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -171,6 +193,8 @@ func SelectCopyrightFromComponent(doc *cydx.BOM, params *types.RmParams) ([]inte
 
 func SelectCpeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting CPEs from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -192,6 +216,8 @@ func SelectCpeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{
 
 func SelectDescriptionFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting description from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -212,6 +238,8 @@ func SelectDescriptionFromComponent(doc *cydx.BOM, params *types.RmParams) ([]in
 
 func SelectHashFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting hash from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -235,6 +263,8 @@ func SelectHashFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 
 func SelectLicenseFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting license from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -264,12 +294,15 @@ func SelectLicenseFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interf
 	if len(selected) == 0 {
 		log.Debugf("No license entries found in selected components")
 	}
+
 	log.Debugf("Selected licenses from component: %v", selected)
 	return selected, nil
 }
 
 func SelectPurlFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting PURLs from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -285,12 +318,15 @@ func SelectPurlFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 	if len(selected) == 0 {
 		log.Debugf("No PURL entries found in selected components")
 	}
+
 	log.Debugf("Selected PURLs from component: %v", selected)
 	return selected, nil
 }
 
 func SelectRepoFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting repository from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -309,12 +345,15 @@ func SelectRepoFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 	if len(selected) == 0 {
 		log.Debugf("No repository entries found in selected components")
 	}
+
 	log.Debugf("Selected repositories from component: %v", selected)
 	return selected, nil
 }
 
 func SelectTypeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting type from component")
+
 	var selected []interface{}
 	for _, comp := range params.SelectedComponents {
 		c, ok := comp.(*cydx.Component)
@@ -329,6 +368,7 @@ func SelectTypeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 	if len(selected) == 0 {
 		log.Debugf("No type entries found in selected components")
 	}
+
 	log.Debugf("Selected types from component: %v", selected)
 	return selected, nil
 }

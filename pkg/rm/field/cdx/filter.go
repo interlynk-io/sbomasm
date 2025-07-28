@@ -27,6 +27,8 @@ import (
 
 func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering authors from metadata")
+
 	var filtered []interface{}
 	for _, s := range selected {
 		authors, ok := s.([]cydx.OrganizationalContact)
@@ -54,12 +56,14 @@ func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([
 		}
 		// }
 	}
-	log.Debugf("Filtered authors: %v", filtered)
+
+	log.Debugf("Filtered authors from metadata: %v", filtered)
 	return filtered, nil
 }
 
 func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering supplier from metadata")
 
 	var filtered []interface{}
 	for _, entry := range selected {
@@ -77,7 +81,8 @@ func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) 
 			filtered = append(filtered, supplier)
 		}
 	}
-	log.Debugf("Filtered suppliers: %v", filtered)
+
+	log.Debugf("Filtered supplier from metadata: %v", filtered)
 	return filtered, nil
 }
 
@@ -95,6 +100,8 @@ func containsEmail(contacts *[]cydx.OrganizationalContact, email string) bool {
 
 func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering license from metadata")
+
 	var filtered []interface{}
 	for _, entry := range selected {
 		license, ok := entry.(cydx.LicenseChoice)
@@ -107,12 +114,15 @@ func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) (
 			filtered = append(filtered, license)
 		}
 	}
-	log.Debugf("Filtered licenses: %v", filtered)
+
+	log.Debugf("Filtered licenses from metadata: %v", filtered)
 	return filtered, nil
 }
 
 func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering lifecycle from metadata")
+
 	var filtered []interface{}
 
 	for _, s := range selected {
@@ -136,12 +146,13 @@ func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams)
 		}
 	}
 
-	log.Debugf("Filtered lifecycles: %v", filtered)
+	log.Debugf("Filtered lifecycle from metadata: %v", filtered)
 	return filtered, nil
 }
 
 func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering repository from metadata")
 
 	var filtered []interface{}
 	for _, entry := range selected {
@@ -162,12 +173,14 @@ func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams
 			}
 		}
 	}
-	log.Debugf("Filtered repositories: %v", filtered)
+	log.Debugf("Filtered repositories from metadata: %v", filtered)
 	return filtered, nil
 }
 
 func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering timestamp from metadata")
+
 	var filtered []interface{}
 
 	timestamp, ok := selected[0].(string)
@@ -177,12 +190,15 @@ func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams)
 	if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
 		filtered = append(filtered, timestamp)
 	}
-	log.Debugf("Filtered timestamps: %v", filtered)
+
+	log.Debugf("Filtered timestamp from metadata: %v", filtered)
 	return filtered, nil
 }
 
 func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering tool from metadata")
+
 	var filtered []interface{}
 
 	for _, s := range selected {
@@ -210,7 +226,7 @@ func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]i
 		}
 	}
 
-	log.Debugf("Filtered tools: %v", filtered)
+	log.Debugf("Filtered tools from metadata: %v", filtered)
 	return filtered, nil
 }
 
@@ -231,6 +247,7 @@ func matchTool(name, version string, params *types.RmParams) bool {
 
 func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering author from component")
 
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
@@ -262,12 +279,14 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 		}
 	}
 
-	log.Debugf("Filtered %d author entries\n", len(filtered))
+	log.Debugf("Filtered author from component: ", filtered)
 	return filtered, nil
 }
 
 func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering supplier from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -298,12 +317,14 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered %d supplier entries\n", len(filtered))
+	log.Debugf("Filtered supplier from component: ", filtered)
 	return filtered, nil
 }
 
 func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering copyright from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -334,12 +355,13 @@ func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params 
 		}
 	}
 
-	log.Debugf("Filtered %d copyright entries\n", len(filtered))
+	log.Debugf("Filtered copyright from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering CPE from component")
 
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		log.Warn("No CPE value provided, returning selected entries without filtering")
@@ -372,12 +394,14 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 		}
 	}
 
-	log.Debugf("Filtered %d CPE entries\n", len(filtered))
+	log.Debugf("Filtered CPE from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering description from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -408,12 +432,14 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 		}
 	}
 
-	log.Debugf("Filtered %d description entries\n", len(filtered))
+	log.Debugf("Filtered description from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering hash from component")
+
 	if params.Value == "" && !params.All {
 		log.Warn("No hash value provided, returning selected entries without filtering")
 		return selected, nil
@@ -445,12 +471,14 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	log.Debugf("Filtered %d hash entries\n", len(filtered))
+	log.Debugf("Filtered hash from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering license from component")
+
 	if params.Value == "" && !params.All {
 		return selected, nil
 	}
@@ -481,12 +509,14 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 		}
 	}
 
-	log.Debugf("Filtered %d license entries\n", len(filtered))
+	log.Debugf("Filtered license from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering PURL from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -517,12 +547,14 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	log.Debugf("Filtered %d PURL entries\n", len(filtered))
+	log.Debugf("Filtered PURL from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering repository from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -557,12 +589,14 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	log.Debugf("Filtered %d repository entries\n", len(filtered))
+	log.Debugf("Filtered repository from component: %v", filtered)
 	return filtered, nil
 }
 
 func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering type from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return selected, nil
 	}
@@ -593,6 +627,6 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 		}
 	}
 
-	log.Debugf("Filtered %d type entries\n", len(filtered))
+	log.Debugf("Filtered type from component: %v", filtered)
 	return filtered, nil
 }
