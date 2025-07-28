@@ -131,7 +131,7 @@ Providing value as "key", i.e "Interlynk" or "VulnCon" instead of <hi@interlynk.
 
 #### Example on "Field Removal" from a specific component
 
-- Remove license from a specific component having name `nginx` and version `v1.21.0`
+- Remove license from a specific component having name `github.com/fluxcd/pkg/oci` and version `v1.21.0`
 
   ```bash
   sbomasm rm --field license --scope component --name "nginx" --version "v1.21.0"

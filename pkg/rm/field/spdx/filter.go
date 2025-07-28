@@ -38,7 +38,7 @@ func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) 
 
 		match := false
 		switch {
-		case params.IsKeyAndValuePresent:
+		case params.IsFieldAndValuePresent:
 			match = strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Key)) &&
 				strings.Contains(strings.ToLower(author.Creator), strings.ToLower(params.Value))
 		case params.IsKeyPresent:
@@ -67,19 +67,19 @@ func FilterLicenseFromMetadata(allLicenses []interface{}, params *types.RmParams
 		if !ok {
 			continue
 		}
-		if params.IsKeyAndValuePresent {
+		if params.IsFieldAndKeyValuePresent {
 			if strings.Contains(licenseStr, params.Key) && strings.Contains(licenseStr, params.Value) {
 				filteredLicenses = append(filteredLicenses, licenseStr)
 			}
-		} else if params.IsKeyPresent {
+		} else if params.IsFieldAndKeyPresent {
 			if strings.Contains(licenseStr, params.Key) {
 				filteredLicenses = append(filteredLicenses, licenseStr)
 			}
-		} else if params.IsValuePresent {
+		} else if params.IsFieldAndValuePresent {
 			if strings.Contains(licenseStr, params.Value) {
 				filteredLicenses = append(filteredLicenses, licenseStr)
 			}
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filteredLicenses = append(filteredLicenses, licenseStr)
 		}
 	}
@@ -96,15 +96,15 @@ func FilterLifecycleFromMetadata(allLifecycles []interface{}, params *types.RmPa
 		if !ok {
 			continue
 		}
-		if params.IsKeyAndValuePresent {
+		if params.IsFieldAndKeyValuePresent {
 			if strings.Contains(lifecycle, params.Key) && strings.Contains(lifecycle, params.Value) {
 				filteredLifecycles = append(filteredLifecycles, lifecycle)
 			}
-		} else if params.IsKeyPresent && strings.Contains(lifecycle, params.Key) {
+		} else if params.IsFieldAndKeyPresent && strings.Contains(lifecycle, params.Key) {
 			filteredLifecycles = append(filteredLifecycles, lifecycle)
-		} else if params.IsValuePresent && strings.Contains(lifecycle, params.Value) {
+		} else if params.IsFieldAndValuePresent && strings.Contains(lifecycle, params.Value) {
 			filteredLifecycles = append(filteredLifecycles, lifecycle)
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filteredLifecycles = append(filteredLifecycles, lifecycle)
 		}
 	}
@@ -125,13 +125,13 @@ func FilterSupplierFromMetadata(allSuppliers []interface{}, params *types.RmPara
 
 		name := creator.Creator
 
-		if params.IsKeyAndValuePresent && name == params.Key && creator.CreatorType == params.Value {
+		if params.IsFieldAndKeyValuePresent && name == params.Value {
 			filteredSuppliers = append(filteredSuppliers, creator)
-		} else if params.IsKeyPresent && name == params.Key {
-			filteredSuppliers = append(filteredSuppliers, creator)
-		} else if params.IsValuePresent && creator.CreatorType == params.Value {
-			filteredSuppliers = append(filteredSuppliers, creator)
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.IsFieldAndValuePresent {
+			if strings.Contains(name, params.Value) {
+				filteredSuppliers = append(filteredSuppliers, creator)
+			}
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filteredSuppliers = append(filteredSuppliers, creator)
 		}
 	}
@@ -152,13 +152,15 @@ func FilterToolFromMetadata(allTools []interface{}, params *types.RmParams) ([]i
 
 		toolName := creator.Creator
 
-		if params.IsKeyAndValuePresent && toolName == params.Key && creator.CreatorType == params.Value {
+		if params.IsFieldAndKeyValuePresent && toolName == params.Key && creator.CreatorType == params.Value {
 			filteredTools = append(filteredTools, creator)
-		} else if params.IsKeyPresent && toolName == params.Key {
+		} else if params.IsFieldAndKeyPresent && toolName == params.Key {
 			filteredTools = append(filteredTools, creator)
-		} else if params.IsValuePresent && creator.CreatorType == params.Value {
-			filteredTools = append(filteredTools, creator)
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.IsFieldAndValuePresent {
+			if strings.Contains(toolName, params.Value) {
+				filteredTools = append(filteredTools, creator)
+			}
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filteredTools = append(filteredTools, creator)
 		}
 	}
@@ -188,7 +190,7 @@ func FilterTimestampFromMetadata(allTimestamps []interface{}, params *types.RmPa
 func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
-		return entries, nil // No filtering criteria, return all
+		return entries, nil
 	}
 
 	var filtered []interface{}
@@ -200,7 +202,7 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Ref.Locator, params.Value) {
 				match = true
 			}
@@ -218,6 +220,8 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering author from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -232,7 +236,7 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Originator.Originator, params.Value) {
 				match = true
 			} else {
@@ -255,12 +259,14 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 		}
 	}
 
-	log.Debugf("Filtered SPDX author entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX author from component:", filtered)
 	return filtered, nil
 }
 
 func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering supplier from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -275,7 +281,7 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Supplier.Supplier, params.Value) {
 				match = true
 			}
@@ -291,12 +297,14 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 		}
 	}
 
-	log.Debugf("Filtered SPDX supplier entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX supplier from component:", filtered)
 	return filtered, nil
 }
 
 func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering copyright from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -311,7 +319,7 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -327,12 +335,14 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 		}
 	}
 
-	log.Debugf("Filtered SPDX copyright entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX copyright from component:", filtered)
 	return filtered, nil
 }
 
 func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering CPE from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -347,14 +357,14 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Ref.Locator, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
 				log.Warnf("NOASSERTION is unlikely for CPE field")
 			}
-		case params.IsKeyPresent:
+		case params.IsFieldAndKeyPresent:
 			if entry.Ref.RefType == params.Key && (params.Key == "cpe22Type" || params.Key == "cpe23Type") {
 				match = true
 			}
@@ -367,12 +377,14 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 		}
 	}
 
-	log.Debugf("Filtered SPDX CPE entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX CPE entries from component:", filtered)
 	return filtered, nil
 }
 
 func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering description from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -387,7 +399,7 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -403,12 +415,14 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 		}
 	}
 
-	log.Debugf("Filtered SPDX description entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX description entries from component:", filtered)
 	return filtered, nil
 }
 
 func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering hash from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -423,7 +437,7 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Checksum.Value, params.Value) {
 				match = true
 			}
@@ -443,12 +457,14 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX hash entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX hash from component:", filtered)
 	return filtered, nil
 }
 
 func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering license from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -463,7 +479,7 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -479,12 +495,14 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 		}
 	}
 
-	log.Debugf("Filtered SPDX license entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX license from component:", filtered)
 	return filtered, nil
 }
 
 func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering repository from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -499,7 +517,7 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -515,12 +533,14 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX repository entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX repository from component:", filtered)
 	return filtered, nil
 }
 
 func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering type from component")
+
 	if params.Value == "" && !params.All && !params.IsKeyPresent {
 		return entries, nil
 	}
@@ -551,6 +571,6 @@ func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX type entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX type from component:", filtered)
 	return filtered, nil
 }

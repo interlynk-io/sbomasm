@@ -154,30 +154,29 @@ func extractRemoveParams(cmd *cobra.Command) (*types.RmParams, error) {
 	isFieldPresent := field != ""
 	isKeyPresent := key != ""
 	isValuePresent := value != ""
+	isFieldAndKeyValuePresent := isFieldPresent && isKeyPresent && isValuePresent
 	isFieldAndValuePresent := isFieldPresent && isValuePresent
-
-	isKeyAndValuePresent := isKeyPresent && isValuePresent
+	isFieldAndKeyPresent := isFieldPresent && isKeyPresent
 
 	params := &types.RmParams{
-		Field:                  field,
-		Scope:                  scope,
-		Key:                    key,
-		Value:                  value,
-		All:                    all,
-		ComponentName:          name,
-		ComponentVersion:       version,
-		DependencyID:           dependencyID,
-		IsComponent:            isComponentRemoval,
-		IsDependency:           isDependencyRemoval,
-		IsFieldPresent:         isFieldPresent,
-		IsKeyPresent:           isKeyPresent,
-		IsValuePresent:         isValuePresent,
-		IsFieldAndValuePresent: isFieldAndValuePresent,
-		IsKeyAndValuePresent:   isKeyAndValuePresent,
-		DryRun:                 dryRun,
-		Summary:                summary,
-		OutputFile:             outputFile,
-		AllComponents:          all,
+		Field:                     field,
+		Scope:                     scope,
+		Key:                       key,
+		Value:                     value,
+		All:                       all,
+		ComponentName:             name,
+		ComponentVersion:          version,
+		DependencyID:              dependencyID,
+		IsComponent:               isComponentRemoval,
+		IsDependency:              isDependencyRemoval,
+		IsFieldPresent:            isFieldPresent,
+		IsFieldAndKeyValuePresent: isFieldAndKeyValuePresent,
+		IsFieldAndValuePresent:    isFieldAndValuePresent,
+		IsFieldAndKeyPresent:      isFieldAndKeyPresent,
+		DryRun:                    dryRun,
+		Summary:                   summary,
+		OutputFile:                outputFile,
+		AllComponents:             all,
 	}
 
 	switch {

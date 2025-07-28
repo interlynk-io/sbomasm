@@ -38,23 +38,22 @@ func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([
 		}
 
 		for _, author := range authors {
-			if params.IsKeyAndValuePresent {
+			if params.IsFieldAndKeyValuePresent {
 				if author.Name == params.Key && author.Email == params.Value {
 					filtered = append(filtered, author)
 				}
-			} else if params.IsKeyPresent {
+			} else if params.IsFieldAndKeyPresent {
 				if author.Name == params.Key {
 					filtered = append(filtered, author)
 				}
-			} else if params.IsValuePresent {
-				if author.Email == params.Value {
+			} else if params.IsFieldAndValuePresent {
+				if author.Name == params.Value || author.Email == params.Value {
 					filtered = append(filtered, author)
 				}
 			} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
 				filtered = append(filtered, author)
 			}
 		}
-		// }
 	}
 
 	log.Debugf("Filtered authors from metadata: %v", filtered)
@@ -71,13 +70,13 @@ func FilterSupplierFromMetadata(selected []interface{}, params *types.RmParams) 
 		if !ok {
 			continue
 		}
-		if params.IsKeyAndValuePresent && supplier.Name == params.Key && containsEmail(supplier.Contact, params.Value) {
+		if params.IsFieldAndKeyValuePresent && supplier.Name == params.Key && containsEmail(supplier.Contact, params.Value) {
 			filtered = append(filtered, supplier)
-		} else if params.IsKeyPresent && supplier.Name == params.Key {
-			filtered = append(filtered, supplier)
-		} else if params.IsValuePresent && containsEmail(supplier.Contact, params.Value) {
-			filtered = append(filtered, supplier)
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.IsFieldAndValuePresent {
+			if supplier.Name == params.Value || containsEmail(supplier.Contact, params.Value) || containsURL(supplier.URL, params.Value) {
+				filtered = append(filtered, supplier)
+			}
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filtered = append(filtered, supplier)
 		}
 	}
@@ -98,6 +97,19 @@ func containsEmail(contacts *[]cydx.OrganizationalContact, email string) bool {
 	return false
 }
 
+func containsURL(url *[]string, value string) bool {
+	if url == nil {
+		return false
+	}
+
+	for _, u := range *url {
+		if u == value {
+			return true
+		}
+	}
+	return false
+}
+
 func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Filtering license from metadata")
@@ -106,11 +118,12 @@ func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) (
 	for _, entry := range selected {
 		license, ok := entry.(cydx.LicenseChoice)
 		if !ok {
+			log.Debugf("skipping license filter for non-license entry: %v", entry)
 			continue
 		}
-		if params.IsKeyPresent && license.Expression == params.Key {
+		if params.IsFieldAndValuePresent && license.License.Name == params.Value || license.License.ID == params.Value {
 			filtered = append(filtered, license)
-		} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 			filtered = append(filtered, license)
 		}
 	}
@@ -134,13 +147,13 @@ func FilterLifecycleFromMetadata(selected []interface{}, params *types.RmParams)
 		}
 
 		for _, lc := range lifecycles {
-			phase := string(lc.Phase) // convert to string for comparison
+			phase := string(lc.Phase)
 
-			if params.IsKeyAndValuePresent || params.IsKeyPresent || params.IsValuePresent {
-				if phase == params.Key || phase == params.Value {
+			if params.IsFieldAndValuePresent {
+				if phase == params.Value {
 					filtered = append(filtered, phase)
 				}
-			} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+			} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 				filtered = append(filtered, phase)
 			}
 		}
@@ -162,17 +175,20 @@ func FilterRepositoryFromMetadata(selected []interface{}, params *types.RmParams
 		}
 
 		for _, ref := range extRefs {
-			if params.IsKeyAndValuePresent && ref.Comment == params.Key && ref.URL == params.Value {
-				filtered = append(filtered, ref)
-			} else if params.IsKeyPresent && ref.Comment == params.Key {
-				filtered = append(filtered, ref)
-			} else if params.IsValuePresent && ref.URL == params.Value {
-				filtered = append(filtered, ref)
-			} else if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+			if params.IsFieldAndKeyValuePresent {
+				if string(ref.Type) == params.Key && ref.URL == params.Value {
+					filtered = append(filtered, ref)
+				}
+			} else if params.IsFieldAndValuePresent {
+				if ref.URL == params.Value {
+					filtered = append(filtered, ref)
+				}
+			} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 				filtered = append(filtered, ref)
 			}
 		}
 	}
+
 	log.Debugf("Filtered repositories from metadata: %v", filtered)
 	return filtered, nil
 }
@@ -187,7 +203,7 @@ func FilterTimestampFromMetadata(selected []interface{}, params *types.RmParams)
 	if !ok {
 		return nil, fmt.Errorf("invalid timestamp format")
 	}
-	if params.All || (!params.IsKeyPresent && !params.IsValuePresent) {
+	if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
 		filtered = append(filtered, timestamp)
 	}
 
@@ -231,18 +247,26 @@ func FilterToolFromMetadata(selected []interface{}, params *types.RmParams) ([]i
 }
 
 func matchTool(name, version string, params *types.RmParams) bool {
-	switch {
-	case params.IsKeyAndValuePresent:
-		return name == params.Key && version == params.Value
-	case params.IsKeyPresent:
-		return name == params.Key
-	case params.IsValuePresent:
-		return version == params.Value
-	case params.All || (!params.IsKeyPresent && !params.IsValuePresent):
-		return true
-	default:
-		return false
+	var paramsToolName, paramsToolVersion string
+
+	if strings.Contains(params.Value, "@") {
+		parts := strings.Split(params.Value, "@")
+		if len(parts) == 2 {
+			paramsToolName = parts[0]
+			paramsToolVersion = parts[1]
+		}
+	} else {
+		paramsToolName = params.Value
 	}
+
+	if params.IsFieldAndValuePresent {
+		if name == paramsToolName || version == paramsToolVersion {
+			return true
+		}
+	} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
+		return true
+	}
+	return false
 }
 
 func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
@@ -263,7 +287,7 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Author.Name, params.Value) || strings.EqualFold(entry.Author.Email, params.Value) {
 				match = true
 			}
@@ -301,7 +325,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -339,7 +363,7 @@ func FilterCopyrightFromComponent(doc *cydx.BOM, selected []interface{}, params 
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -363,7 +387,7 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Filtering CPE from component")
 
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All && !params.IsFieldAndKeyPresent {
 		log.Warn("No CPE value provided, returning selected entries without filtering")
 		return selected, nil
 	}
@@ -378,7 +402,7 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Ref, params.Value) {
 				match = true
 			}
@@ -416,7 +440,7 @@ func FilterDescriptionFromComponent(doc *cydx.BOM, selected []interface{}, param
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -455,7 +479,7 @@ func FilterHashFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Hash.Value, params.Value) {
 				match = true
 			}
@@ -493,7 +517,7 @@ func FilterLicenseFromComponent(doc *cydx.BOM, selected []interface{}, params *t
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -517,7 +541,7 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Filtering PURL from component")
 
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All && !params.IsFieldAndKeyPresent {
 		return selected, nil
 	}
 
@@ -531,7 +555,7 @@ func FilterPurlFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Value, params.Value) {
 				match = true
 			}
@@ -555,7 +579,7 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Filtering repository from component")
 
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All && !params.IsFieldAndKeyPresent {
 		return selected, nil
 	}
 
@@ -569,14 +593,14 @@ func FilterRepoFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(entry.Ref.URL, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
 				log.Warn("Warning: NOASSERTION is unlikely for repository field")
 			}
-		case params.IsKeyPresent:
+		case params.IsFieldAndKeyPresent:
 			if entry.Ref.Type == cydx.ExternalReferenceType(params.Key) && (params.Key == string(cydx.ERTypeVCS) || params.Key == string(cydx.ERTypeDistribution)) {
 				match = true
 			}
@@ -597,7 +621,7 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Filtering type from component")
 
-	if params.Value == "" && !params.All && !params.IsKeyPresent {
+	if params.Value == "" && !params.All && !params.IsFieldAndKeyPresent {
 		return selected, nil
 	}
 
@@ -611,7 +635,7 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 
 		match := false
 		switch {
-		case params.IsValuePresent:
+		case params.IsFieldAndValuePresent:
 			if strings.EqualFold(string(entry.Value), params.Value) {
 				match = true
 			}
