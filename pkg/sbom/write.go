@@ -14,24 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package assemble
+package sbom
 
 import (
-	"os"
+	"fmt"
+	"io"
 
-	"github.com/interlynk-io/sbomasm/pkg/detect"
+	cydx "github.com/CycloneDX/cyclonedx-go"
+	spdxjson "github.com/spdx/tools-golang/json"
+	"github.com/spdx/tools-golang/spdx"
 )
 
-func detectSbom(path string) (string, string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", "", err
-	}
-	defer f.Close()
+func WriteSBOM(w io.Writer, doc SBOMDocument) error {
+	switch d := doc.Raw().(type) {
+	case *cydx.BOM:
+		encoder := cydx.NewBOMEncoder(w, cydx.BOMFileFormatJSON)
+		encoder.SetPretty(true)
+		return encoder.Encode(d)
 
-	spec, format, err := detect.Detect(f)
-	if err != nil {
-		return "", "", err
+	case *spdx.Document:
+		return spdxjson.Write(d, w)
+	default:
+		return fmt.Errorf("unsupported SBOM type for writing")
 	}
-	return string(spec), string(format), nil
 }

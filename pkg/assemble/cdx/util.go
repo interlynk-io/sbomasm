@@ -26,8 +26,8 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/detect"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/samber/lo"
 	"sigs.k8s.io/release-utils/version"
 )
@@ -152,7 +152,7 @@ func loadBom(ctx context.Context, path string) (*cydx.BOM, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := detect.Detect(f)
+	spec, format, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}
@@ -160,13 +160,13 @@ func loadBom(ctx context.Context, path string) (*cydx.BOM, error) {
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
 	switch format {
-	case detect.FileFormatJSON:
+	case sbom.FileFormatJSON:
 		bom = new(cydx.BOM)
 		decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatJSON)
 		if err = decoder.Decode(bom); err != nil {
 			return nil, err
 		}
-	case detect.FileFormatXML:
+	case sbom.FileFormatXML:
 		bom = new(cydx.BOM)
 		decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatXML)
 		if err = decoder.Decode(bom); err != nil {
