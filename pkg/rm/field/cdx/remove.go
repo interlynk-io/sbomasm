@@ -330,10 +330,12 @@ func RemoveAuthorFromComponent(doc *cydx.BOM, entries []interface{}, params *typ
 		comp := entry.Component
 		found := false
 		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
+			log.Debugf("Found component in metadata: %s@%s", comp.Name, comp.Version)
 			found = true
 		} else if doc.Components != nil {
 			for i := range *doc.Components {
 				if &(*doc.Components)[i] == comp {
+					log.Debugf("Found component in components: %s@%s", comp.Name, comp.Version)
 					found = true
 					break
 				}
@@ -347,7 +349,7 @@ func RemoveAuthorFromComponent(doc *cydx.BOM, entries []interface{}, params *typ
 		if comp.Authors != nil {
 			var newAuthors []cydx.OrganizationalContact
 			for _, author := range *comp.Authors {
-				if &author != entry.Author {
+				if author != *entry.Author {
 					newAuthors = append(newAuthors, author)
 				}
 			}
@@ -374,7 +376,7 @@ func RemoveSupplierFromComponent(doc *cydx.BOM, entries []interface{}, params *t
 	removedCount := 0
 	for _, e := range entries {
 		entry, ok := e.(SupplierEntry)
-		if !ok || entry.Value == "" {
+		if !ok || entry.Value == nil {
 			log.Debugf("Skipping invalid supplier entry: %v", e)
 			continue
 		}
@@ -396,7 +398,7 @@ func RemoveSupplierFromComponent(doc *cydx.BOM, entries []interface{}, params *t
 			continue
 		}
 
-		if comp.Supplier != nil && strings.EqualFold(comp.Supplier.Name, entry.Value) {
+		if comp.Supplier != nil && (strings.Contains(entry.Value.Name, params.Value) || containsURL(entry.Value.URL, params.Value)) {
 			comp.Supplier = nil
 			removedCount++
 			log.Debugf("Removed supplier from component: %s@%s, Supplier: %s\n", comp.Name, comp.Version, entry.Value)

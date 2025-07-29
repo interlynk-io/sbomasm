@@ -27,7 +27,7 @@ type AuthorEntry struct {
 // SupplierEntry for Component.Supplier.Name
 type SupplierEntry struct {
 	Component *cydx.Component
-	Value     string
+	Value     *cydx.OrganizationalEntity
 }
 
 // RepositoryEntry for ExternalReferences with Type "vcs"
