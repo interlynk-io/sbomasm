@@ -17,7 +17,6 @@
 package spdx
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -183,7 +182,7 @@ func FilterTimestampFromMetadata(allTimestamps []interface{}, params *types.RmPa
 
 	}
 
-	log.Debugf("Filtered SPDX timestamps: %v", filteredTimestamps)
+	log.Debugf("Filtered SPDX timestamp from metadata: %v", filteredTimestamps)
 	return filteredTimestamps, nil
 }
 
@@ -214,7 +213,7 @@ func FilterPurlFromComponent(doc *spdx.Document, entries []interface{}, params *
 			filtered = append(filtered, entry)
 		}
 	}
-	log.Debugf("Filtered SPDX PURL entries: %d", len(filtered))
+	log.Debugf("Filtered SPDX PURL from Component: %v", filtered)
 	return filtered, nil
 }
 
@@ -237,15 +236,8 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.EqualFold(entry.Originator.Originator, params.Value) {
+			if strings.Contains(entry.Originator.Originator, params.Value) {
 				match = true
-			} else {
-				re := regexp.MustCompile(`\(([^)]+)\)`)
-				if matches := re.FindStringSubmatch(entry.Originator.Originator); len(matches) > 1 {
-					if strings.EqualFold(matches[1], params.Value) {
-						match = true
-					}
-				}
 			}
 			if params.Value == "NOASSERTION" {
 				log.Warnf("NOASSERTION is unlikely for author field")
@@ -259,7 +251,7 @@ func FilterAuthorFromComponent(doc *spdx.Document, entries []interface{}, params
 		}
 	}
 
-	log.Debugf("Filtered SPDX author from component:", filtered)
+	log.Debugf("Filtered SPDX author from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -282,7 +274,7 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.EqualFold(entry.Supplier.Supplier, params.Value) {
+			if strings.Contains(entry.Supplier.Supplier, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
@@ -297,7 +289,7 @@ func FilterSupplierFromComponent(doc *spdx.Document, entries []interface{}, para
 		}
 	}
 
-	log.Debugf("Filtered SPDX supplier from component:", filtered)
+	log.Debugf("Filtered SPDX supplier from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -335,7 +327,7 @@ func FilterCopyrightFromComponent(doc *spdx.Document, entries []interface{}, par
 		}
 	}
 
-	log.Debugf("Filtered SPDX copyright from component:", filtered)
+	log.Debugf("Filtered SPDX copyright from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -377,7 +369,7 @@ func FilterCpeFromComponent(doc *spdx.Document, entries []interface{}, params *t
 		}
 	}
 
-	log.Debugf("Filtered SPDX CPE entries from component:", filtered)
+	log.Debugf("Filtered SPDX CPE from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -415,7 +407,7 @@ func FilterDescriptionFromComponent(doc *spdx.Document, entries []interface{}, p
 		}
 	}
 
-	log.Debugf("Filtered SPDX description entries from component:", filtered)
+	log.Debugf("Filtered SPDX description from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -457,7 +449,7 @@ func FilterHashFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX hash from component:", filtered)
+	log.Debugf("Filtered SPDX hash from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -495,7 +487,7 @@ func FilterLicenseFromComponent(doc *spdx.Document, entries []interface{}, param
 		}
 	}
 
-	log.Debugf("Filtered SPDX license from component:", filtered)
+	log.Debugf("Filtered SPDX license from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -533,7 +525,7 @@ func FilterRepoFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX repository from component:", filtered)
+	log.Debugf("Filtered SPDX repository from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -571,6 +563,6 @@ func FilterTypeFromComponent(doc *spdx.Document, entries []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered SPDX type from component:", filtered)
+	log.Debugf("Filtered SPDX type from component: %v", filtered)
 	return filtered, nil
 }

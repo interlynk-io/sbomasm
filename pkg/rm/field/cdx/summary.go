@@ -163,7 +163,7 @@ func RenderSummarySupplierFromComponent(entries []interface{}) {
 
 	for _, e := range entries {
 		entry, ok := e.(SupplierEntry)
-		if !ok || entry.Value == "" {
+		if !ok || entry.Value == nil {
 			fmt.Println("Skipping invalid supplier entry:", e)
 			continue
 		}
@@ -171,9 +171,7 @@ func RenderSummarySupplierFromComponent(entries []interface{}) {
 			entry.Component.Name,
 			entry.Component.Version,
 			entry.Value)
-		if strings.EqualFold(entry.Value, "NOASSERTION") {
-			fmt.Println("    Note: NOASSERTION matched for supplier")
-		}
+
 	}
 }
 

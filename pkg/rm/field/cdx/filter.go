@@ -288,7 +288,7 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.EqualFold(entry.Author.Name, params.Value) || strings.EqualFold(entry.Author.Email, params.Value) {
+			if strings.Contains(entry.Author.Name, params.Value) || strings.Contains(entry.Author.Email, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
@@ -303,7 +303,7 @@ func FilterAuthorFromComponent(doc *cydx.BOM, selected []interface{}, params *ty
 		}
 	}
 
-	log.Debugf("Filtered author from component: ", filtered)
+	log.Debugf("Filtered author from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -318,7 +318,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 	var filtered []interface{}
 	for _, e := range selected {
 		entry, ok := e.(SupplierEntry)
-		if !ok || entry.Value == "" {
+		if !ok || entry.Value == nil {
 			log.Warn("Skipping invalid supplier entry:", e)
 			continue
 		}
@@ -326,7 +326,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.EqualFold(entry.Value, params.Value) {
+			if strings.Contains(entry.Value.Name, params.Value) || containsURL(entry.Value.URL, params.Value) {
 				match = true
 			}
 			if params.Value == "NOASSERTION" {
@@ -341,7 +341,7 @@ func FilterSupplierFromComponent(doc *cydx.BOM, selected []interface{}, params *
 		}
 	}
 
-	log.Debugf("Filtered supplier from component: ", filtered)
+	log.Debugf("Filtered supplier from component: %v", filtered)
 	return filtered, nil
 }
 
@@ -388,7 +388,6 @@ func FilterCpeFromComponent(doc *cydx.BOM, selected []interface{}, params *types
 	log.Debugf("Filtering CPE from component")
 
 	if params.Value == "" && !params.All && !params.IsFieldAndKeyPresent {
-		log.Warn("No CPE value provided, returning selected entries without filtering")
 		return selected, nil
 	}
 

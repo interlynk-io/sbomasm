@@ -158,7 +158,7 @@ func SelectSupplierFromComponent(doc *cydx.BOM, params *types.RmParams) ([]inter
 		}
 		if c.Supplier != nil && c.Supplier.Name != "" {
 			log.Debugf("Selecting supplier from component: %s@%s, Supplier: %s", c.Name, c.Version, c.Supplier.Name)
-			selected = append(selected, SupplierEntry{Component: c, Value: c.Supplier.Name})
+			selected = append(selected, SupplierEntry{Component: c, Value: c.Supplier})
 		}
 	}
 	if len(selected) == 0 {
