@@ -1,13 +1,14 @@
 module github.com/interlynk-io/sbomasm
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.1
+toolchain go1.24.6
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.9.2
 	github.com/github/go-spdx/v2 v2.3.3
 	github.com/google/uuid v1.6.0
+	github.com/interlynk-io/sbomqs v1.1.0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.51.0
@@ -21,6 +22,7 @@ require (
 require golang.org/x/mod v0.26.0 // indirect
 
 require (
+	github.com/package-url/packageurl-go v0.1.3 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 )
