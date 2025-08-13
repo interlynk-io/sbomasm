@@ -23,7 +23,7 @@ import (
 
 type SBOMDocument interface {
 	SpecType() string
-	Raw() any
+	Document() any
 }
 
 type SPDXDocument struct {
@@ -31,11 +31,11 @@ type SPDXDocument struct {
 }
 
 func (s *SPDXDocument) SpecType() string { return "spdx" }
-func (s *SPDXDocument) Raw() any         { return s.Doc }
+func (s *SPDXDocument) Document() any    { return s.Doc }
 
 type CycloneDXDocument struct {
 	BOM *cydx.BOM
 }
 
 func (c *CycloneDXDocument) SpecType() string { return "cdx" }
-func (c *CycloneDXDocument) Raw() any         { return c.BOM }
+func (c *CycloneDXDocument) Document() any    { return c.BOM }

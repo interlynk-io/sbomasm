@@ -69,17 +69,17 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 
 	switch spec {
 	case sbom.SBOMSpecCDX:
-		bom, ok := sbomDoc.Raw().(*cydx.BOM)
+		bom, ok := sbomDoc.Document().(*cydx.BOM)
 		if !ok {
-			return fmt.Errorf("expected CycloneDX BOM, got %T", sbomDoc.Raw())
+			return fmt.Errorf("expected CycloneDX BOM, got %T", sbomDoc.Document())
 		}
 		log.Debugf("CycloneDX BOM detected, registering handlers")
 
 		RegisterHandlers(bom, nil)
 	case sbom.SBOMSpecSPDX:
-		doc, ok := sbomDoc.Raw().(*spdx.Document)
+		doc, ok := sbomDoc.Document().(*spdx.Document)
 		if !ok {
-			return fmt.Errorf("expected SPDX doc, got %T", sbomDoc.Raw())
+			return fmt.Errorf("expected SPDX doc, got %T", sbomDoc.Document())
 		}
 		log.Debugf("SPDX Doc detected, registering handlers")
 		RegisterHandlers(nil, doc)
