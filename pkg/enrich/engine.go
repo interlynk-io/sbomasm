@@ -47,6 +47,7 @@ func Engine(ctx context.Context, args []string, params *types.EnrichConfig) (*ty
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("Extracted components: %d", len(components))
 
 	coordinates := clearlydef.Mapper(ctx, components)
 	responses := clearlydef.Client(ctx, coordinates)

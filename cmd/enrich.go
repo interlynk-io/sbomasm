@@ -19,6 +19,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -60,17 +61,16 @@ func init() {
 }
 
 func runEnrich(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	log := logger.FromContext(ctx)
-
-	log.Debugf("Executing enrich command with args: %v", args)
-
 	debug, _ := cmd.Flags().GetBool("debug")
 	if debug {
 		logger.InitDebugLogger()
 	} else {
 		logger.InitProdLogger()
 	}
+	ctx := logger.WithLogger(context.Background())
+	log := logger.FromContext(ctx)
+	fmt.Println("debug: ", debug)
+	log.Debugf("Executing enrich command with args: %v", args)
 
 	enrichParams, err := extractEnrichParams(cmd)
 	if err != nil {
@@ -104,12 +104,14 @@ func extractEnrichParams(cmd *cobra.Command) (*types.EnrichConfig, error) {
 	outputFile, _ := cmd.Flags().GetString("output")
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	force, _ := cmd.Flags().GetBool("force")
+	debug, _ := cmd.Flags().GetBool("debug")
 
 	params := &types.EnrichConfig{
 		Fields:  fields,
 		Output:  outputFile,
 		Verbose: verbose,
 		Force:   force,
+		Debug:   debug,
 	}
 	return params, nil
 }

@@ -19,7 +19,6 @@ package clearlydef
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -32,7 +31,7 @@ type PKG_TYPE string
 
 const (
 	NPM   PKG_TYPE = "npm"
-	GO    PKG_TYPE = "go"
+	GO    PKG_TYPE = "golang"
 	PYPI  PKG_TYPE = "pypi"
 	MAVEN PKG_TYPE = "maven"
 	NUGET PKG_TYPE = "nuget"
@@ -51,7 +50,7 @@ type Coordinate struct {
 // Map component into coordinate mapper for clearlydefined
 func Mapper(ctx context.Context, components []interface{}) map[interface{}]Coordinate {
 	log := logger.FromContext(ctx)
-	log.Debug("mapping components to ClearlyDefined coordinates")
+	log.Debug("mapping components to clearlydefined coordinates")
 
 	coordinates := make(map[interface{}]Coordinate)
 
@@ -92,22 +91,6 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]Coord
 				// error.HandleError(fmt.Errorf("multiple PURLs for component %s; using %s", name, coord.ToPath()), true)
 			}
 		}
-
-		// if spec == "cyclonedx" && strings.HasPrefix(comp.GetID(), "pkg:") {
-		// 	coord, err = parsePURL(ctx, comp.GetID())
-		// } else if spec == "spdx" && comp.GetPurls() != nil {
-		// 	for _, purl := range comp.GetPurls() {
-		// 		coord, err = parsePURL(ctx, purl.String())
-		// 		if err == nil {
-		// 			break // Use the first valid PURL
-		// 		}
-		// 	}
-		// } else {
-		// 	err = errors.New("unsupported identifier")
-		// }
-		// if err == nil {
-		// 	coordinates[comp] = coord
-		// }
 	}
 	log.Debugf("mapped %d components to coordinates", len(coordinates))
 
@@ -129,9 +112,26 @@ func parsePURL(ctx context.Context, purl string) (Coordinate, error) {
 		return Coordinate{}, errors.New("invalid PURL format")
 	}
 
-	fmt.Println("parts: ", parts)
 	pkgType := parts[0]
-	nameVersion := strings.SplitN(parts[1], "@", 2)
+	newPurl := parts[1]
+
+	// Parse PURL to strip query parameters and fragments
+	parsedURL, err := url.Parse(newPurl)
+	if err != nil {
+		log.Errorf("Failed to parse PURL %s: %v", purl, err)
+		return Coordinate{}, errors.New("invalid PURL")
+	}
+	log.Debugf("Parsed PURL: %s", parsedURL)
+
+	// Use path (removes ?query and #fragment)
+	purlPath := parsedURL.Path
+	if purlPath == "" {
+		log.Error("invalid PURL: empty path")
+		return Coordinate{}, errors.New("invalid PURL: empty path")
+	}
+	log.Debugf("PURL path: %s", purlPath)
+
+	nameVersion := strings.SplitN(purlPath, "@", 2)
 	if len(nameVersion) < 2 {
 		log.Error("invalid PURL: missing version")
 		return Coordinate{}, errors.New("invalid PURL: missing version")
@@ -139,7 +139,7 @@ func parsePURL(ctx context.Context, purl string) (Coordinate, error) {
 	name := nameVersion[0]
 	version := nameVersion[1]
 
-	log.Debugf("Parsing PURL: package type=%s, name=%s, version=%s", pkgType, name, version)
+	log.Debugf("Parsing PURL: package_type=%s, name=%s, version=%s", pkgType, name, version)
 
 	switch PKG_TYPE(pkgType) {
 
@@ -154,16 +154,21 @@ func parsePURL(ctx context.Context, purl string) (Coordinate, error) {
 		}, nil
 
 	case GO:
-		log.Debug("Parsing Go PURL")
+		log.Debug("Parsing Golang PURL")
 		// e.g., pkg:go/github.com/quasilyte/regex/syntax@v0.0.0-20200419152657-af9db7f4a3ab
 		pathParts := strings.SplitN(name, "/", 2)
+
 		if len(pathParts) < 2 {
 			log.Error("invalid Go PURL")
 			return Coordinate{}, errors.New("invalid Go PURL")
 		}
+
 		namespace := pathParts[0]
 		name = pathParts[1]
 		encodedNamespace := url.PathEscape(namespace)
+
+		log.Debugf("encoded namespace: %s, name: %s", encodedNamespace, name)
+
 		return Coordinate{
 			Type:      "go",
 			Provider:  "golang",
