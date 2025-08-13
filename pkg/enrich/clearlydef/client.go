@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomqs/pkg/sbom"
 )
 
 const (
@@ -41,7 +40,7 @@ type DefinitionResponse struct {
 	} `json:"licensed"`
 }
 
-func Client(ctx context.Context, coordinates map[sbom.GetComponent]Coordinate) map[sbom.GetComponent]DefinitionResponse {
+func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[interface{}]DefinitionResponse {
 	log := logger.FromContext(ctx)
 	log.Debug("querying ClearlyDefined API")
 
@@ -49,23 +48,29 @@ func Client(ctx context.Context, coordinates map[sbom.GetComponent]Coordinate) m
 	cache := make(map[string]DefinitionResponse)
 
 	// store component and it's responses
-	responses := make(map[sbom.GetComponent]DefinitionResponse)
+	responses := make(map[interface{}]DefinitionResponse)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	for comp, coordinate := range coordinates {
 		path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
 
+		if cached, ok := cache[path]; ok {
+			responses[comp] = cached
+			continue
+		}
+
+		baseURL := API_BASE_DEFINITIONS_URL + "/" + path
+
 		if coordinate.Type == "go" {
-			path = fmt.Sprintf("?coordinates=%s", url.QueryEscape(path))
+			path = fmt.Sprintf("?coordinates=%s", url.QueryEscape(baseURL))
 		}
 
 		log.Debugf("querying clearlydefined for coordinate %s", path)
 
-		url := API_BASE_DEFINITIONS_URL + "/" + path
-		log.Debugf("final clearlydefined URL: %s", url)
+		log.Debugf("final clearlydefined URL: %s", baseURL)
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", baseURL, nil)
 		if err != nil {
 			continue
 		}
@@ -85,7 +90,7 @@ func Client(ctx context.Context, coordinates map[sbom.GetComponent]Coordinate) m
 		defer resp.Body.Close()
 
 		if resp.StatusCode == 429 {
-
+			log.Warn("rate limit exceeded")
 			// retry after reset time
 			resetTime := resp.Header.Get("x-ratelimit-reset")
 

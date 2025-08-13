@@ -23,9 +23,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
+	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomqs/pkg/sbom"
+	"github.com/spdx/tools-golang/spdx"
 )
 
 type PKG_TYPE string
@@ -49,34 +49,65 @@ type Coordinate struct {
 }
 
 // Map component into coordinate mapper for clearlydefined
-func Mapper(ctx context.Context, spec string, targets []types.EnrichmentTarget) map[sbom.GetComponent]Coordinate {
+func Mapper(ctx context.Context, components []interface{}) map[interface{}]Coordinate {
 	log := logger.FromContext(ctx)
 	log.Debug("mapping components to ClearlyDefined coordinates")
-	fmt.Println("spec: ", spec)
 
-	coordinates := make(map[sbom.GetComponent]Coordinate)
+	coordinates := make(map[interface{}]Coordinate)
 
-	for _, target := range targets {
-		comp := target.Component
-
+	for _, comp := range components {
 		var coord Coordinate
 		var err error
+		var purls []string
 
-		if spec == "cyclonedx" && strings.HasPrefix(comp.GetID(), "pkg:") {
-			coord, err = parsePURL(ctx, comp.GetID())
-		} else if spec == "spdx" && comp.GetPurls() != nil {
-			for _, purl := range comp.GetPurls() {
-				coord, err = parsePURL(ctx, purl.String())
-				if err == nil {
-					break // Use the first valid PURL
+		switch c := comp.(type) {
+		case *spdx.Package:
+
+			for _, ref := range c.PackageExternalReferences {
+				if ref.RefType == "purl" {
+					purls = append(purls, ref.Locator)
 				}
 			}
-		} else {
-			err = errors.New("unsupported identifier")
+		case cydx.Component:
+
+			if c.PackageURL != "" {
+				purls = append(purls, c.PackageURL)
+			}
+		default:
+			// error.HandleError(errors.New("unknown component type"), true)
+			continue
 		}
+
+		// Select first valid PURL
+		for _, purl := range purls {
+			coord, err = parsePURL(ctx, purl)
+			if err == nil {
+				break
+			}
+		}
+
 		if err == nil {
 			coordinates[comp] = coord
+			if len(purls) > 1 {
+				// error.HandleError(fmt.Errorf("multiple PURLs for component %s; using %s", name, coord.ToPath()), true)
+			}
 		}
+
+		// if spec == "cyclonedx" && strings.HasPrefix(comp.GetID(), "pkg:") {
+		// 	coord, err = parsePURL(ctx, comp.GetID())
+		// } else if spec == "spdx" && comp.GetPurls() != nil {
+		// 	for _, purl := range comp.GetPurls() {
+		// 		coord, err = parsePURL(ctx, purl.String())
+		// 		if err == nil {
+		// 			break // Use the first valid PURL
+		// 		}
+		// 	}
+		// } else {
+		// 	err = errors.New("unsupported identifier")
+		// }
+		// if err == nil {
+		// 	coordinates[comp] = coord
+		// }
 	}
 	log.Debugf("mapped %d components to coordinates", len(coordinates))
 

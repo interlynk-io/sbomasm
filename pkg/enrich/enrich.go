@@ -17,33 +17,44 @@
 package enrich
 
 import (
+	"context"
+
+	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
-	"github.com/interlynk-io/sbomqs/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/spdx/tools-golang/spdx"
 )
 
-func Enricher(sbom sbom.Document, targets []types.EnrichmentTarget, responses map[sbom.GetComponent]clearlydef.DefinitionResponse, force bool) sbom.Document {
-	for _, target := range targets {
-		componentIndex := findComponentIndex(sbom.Components(), target.Component)
-		if componentIndex == -1 {
+// Enricher updates licenses in the SBOM
+func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) sbom.SBOMDocument {
+	for _, comp := range components {
+		resp, ok := responses[comp]
+		if !ok || resp.Licensed.Declared == "" {
 			continue
 		}
-		response, ok := responses[target.Component]
-		if !ok || response.Licensed.Declared == "" {
-			continue
-		}
-		if target.Field == "license" && (force || sbom.Components()[componentIndex].GetPackageLicenseConcluded() == "" || sbom.Components()[componentIndex].GetPackageLicenseConcluded() == "NOASSERTION") {
-			// sbom.Components()[componentIndex].SetPackageLicenseConcluded(response.Licensed.Declared)
+		switch c := comp.(type) {
+		case *spdx.Package:
+			if force || c.PackageLicenseConcluded == "" || c.PackageLicenseConcluded == "NOASSERTION" {
+				c.PackageLicenseConcluded = resp.Licensed.Declared
+			}
+		case cydx.Component:
+			if force || (c.Licenses == nil || len(*c.Licenses) == 0 || (*c.Licenses)[0].License.ID == "") {
+				if c.Licenses == nil {
+					c.Licenses = &cydx.Licenses{{License: &cydx.License{ID: resp.Licensed.Declared}}}
+				} else {
+					(*c.Licenses)[0].License.ID = resp.Licensed.Declared
+				}
+			}
 		}
 	}
-	return sbom
+	return sbomDoc
 }
 
-func findComponentIndex(components []sbom.GetComponent, comp sbom.GetComponent) int {
-	for i, c := range components {
-		if c.GetID() == comp.GetID() {
-			return i
-		}
-	}
-	return -1
-}
+// func findComponentIndex(components []sbom.GetComponent, comp sbom.GetComponent) int {
+// 	for i, c := range components {
+// 		if c.GetID() == comp.GetID() {
+// 			return i
+// 		}
+// 	}
+// 	return -1
+// }

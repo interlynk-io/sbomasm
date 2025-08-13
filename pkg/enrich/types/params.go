@@ -27,13 +27,20 @@ type EnrichmentTarget struct {
 	Field     string
 }
 
-type EnrichParams struct {
+type EnrichConfig struct {
 	Fields   []string
 	Output   string
 	SBOMFile string
 	Verbose  bool
 	Force    bool
 	Debug    bool
+}
+
+// EnrichParams for the enrich command
+type EnrichParams struct {
+	Fields  []string
+	Force   bool
+	Verbose bool
 }
 
 type EnrichSummary struct {
@@ -43,7 +50,7 @@ type EnrichSummary struct {
 	Errors   []error
 }
 
-func (p *EnrichParams) Validate() error {
+func (p *EnrichConfig) Validate() error {
 	if len(p.Fields) == 0 {
 		return fmt.Errorf("no fields specified for enrichment")
 	}

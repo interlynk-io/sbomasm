@@ -25,45 +25,41 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/enrich/extract"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
-	sbomop "github.com/interlynk-io/sbomasm/pkg/sbom"
-	"github.com/interlynk-io/sbomqs/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
-func Engine(ctx context.Context, args []string, params *types.EnrichParams) (*types.EnrichSummary, error) {
+func Engine(ctx context.Context, args []string, params *types.EnrichConfig) (*types.EnrichSummary, error) {
 	// Initialize the enrich engine with the provided parameters
 
 	log := logger.FromContext(ctx)
 	log.Debugf("Starting Enrich Engine")
 	sbomFile := args[0]
 
-	// // get SBOM doc
-	// sbomDoc, err := getSBOMDoc(ctx, sbomFile)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	f, err := os.Open(sbomFile)
+	// get SBOM doc
+	sbomDoc, err := sbom.Parser(ctx, sbomFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file %q: %w", sbomFile, err)
-	}
-	defer f.Close()
-
-	sbomDoc, err := sbom.NewSBOMDocument(ctx, f, sbom.Signature{})
-	if err != nil {
-		log.Fatalf("failed to parse SBOM document: %w", err)
+		return nil, err
 	}
 
-	spec := sbomDoc.Spec().GetSpecType()
+	log.Debugf("Parsed SBOM document: %s", sbomDoc.SpecType())
 
-	// extract targets
-	targets := extract.Extractor(sbomDoc, params.Fields, params.Force)
+	components, err := extract.Components(ctx, sbomDoc, params)
+	if err != nil {
+		return nil, err
+	}
 
-	coordinates := clearlydef.Mapper(ctx, spec, targets)
-	log.Debugf("coordinates: %+v", coordinates)
-
+	coordinates := clearlydef.Mapper(ctx, components)
 	responses := clearlydef.Client(ctx, coordinates)
 
-	sbomDoc = Enricher(sbomDoc, targets, responses, params.Force)
+	// // extract targets
+	// targets := extract.Extractor(sbomDoc, params.Fields, params.Force)
+
+	// coordinates := clearlydef.Mapper(ctx, spec, targets)
+	// log.Debugf("coordinates: %+v", coordinates)
+
+	// responses := clearlydef.Client(ctx, coordinates)
+
+	sbomDoc = Enricher(ctx, sbomDoc, components, responses, params.Force)
 
 	newFile, err := os.Create(params.Output)
 	if err != nil {
@@ -71,59 +67,30 @@ func Engine(ctx context.Context, args []string, params *types.EnrichParams) (*ty
 	}
 	defer newFile.Close()
 
-	if err := sbomop.WriteSBOM(newFile, sbomDoc); err != nil {
+	if err := sbom.WriteSBOM(newFile, sbomDoc); err != nil {
 		return nil, fmt.Errorf("failed to write SBOM to file: %w", err)
 	}
 
-	summary := calculateSummary(responses)
+	summary := calculateSummary(responses, params.Verbose)
 
 	return &summary, nil
 }
 
-func calculateSummary(responses map[sbom.GetComponent]clearlydef.DefinitionResponse) types.EnrichSummary {
-	// Logic to count enriched/skipped/failed based on responses
-	// Placeholder implementation
-	enriched := 0
-	skipped := 0
-	failed := 0
-	errors := []error{}
-
+// calculateSummary counts enriched/skipped/failed components
+func calculateSummary(responses map[interface{}]clearlydef.DefinitionResponse, verbose bool) types.EnrichSummary {
+	summary := types.EnrichSummary{}
 	for _, resp := range responses {
 		if resp.Licensed.Declared != "" {
-			enriched++
+			summary.Enriched++
 		} else {
-			skipped++
+			summary.Skipped++
 		}
 	}
-
-	return types.EnrichSummary{Enriched: enriched, Skipped: skipped, Failed: failed, Errors: errors}
+	if verbose {
+		fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
+		for _, err := range summary.Errors {
+			fmt.Println("Error:", err)
+		}
+	}
+	return summary
 }
-
-// func getSBOMDoc(ctx context.Context, sbomFile string) (sbom.SBOMDocument, error) {
-// 	log := logger.FromContext(ctx)
-
-// 	f, err := os.Open(sbomFile)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to open file %q: %w", sbomFile, err)
-// 	}
-// 	defer f.Close()
-
-// 	spec, format, err := sbom.Detect(f)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
-// 	}
-
-// 	log.Debugf("Detected SBOM format: %s, spec: %s", format, spec)
-
-// 	// rewind before parsing
-// 	if _, err := f.Seek(0, io.SeekStart); err != nil {
-// 		return nil, fmt.Errorf("failed to rewind file: %w", err)
-// 	}
-
-// 	// parse into SBOM object
-// 	sbomDoc, err := sbom.ParseSBOM(f, spec, format)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return sbomDoc, nil
-// }

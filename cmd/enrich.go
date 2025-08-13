@@ -99,13 +99,13 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func extractEnrichParams(cmd *cobra.Command) (*types.EnrichParams, error) {
+func extractEnrichParams(cmd *cobra.Command) (*types.EnrichConfig, error) {
 	fields, _ := cmd.Flags().GetStringSlice("fields")
 	outputFile, _ := cmd.Flags().GetString("output")
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	force, _ := cmd.Flags().GetBool("force")
 
-	params := &types.EnrichParams{
+	params := &types.EnrichConfig{
 		Fields:  fields,
 		Output:  outputFile,
 		Verbose: verbose,

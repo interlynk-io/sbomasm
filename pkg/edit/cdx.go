@@ -118,7 +118,7 @@ func loadCdxBom(ctx context.Context, path string) (*cydx.BOM, error) {
 		return nil, err
 	}
 
-	bom, ok := sbomDoc.Raw().(*cydx.BOM)
+	bom, ok := sbomDoc.Document().(*cydx.BOM)
 	if !ok {
 		return nil, fmt.Errorf("failed to assert sbomDoc.Raw() to *cydx.BOM")
 	}
