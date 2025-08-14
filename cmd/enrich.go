@@ -24,15 +24,14 @@ import (
 	"os"
 
 	"github.com/interlynk-io/sbomasm/pkg/enrich"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
 var enrichCmd = &cobra.Command{
 	Use:   "enrich [flags] <input-file>",
-	Short: "Enrich SBOM licenses using ClearlyDefined API",
-	Long: `Enrich missing or incorrect licenses in an SBOM file using the ClearlyDefined API.
+	Short: "Enrich SBOM licenses using ClearlyDefined",
+	Long: `Enrich missing or incorrect licenses in an SBOM file using the ClearlyDefined.
 
 	`,
 	Args:         cobra.ExactArgs(1),
@@ -52,12 +51,11 @@ var enrichCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(enrichCmd)
 
-	// Define flags for the enrich command
-	enrichCmd.Flags().StringSlice("fields", []string{}, "Fields to enrich in the SBOM (e.g., author, license)")
-	enrichCmd.Flags().String("output", "", "Output file to save the enriched SBOM")
-	enrichCmd.Flags().Bool("debug", false, "Enable debug logging")
-	enrichCmd.Flags().Bool("force", false, "Force overwrite of output file if it exists")
-	enrichCmd.Flags().Bool("verbose", false, "Enable verbose output")
+	enrichCmd.Flags().StringSlice("fields", []string{}, "Fields to enrich in the SBOM (e.g. license)")
+	enrichCmd.Flags().StringP("output", "o", "", "Output path of file to save the enriched SBOM")
+	enrichCmd.Flags().BoolP("debug", "d", false, "Enable debug logging")
+	enrichCmd.Flags().BoolP("force", "f", false, "Forcefully replace the existing fields with new one.")
+	enrichCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 }
 
 func runEnrich(cmd *cobra.Command, args []string) error {
@@ -67,29 +65,30 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 	} else {
 		logger.InitProdLogger()
 	}
+
 	ctx := logger.WithLogger(context.Background())
 	log := logger.FromContext(ctx)
-	fmt.Println("debug: ", debug)
+
 	log.Debugf("Executing enrich command with args: %v", args)
 
-	enrichParams, err := extractEnrichParams(cmd)
+	// extract the enrich configuration
+	enrichConfig, err := extractEnrichConfig(cmd, args)
 	if err != nil {
-		return fmt.Errorf("failed to extract enrich parameters: %w", err)
-	}
-	enrichParams.SBOMFile = args[0]
-
-	log.Debugf("Enrich parameters: %+v", enrichParams)
-
-	if err := enrichParams.Validate(); err != nil {
-		return fmt.Errorf("invalid enrich parameters: %w", err)
+		return fmt.Errorf("failed to extract enrich configuration: %w", err)
 	}
 
-	summary, err := enrich.Engine(ctx, args, enrichParams)
+	log.Debugf("Enrich configuration: %+v", enrichConfig)
+
+	if err := enrichConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid enrich configuration: %w", err)
+	}
+
+	summary, err := enrich.Engine(ctx, enrichConfig)
 	if err != nil {
 		return fmt.Errorf("failed to run enrich engine: %w", err)
 	}
 
-	if enrichParams.Verbose {
+	if enrichConfig.Verbose {
 		fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
 		for _, err := range summary.Errors {
 			fmt.Println("Error: " + err.Error())
@@ -99,19 +98,25 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func extractEnrichParams(cmd *cobra.Command) (*types.EnrichConfig, error) {
-	fields, _ := cmd.Flags().GetStringSlice("fields")
-	outputFile, _ := cmd.Flags().GetString("output")
-	verbose, _ := cmd.Flags().GetBool("verbose")
-	force, _ := cmd.Flags().GetBool("force")
-	debug, _ := cmd.Flags().GetBool("debug")
+func extractEnrichConfig(cmd *cobra.Command, args []string) (*enrich.Config, error) {
+	enrichConfig := enrich.NewConfig()
 
-	params := &types.EnrichConfig{
-		Fields:  fields,
-		Output:  outputFile,
-		Verbose: verbose,
-		Force:   force,
-		Debug:   debug,
-	}
-	return params, nil
+	enrichConfig.SBOMFile = args[0]
+
+	fields, _ := cmd.Flags().GetStringSlice("fields")
+	enrichConfig.Fields = fields
+
+	outputFile, _ := cmd.Flags().GetString("output")
+	enrichConfig.Output = outputFile
+
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	enrichConfig.Verbose = verbose
+
+	force, _ := cmd.Flags().GetBool("force")
+	enrichConfig.Force = force
+
+	debug, _ := cmd.Flags().GetBool("debug")
+	enrichConfig.Debug = debug
+
+	return enrichConfig, nil
 }

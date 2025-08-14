@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
@@ -48,15 +47,24 @@ import (
 // 	return targets
 // }
 
+// Extract Params
+type Params struct {
+	Fields  []string
+	Force   bool
+	Verbose bool
+}
+
 // Components selects components needing license enrichment
-func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.EnrichConfig) ([]interface{}, error) {
+func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Selecting components for enrichment")
 
 	var selectedComponents []interface{}
 	var totalComponents int
 	var totalSelectedComponents int
 
 	switch doc := sbomDoc.Document().(type) {
+
 	case *spdx.Document:
 		for _, p := range doc.Packages {
 			totalComponents++
@@ -100,7 +108,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.En
 }
 
 // shouldSelectSPDXComponent checks if an SPDX package needs license enrichment
-func shouldSelectSPDXComponent(pkg spdx.Package, params *types.EnrichConfig) bool {
+func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
 	for _, field := range params.Fields {
 		if field == "license" {
 			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" {
@@ -112,7 +120,7 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *types.EnrichConfig) boo
 }
 
 // shouldSelectCDXComponent checks if a CycloneDX component needs license enrichment
-func shouldSelectCDXComponent(comp *cydx.Component, params *types.EnrichConfig) bool {
+func shouldSelectCDXComponent(comp *cydx.Component, params *Params) bool {
 	for _, field := range params.Fields {
 		if field == "license" {
 			license := ""

@@ -33,6 +33,7 @@ import (
 
 func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	log := logger.FromContext(ctx)
+	log.Debugf("Parsing SBOM file: %s", sbomFile)
 
 	f, err := os.Open(sbomFile)
 	if err != nil {
@@ -45,7 +46,7 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	log.Debugf("Detected SBOM format: %s, spec: %s", format, spec)
+	log.Debugf("detected SBOM format: %s, spec: %s", format, spec)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {

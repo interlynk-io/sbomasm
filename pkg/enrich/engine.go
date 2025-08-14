@@ -23,31 +23,35 @@ import (
 
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/extract"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/types"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
-func Engine(ctx context.Context, args []string, params *types.EnrichConfig) (*types.EnrichSummary, error) {
+func Engine(ctx context.Context, params *Config) (*Summary, error) {
 	// Initialize the enrich engine with the provided parameters
 
 	log := logger.FromContext(ctx)
 	log.Debugf("Starting Enrich Engine")
-	sbomFile := args[0]
 
-	// get SBOM doc
-	sbomDoc, err := sbom.Parser(ctx, sbomFile)
+	// parse the SBOM document
+	sbomDoc, err := sbom.Parser(ctx, params.SBOMFile)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugf("Parsed SBOM document: %s", sbomDoc.SpecType())
+	log.Debugf("parsed SBOM document successfully: %s", sbomDoc.SpecType())
 
-	components, err := extract.Components(ctx, sbomDoc, params)
+	extractParams := &extract.Params{
+		Fields:  params.Fields,
+		Force:   params.Force,
+		Verbose: params.Verbose,
+	}
+
+	components, err := extract.Components(ctx, sbomDoc, extractParams)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Extracted components: %d", len(components))
+	log.Debugf("total extracted components: %d", len(components))
 
 	coordinates := clearlydef.Mapper(ctx, components)
 	responses := clearlydef.Client(ctx, coordinates)
@@ -78,8 +82,8 @@ func Engine(ctx context.Context, args []string, params *types.EnrichConfig) (*ty
 }
 
 // calculateSummary counts enriched/skipped/failed components
-func calculateSummary(responses map[interface{}]clearlydef.DefinitionResponse, verbose bool) types.EnrichSummary {
-	summary := types.EnrichSummary{}
+func calculateSummary(responses map[interface{}]clearlydef.DefinitionResponse, verbose bool) Summary {
+	summary := Summary{}
 	for _, resp := range responses {
 		if resp.Licensed.Declared != "" {
 			summary.Enriched++

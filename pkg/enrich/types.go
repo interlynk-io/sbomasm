@@ -14,20 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package enrich
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/interlynk-io/sbomqs/pkg/sbom"
 )
 
-type EnrichmentTarget struct {
+type Target struct {
 	Component sbom.GetComponent
 	Field     string
 }
 
-type EnrichConfig struct {
+type Config struct {
 	Fields   []string
 	Output   string
 	SBOMFile string
@@ -36,27 +37,31 @@ type EnrichConfig struct {
 	Debug    bool
 }
 
-// EnrichParams for the enrich command
-type EnrichParams struct {
-	Fields  []string
-	Force   bool
-	Verbose bool
-}
-
-type EnrichSummary struct {
+type Summary struct {
 	Enriched int
 	Skipped  int
 	Failed   int
 	Errors   []error
 }
 
-func (p *EnrichConfig) Validate() error {
+// SupportedEnrichFields defines the valid fields for enrichment.
+var SupportedEnrichFields = map[string]bool{
+	"license": true,
+	// Add future supported fields here, e.g.,
+	// "supplier": true,
+	// "downloadLocation": true
+}
+
+func (p *Config) Validate() error {
 	if len(p.Fields) == 0 {
 		return fmt.Errorf("no fields specified for enrichment")
 	}
 
-	if p.Output == "" {
-		return fmt.Errorf("output file must be specified")
+	for _, field := range p.Fields {
+		if !SupportedEnrichFields[strings.ToLower(field)] {
+			return fmt.Errorf("unsupported field: %s (supported: %v)", field, SupportedEnrichFields)
+		}
 	}
+
 	return nil
 }
