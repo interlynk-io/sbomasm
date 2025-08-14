@@ -42,7 +42,7 @@ type DefinitionResponse struct {
 
 func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[interface{}]DefinitionResponse {
 	log := logger.FromContext(ctx)
-	log.Debug("querying ClearlyDefined API")
+	log.Debug("querying clearlydefined API")
 
 	// to keep track of path and it's responses
 	cache := make(map[string]DefinitionResponse)
@@ -53,73 +53,87 @@ func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[int
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	for comp, coordinate := range coordinates {
-		path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
+		// path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
+		path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Namespace), url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+
+		if coordinate.Namespace == "" {
+			path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+		}
 
 		if cached, ok := cache[path]; ok {
 			responses[comp] = cached
 			continue
 		}
 
-		baseURL := API_BASE_DEFINITIONS_URL + "/" + path
+		cdURL := API_BASE_DEFINITIONS_URL + "/" + path
 
 		if coordinate.Type == "go" {
-			path = fmt.Sprintf("?coordinates=%s", url.QueryEscape(baseURL))
+			path = fmt.Sprintf("?coordinates=%s", url.QueryEscape(cdURL))
 		}
 
 		log.Debugf("querying clearlydefined for coordinate %s", path)
-
-		log.Debugf("final clearlydefined URL: %s", baseURL)
-
-		req, err := http.NewRequest("GET", baseURL, nil)
-		if err != nil {
-			continue
-		}
-
-		if PKG_TYPE(coordinate.Type) == "GO" {
-			req.Header.Set("Accept-Version", "1.0.0")
-			req.Header.Set("Content-Type", "application/json")
-		}
-
-		req.Header.Set("Accept", "*/*")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode == 429 {
-			log.Warn("rate limit exceeded")
-			// retry after reset time
-			resetTime := resp.Header.Get("x-ratelimit-reset")
-
-			// wait until reset time
-			if resetTime != "" {
-				if reset, err := strconv.ParseInt(resetTime, 10, 64); err == nil {
-					time.Sleep(time.Until(time.Unix(reset, 0)))
-				}
-			}
-			continue
-
-		} else if resp.StatusCode == 404 {
-			queueHarvest(ctx, coordinate)
-			continue
-
-		} else if resp.StatusCode != 200 {
-			continue
-		}
+		log.Debugf("clearlydefined final URL: %s", cdURL)
 
 		var def DefinitionResponse
-		err = json.NewDecoder(resp.Body).Decode(&def)
-		if err != nil {
-			continue
+		for attempt := 1; attempt <= 3; attempt++ {
+			req, err := http.NewRequest("GET", cdURL, nil)
+			if err != nil {
+				continue
+			}
+
+			if PKG_TYPE(coordinate.Type) == "GO" {
+				req.Header.Set("Accept-Version", "1.0.0")
+				req.Header.Set("Content-Type", "application/json")
+			}
+
+			req.Header.Set("Accept", "*/*")
+
+			resp, err := client.Do(req)
+			if err != nil {
+				continue
+			}
+
+			defer resp.Body.Close()
+
+			if resp.StatusCode == 429 {
+
+				// retry after reset time
+				resetTime := resp.Header.Get("x-ratelimit-reset")
+				log.Warnf("rate limit exceeded for %s; retrying after %s", cdURL, resetTime)
+
+				// wait until reset time
+				if resetTime != "" {
+					if reset, err := strconv.ParseInt(resetTime, 10, 64); err == nil {
+						time.Sleep(time.Until(time.Unix(reset, 0)))
+					}
+				}
+
+				log.Infof("waiting for rate limit reset")
+
+				continue
+
+			} else if resp.StatusCode == 404 {
+				log.Debugf("component not found for %s; queuing harvest", cdURL)
+				queueHarvest(ctx, coordinate)
+				continue
+
+			} else if resp.StatusCode != 200 {
+				log.Errorf("unexpected status code for %s (attempt %d/3): %d", cdURL, attempt, resp.StatusCode)
+
+				continue
+			}
+
+			err = json.NewDecoder(resp.Body).Decode(&def)
+			if err != nil {
+				log.Errorf("failed to decode response for %s (attempt %d/3): %v", cdURL, attempt, err)
+				continue
+			}
+
+			cache[path] = def
+			responses[comp] = def
+			log.Debugf("def response: %+v", def)
+			break
 		}
-
-		fmt.Println("def response: ", def)
-
-		cache[path] = def
-		responses[comp] = def
 	}
 
 	return responses
@@ -130,7 +144,12 @@ func queueHarvest(ctx context.Context, coordinate Coordinate) {
 	log.Debugf("queueing harvest for coordinate: %s", coordinate)
 
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
+	if coordinate.Namespace == "" {
+		path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+	}
+
 	payload := fmt.Sprintf(`[{"tool":"package","coordinates":"%s"}]`, path)
+
 	req, err := http.NewRequest("POST", "https://api.clearlydefined.io/harvest", strings.NewReader(payload))
 	if err != nil {
 		return
@@ -142,5 +161,6 @@ func queueHarvest(ctx context.Context, coordinate Coordinate) {
 	_, err = client.Do(req)
 	if err != nil {
 		// Log error
+		log.Errorf("failed to queue harvest for coordinate %s: %v", coordinate, err)
 	}
 }

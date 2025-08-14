@@ -27,11 +27,11 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
 )
 
-func Engine(ctx context.Context, params *Config) (*Summary, error) {
+func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	// Initialize the enrich engine with the provided parameters
 
 	log := logger.FromContext(ctx)
-	log.Debugf("Starting Enrich Engine")
+	log.Debugf("starting enrich engine")
 
 	// parse the SBOM document
 	sbomDoc, err := sbom.Parser(ctx, params.SBOMFile)
@@ -51,20 +51,18 @@ func Engine(ctx context.Context, params *Config) (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("total extracted components: %d", len(components))
 
+	// map the component to a clearlydefined coordinates
 	coordinates := clearlydef.Mapper(ctx, components)
+
+	// crawl the clearlydefined coordinates via client to get definitions
 	responses := clearlydef.Client(ctx, coordinates)
 
-	// // extract targets
-	// targets := extract.Extractor(sbomDoc, params.Fields, params.Force)
-
-	// coordinates := clearlydef.Mapper(ctx, spec, targets)
-	// log.Debugf("coordinates: %+v", coordinates)
-
-	// responses := clearlydef.Client(ctx, coordinates)
-
-	sbomDoc = Enricher(ctx, sbomDoc, components, responses, params.Force)
+	// enrich the sbom
+	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force)
+	if err != nil {
+		return nil, err
+	}
 
 	newFile, err := os.Create(params.Output)
 	if err != nil {
@@ -76,26 +74,22 @@ func Engine(ctx context.Context, params *Config) (*Summary, error) {
 		return nil, fmt.Errorf("failed to write SBOM to file: %w", err)
 	}
 
-	summary := calculateSummary(responses, params.Verbose)
+	summary := calculateSummary(ctx, enriched, skipped, skippedReasons)
 
 	return &summary, nil
 }
 
 // calculateSummary counts enriched/skipped/failed components
-func calculateSummary(responses map[interface{}]clearlydef.DefinitionResponse, verbose bool) Summary {
-	summary := Summary{}
-	for _, resp := range responses {
-		if resp.Licensed.Declared != "" {
-			summary.Enriched++
-		} else {
-			summary.Skipped++
-		}
-	}
-	if verbose {
-		fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
-		for _, err := range summary.Errors {
-			fmt.Println("Error:", err)
-		}
+func calculateSummary(ctx context.Context, enriched, skipped int, skippedReasons map[string]string) EnrichSummary {
+	log := logger.FromContext(ctx)
+	log.Debugf("enrichment summary: Enriched: %d, Skipped: %d", enriched, skipped)
+
+	summary := EnrichSummary{
+		Enriched:       enriched,
+		Skipped:        skipped,
+		SkippedReasons: skippedReasons,
+		Failed:         0,
+		Errors:         nil,
 	}
 	return summary
 }

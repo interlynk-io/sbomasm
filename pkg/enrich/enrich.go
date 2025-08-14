@@ -18,7 +18,7 @@ package enrich
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
@@ -27,20 +27,44 @@ import (
 	"github.com/spdx/tools-golang/spdx"
 )
 
+const (
+	NO_LICENSE_DATA_FOUND      = "no license data found"
+	NON_STANDARD_LICENSE_FOUND = "non-standard license found"
+	LICENSE_ALREADY_EXISTS     = "license already exists"
+)
+
 func NewConfig() *Config {
 	return &Config{}
 }
 
 // Enricher updates licenses in the SBOM
-func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) sbom.SBOMDocument {
+func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) (sbom.SBOMDocument, int, int, map[string]string, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("enriching SBOM")
 
+	var enrichedCount, skippedCount int
+	skippedReasons := make(map[string]string)
+
 	for _, comp := range components {
 		resp, ok := responses[comp]
+		purl := getPurl(comp)
+
 		if !ok || resp.Licensed.Declared == "" {
-			log.Debugf("skipping component: no response or license declared")
+			log.Debugf("No license data for component with PURL: %s; harvest queued", purl)
+			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
+
+			skippedCount++
 			continue
+		}
+
+		if strings.Contains(resp.Licensed.Declared, "LicenseRef") || strings.Contains(resp.Licensed.Declared, "OTHER") || resp.Licensed.Declared == "NOASSERTION" {
+			log.Debugf("License found, but non-standard license for component with PURL: %s: %s", purl, resp.Licensed.Declared)
+			if resp.Licensed.Declared == "NOASSERTION" || resp.Licensed.Declared == "OTHER" {
+				skippedReasons[purl] = NON_STANDARD_LICENSE_FOUND
+
+				skippedCount++
+				continue
+			}
 		}
 
 		switch c := comp.(type) {
@@ -48,9 +72,12 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 		case *spdx.Package:
 			if force || c.PackageLicenseConcluded == "" || c.PackageLicenseConcluded == "NOASSERTION" {
 				c.PackageLicenseConcluded = resp.Licensed.Declared
-				log.Debugf("added license %s to SPDX package %s@%s", resp.Licensed.Declared, c.PackageName, c.PackageVersion)
+				enrichedCount++
+
+				log.Debugf("Enriched license %s to SPDX package %s@%s", resp.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
-				log.Debugf("skipping SPDX package %s@%s: license already set (%s)", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
+				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				log.Debugf("Skipping SPDX package %s@%s: license already exits (%s)", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
 			}
 
 		case cydx.Component:
@@ -66,10 +93,9 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				// if doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
 				targetComp = doc.Metadata.Component
 				found = true
-				// }
+
 			} else if doc.Components != nil {
 				for i := range *doc.Components {
-					fmt.Println("found component:", (*doc.Components)[i].Name, (*doc.Components)[i].Version)
 					if (*doc.Components)[i].Name == c.Name && (*doc.Components)[i].Version == c.Version {
 						targetComp = &(*doc.Components)[i]
 						found = true
@@ -84,18 +110,54 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			}
 
 			// extract the component pointer in the document
-			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0 || (*targetComp.Licenses)[0].License.ID == "") {
+			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
+
 				if targetComp.Licenses == nil {
 					targetComp.Licenses = &cydx.Licenses{{License: &cydx.License{ID: resp.Licensed.Declared}}}
 				} else {
-					(*targetComp.Licenses)[0].License.ID = resp.Licensed.Declared
+					for _, lic := range *targetComp.Licenses {
+						if lic.License != nil {
+							(*targetComp.Licenses)[0].License.ID = resp.Licensed.Declared
+						} else if lic.Expression != "" {
+							(*targetComp.Licenses)[0].Expression = resp.Licensed.Declared
+						}
+					}
 				}
 
-				log.Debugf("added license %s to CycloneDX component %s@%s", resp.Licensed.Declared, targetComp.Name, targetComp.Version)
+				enrichedCount++
+
+				log.Debugf("Added license %s to CycloneDX component %s@%s (BOMRef: %s)", resp.Licensed.Declared, c.Name, c.Version, c.BOMRef)
 			} else {
-				log.Debugf("skipping CycloneDX component %s@%s: license already set (%s)", targetComp.Name, targetComp.Version, (*targetComp.Licenses)[0].License.ID)
+				log.Debugf("Skipped CycloneDX component %s@%s (BOMRef: %s)", c.Name, c.Version, c.BOMRef)
+				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+			}
+
+		}
+	}
+
+	return sbomDoc, enrichedCount, skippedCount, skippedReasons, nil
+}
+
+// getPurl of a component
+func getPurl(comp interface{}) string {
+	var purls []string
+
+	switch c := comp.(type) {
+	case *cydx.Component:
+		if c.PackageURL != "" {
+			purls = append(purls, c.PackageURL)
+		}
+
+	case *spdx.Package:
+		for _, ref := range c.PackageExternalReferences {
+			if ref.RefType == "purl" {
+				purls = append(purls, ref.Locator)
 			}
 		}
 	}
-	return sbomDoc
+	if len(purls) > 0 {
+		return purls[0]
+	}
+
+	return ""
 }

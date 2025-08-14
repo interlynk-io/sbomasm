@@ -69,7 +69,7 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 	ctx := logger.WithLogger(context.Background())
 	log := logger.FromContext(ctx)
 
-	log.Debugf("Executing enrich command with args: %v", args)
+	log.Debugf("executing enrich command with args: %v", args)
 
 	// extract the enrich configuration
 	enrichConfig, err := extractEnrichConfig(cmd, args)
@@ -77,7 +77,7 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to extract enrich configuration: %w", err)
 	}
 
-	log.Debugf("Enrich configuration: %+v", enrichConfig)
+	log.Debugf("enrich configuration: %+v", enrichConfig)
 
 	if err := enrichConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid enrich configuration: %w", err)
@@ -90,8 +90,9 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 
 	if enrichConfig.Verbose {
 		fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
+
 		for _, err := range summary.Errors {
-			fmt.Println("Error: " + err.Error())
+			fmt.Printf("Error: %v\n", err)
 		}
 	}
 

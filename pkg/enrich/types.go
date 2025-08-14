@@ -37,11 +37,12 @@ type Config struct {
 	Debug    bool
 }
 
-type Summary struct {
-	Enriched int
-	Skipped  int
-	Failed   int
-	Errors   []error
+type EnrichSummary struct {
+	Enriched       int
+	Skipped        int
+	Failed         int
+	Errors         []error
+	SkippedReasons map[string]string
 }
 
 // SupportedEnrichFields defines the valid fields for enrichment.

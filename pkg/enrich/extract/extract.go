@@ -26,27 +26,6 @@ import (
 	"github.com/spdx/tools-golang/spdx"
 )
 
-// type EnrichmentTarget struct {
-// 	Component sbom.GetComponent
-// 	Field     string
-// }
-
-// // extract all the components with missing or NOASSERTION licenses
-// func Extractor(sbom sbom.Document, fields []string, force bool) []types.EnrichmentTarget {
-// 	targets := []types.EnrichmentTarget{}
-// 	for _, comp := range sbom.Components() {
-// 		for _, field := range fields {
-// 			if field == "license" {
-// 				if force || comp.GetPackageLicenseConcluded() == "" || comp.GetPackageLicenseConcluded() == "NOASSERTION" {
-// 					targets = append(targets, types.EnrichmentTarget{Component: comp, Field: field})
-// 				}
-// 			}
-// 			// Future: Add for supplier, downloadLocation
-// 		}
-// 	}
-// 	return targets
-// }
-
 // Extract Params
 type Params struct {
 	Fields  []string
@@ -57,7 +36,7 @@ type Params struct {
 // Components selects components needing license enrichment
 func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
-	log.Debugf("Selecting components for enrichment")
+	log.Debugf("extracting components for enrichment")
 
 	var selectedComponents []interface{}
 	var totalComponents int
@@ -66,10 +45,10 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 	switch doc := sbomDoc.Document().(type) {
 
 	case *spdx.Document:
-		for _, p := range doc.Packages {
+		for _, pkg := range doc.Packages {
 			totalComponents++
-			if shouldSelectSPDXComponent(*p, params) {
-				selectedComponents = append(selectedComponents, p)
+			if shouldSelectSPDXComponent(*pkg, params) {
+				selectedComponents = append(selectedComponents, pkg)
 				totalSelectedComponents++
 			}
 		}
@@ -84,7 +63,8 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 				}
 			}
 		}
-		// Check metadata.component
+
+		// check primary component too - metadata.component
 		if doc.Metadata != nil && doc.Metadata.Component != nil {
 			totalComponents++
 			if shouldSelectCDXComponent(doc.Metadata.Component, params) {
@@ -92,6 +72,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 				selectedComponents = append(selectedComponents, *doc.Metadata.Component)
 			}
 		}
+
 	default:
 		return nil, fmt.Errorf("unsupported SBOM format")
 	}
@@ -101,20 +82,24 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 	}
 
 	if params.Verbose {
-		log.Infof("Total components: %d, Total selected components: %d", totalComponents, totalSelectedComponents)
+		fmt.Printf("Total components: %d, Selected components for %s enrichment: %d\n", totalComponents, params.Fields, totalSelectedComponents)
 	}
 
+	log.Debugf("extracted %d components out of %d for enrichment", len(selectedComponents), totalComponents)
 	return selectedComponents, nil
 }
 
 // shouldSelectSPDXComponent checks if an SPDX package needs license enrichment
 func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
 	for _, field := range params.Fields {
+		// when field is license
 		if field == "license" {
 			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" {
 				return true
 			}
 		}
+
+		// future work: Add checks for other fields
 	}
 	return false
 }
@@ -122,6 +107,7 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
 // shouldSelectCDXComponent checks if a CycloneDX component needs license enrichment
 func shouldSelectCDXComponent(comp *cydx.Component, params *Params) bool {
 	for _, field := range params.Fields {
+		// when field is license
 		if field == "license" {
 			license := ""
 			if comp.Licenses != nil && len(*comp.Licenses) > 0 {
@@ -133,6 +119,8 @@ func shouldSelectCDXComponent(comp *cydx.Component, params *Params) bool {
 				return true
 			}
 		}
+
+		// future work: Add checks for other fields
 	}
 	return false
 }
