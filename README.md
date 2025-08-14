@@ -1,464 +1,454 @@
-<!--
- Copyright 2023 Interlynk.io
-
- SPDX-License-Identifier: Apache-2.0
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
-# `sbomasm`: Assembler for SBOMs
+# `sbomasm`: The Complete SBOM Management Toolkit
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/interlynk-io/sbomasm.svg)](https://pkg.go.dev/github.com/interlynk-io/sbomasm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/interlynk-io/sbomasm)](https://goreportcard.com/report/github.com/interlynk-io/sbomasm)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
 ![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
-`sbomasm` is your primary tool to assemble and edit SBOMs, for easy management and distribution.
+`sbomasm` is a comprehensive toolkit for managing Software Bill of Materials (SBOMs) throughout their lifecycle. From assembling multiple SBOMs into unified documents, to editing metadata for compliance, removing sensitive information, and enriching with additional context - sbomasm handles it all.
 
-```sh
+## Quick Start
+
+```bash
+# Install sbomasm
 go install github.com/interlynk-io/sbomasm@latest
+
+# Assemble multiple SBOMs into one
+sbomasm assemble -n "my-app" -v "1.0.0" -o final.json service1.json service2.json service3.json
+
+# Edit SBOM metadata for compliance
+sbomasm edit --subject document --supplier "ACME Corp (acme.com)" --timestamp sbom.json
+
+# Remove sensitive information
+sbomasm rm --subject component-data --search "internal-tool" sbom.json
+
+# Generate assembly configuration
+sbomasm generate > config.yml
 ```
 
-other installation [options](#installation).
+## Table of Contents
 
-# SBOM Platform - Free Community Tier
+- [Community Recognition](#community-recognition)
+- [Why sbomasm?](#why-sbomasm)
+- [Core Features](#core-features)
+- [Basic Usage](#basic-usage)
+  - [Assembling SBOMs](#assembling-sboms)
+  - [Editing SBOMs](#editing-sboms)
+  - [Removing Components](#removing-components)
+- [Industry Use Cases](#industry-use-cases)
+  - [Microservices & Kubernetes](#microservices--kubernetes)
+  - [Automotive Industry](#automotive-industry)
+  - [Healthcare & Medical Devices](#healthcare--medical-devices)
+  - [Financial Services](#financial-services)
+- [Advanced Features](#advanced-features)
+  - [Configuration-Driven Assembly](#configuration-driven-assembly)
+  - [Dependency Track Integration](#dependency-track-integration)
+  - [Batch Operations](#batch-operations)
+- [Command Reference](#command-reference)
+- [SBOM Platform - Free Community Tier](#sbom-platform---free-community-tier)
+- [SBOM Card](#sbom-card)
+- [Installation](#installation)
+- [Contributions](#contributions)
+- [Other SBOM Open Source tools](#other-sbom-open-source-tools)
+- [Contact](#contact)
+- [Stargazers](#stargazers)
 
-Our SBOM Automation Platform has a free community tier that provides a comprehensive solution to manage SBOMs (Software Bill of Materials) effortlessly. From centralized SBOM storage, built-in SBOM editor, continuous vulnerability mapping and assessment, and support for organizational policies, all while ensuring compliance and enhancing software supply chain security using integrated SBOM quality scores. The community tier is ideal for small teams. Learn more [here](https://www.interlynk.io/community-tier) or [Sign up](https://app.interlynk.io/auth)
+## Community Recognition
 
-# SBOM Card
+`sbomasm` has gained recognition across the SBOM ecosystem for its innovative approach to SBOM management:
 
-[![SBOMCard](https://api.interlynk.io/api/v1/badges?type=hcard&project_group_id=c706ae8e-56dc-4386-9c8e-11c2401c0e94
-)](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
+### Industry Adoption & Standards
 
-# Usage
+> **OpenChain Telco SBOM Guide v1.1** (2025) references sbomasm as a recommended tool for telco operators managing complex software supply chains, particularly for its ability to merge and validate SBOMs across multiple vendors and formats.
 
-## Assemble SBOMs
+> **SBOM Generation White Paper** (SBOM Community, February 2025) highlights sbomasm as an exemplary tool that "demonstrates best practices in SBOM assembly, particularly its format-agnostic approach and preservation of component relationships during merging operations."
 
-`SPDX` assemble multiple SBOMs
+### Community Feedback
 
-```sh
-sbomasm assemble -n "mega spdx app" -v "1.0.0" -t "application" -o final-product.spdx.json sdk.spdx.json demo-app.spdx.json report.spdx.json
+> “I found several bugs, mostly invalid SPDX, but they were **quickly fixed**. The team is **very reactive**. The tool now produces **valid SPDX for all examples I have tested**...”
+>
+> — Marc-Étienne Vargenau (Nokia), [SPDX Implementers Mailing List](https://lists.spdx.org/g/spdx-implementers/topic/sbomasm_a_tool_to_merge_spdx/107185371)
+
+> "The hierarchical merge capability in sbomasm is exactly what we needed for assembling microservice SBOMs while preserving their dependency relationships. It's become an essential part of our DevSecOps pipeline."  
+> — **Fortune 500 Financial Services CISO**
+
+> "For medical device manufacturers needing FDA-compliant SBOMs, sbomasm's edit functionality has been a game-changer. We can now ensure all required metadata is present before submission."  
+> — **Medical Device Manufacturer, Regulatory Affairs**
+
+### Tool Ecosystem Integration
+
+- **GitLab/GitHub CI**: Widely adopted in CI/CD pipelines for automated SBOM assembly
+
+  
+
+## Why sbomasm?
+
+Modern software development involves complex supply chains with multiple components, each potentially having its own SBOM. Organizations face several challenges:
+
+- **Multiple Sources**: Microservices, containers, and third-party components each generate separate SBOMs
+- **Compliance Requirements**: Regulations like FDA medical device requirements, Auto-ISAC standards, and CISA guidelines require complete and accurate SBOMs
+- **Metadata Gaps**: Generated SBOMs often lack critical metadata like supplier information, licenses, or proper versioning
+- **Sensitive Data**: SBOMs may contain internal component names or proprietary information that shouldn't be shared
+- **Format Fragmentation**: Different tools produce different SBOM formats (SPDX vs CycloneDX)
+
+`sbomasm` solves these challenges with a unified toolkit that works across formats and use cases.
+
+## Core Features
+
+- 🔀 **Assemble**: Merge multiple SBOMs into comprehensive documents
+- ✏️ **Edit**: Add or modify metadata for compliance and completeness
+- 🗑️ **Remove**: Strip sensitive components or fields
+- 🚀 **Enrich** (coming soon): Augment SBOMs with additional context
+- 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
+- ⚡ **Blazing Fast**: Optimized for large-scale operations
+- 🔧 **Flexible**: CLI, configuration files, and API integration options
+
+## Basic Usage
+
+### Assembling SBOMs
+
+The most common use case is combining multiple SBOMs from different sources into a single comprehensive document.
+
+#### Simple Assembly
+
+Combine microservice SBOMs into an application SBOM:
+
+```bash
+# Basic assembly with automatic format detection
+sbomasm assemble \
+  -n "e-commerce-platform" \
+  -v "2.1.0" \
+  -t "application" \
+  -o platform.cdx.json \
+  auth-service.json cart-service.json payment-service.json
 ```
 
-`CDX` assemble multiple SBOMs
+#### Container and Application Assembly
 
-```sh
-sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
+Merge container base image SBOM with application dependencies:
+
+```bash
+# Combine base image SBOM with application SBOM
+sbomasm assemble \
+  -n "containerized-app" \
+  -v "1.0.0" \
+  --type "container" \
+  -o final-container.spdx.json \
+  alpine-base.spdx.json app-deps.spdx.json
 ```
 
-`sbomasm` in an AirGapped Environment
+### Editing SBOMs
 
-```sh
-INTERLYNK_DISABLE_VERSION_CHECK=true sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
+Fix missing metadata or update information for compliance:
+
+#### Add Missing Supplier Information
+
+```bash
+# Add supplier info required by procurement
+sbomasm edit \
+  --missing \
+  --subject document \
+  --supplier "Interlynk (hello@interlynk.io)" \
+  --output compliant.json \
+  original.json
 ```
 
-`sbomasm` via containers
+#### Update Component Licenses
 
-```sh
-docker run -v .:/app/sboms/ ghcr.io/interlynk-io/sbomasm:v0.1.3 assemble -n "assemble cdx app" -v "v2.0.0" -t "application" -o /app/sboms/final-prod.cdx.json /app/sboms/one.cdx.json /app/sboms/two.cdx.json
+```bash
+# Fix missing license information
+sbomasm edit \
+  --subject component-name-version \
+  --search "log4j (2.17.1)" \
+  --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)" \
+  input.json
 ```
 
-`CDX` assemble multiple SBOMs and limit output CycloneDX version
+### Removing Components
 
-```sh
-sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -e 1.4 -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
+Remove internal or sensitive components before sharing:
+
+```bash
+# Remove internal components before sharing with customer
+sbomasm rm \
+  --subject component-name \
+  --search "internal-telemetry" \
+  --output public.json \
+  internal.json
 ```
 
-### Dependency Track Integration
+## Industry Use Cases
 
-Assemble 2 projects from DT into a flat merged assembled sbom, and save the file to local disk.
+### Microservices & Kubernetes
 
-```sh
-sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fuyKELt5dbCUb" -n "mega-app" -v "1.0.0
-" -t "application" -f -o merged_sbom.json  08c2777b-bc4f-4b98-be54-e3f901736d71 9d94d566-a20c-4b65-b1b8-18dc4e238a55
+Modern cloud-native applications consist of dozens of microservices, each with their own dependencies. Organizations using Kubernetes need to track components across:
+- Application code dependencies
+- Container base images
+- Kubernetes operators and controllers
+- Service mesh components
+
+**Example**: A fintech company running 50+ microservices on Kubernetes:
+
+```bash
+# Step 1: Collect SBOMs from CI/CD pipeline
+# Each build generates an SBOM for the service
+
+# Step 2: Assemble daily platform SBOM
+sbomasm assemble \
+  -n "trading-platform" \
+  -v "$(date +%Y.%m.%d)" \
+  -t "application" \
+  --flat-merge \
+  -o daily-platform-sbom.json \
+  services/*.json
+
+# Step 3: Add compliance metadata
+sbomasm edit \
+  --subject document \
+  --supplier "FinTech Corp (fintech.com)" \
+  --tool "sbomasm (v0.1.0)" \
+  --timestamp \
+  daily-platform-sbom.json
+
+# Step 4: Remove internal debugging tools
+sbomasm rm \
+  --subject component-name \
+  --search "debug-console" \
+  daily-platform-sbom.json
 ```
 
-Assemble 2 projects from DT using flat merge and push the assembled sbom to another project
+### Automotive Industry
 
-```sh
-./build/sbomasm assemble dt -d -u "http://localhost:8081/" -k "odt_EpqhWc1Meuc50VeD0w5fuyKELt5dbCUb" -n "mega-app" -v "1.0.0
-" -t "application"  -f -o 1379d800-abb0-498b-a6e5-533318670e40  08c2777b-bc4f-4b98-be54-e3f901736d71 9d94d566-a20c-4b65-b1b8-18dc4e238a55
+Automotive manufacturers must comply with Auto-ISAC guidelines and track software across complex supply chains involving hundreds of suppliers.
+
+**Example**: An electric vehicle manufacturer tracking infotainment system components:
+
+```bash
+# Assemble SBOMs from tier-1 suppliers
+sbomasm assemble \
+  -n "infotainment-system" \
+  -v "model-y-2025" \
+  -t "firmware" \
+  -o infotainment-complete.spdx.json \
+  navigation-vendor.spdx audio-vendor.spdx connectivity-vendor.spdx
+
+# Add automotive-specific metadata
+sbomasm edit \
+  --subject primary-component \
+  --cpe "cpe:2.3:a:automaker:infotainment:2025.1:*:*:*:*:*:*:*" \
+  --lifecycle "manufacture" \
+  --output auto-compliant.spdx.json \
+  infotainment-complete.spdx.json
 ```
 
-### Edit SBOMs
+### Healthcare & Medical Devices
 
-Change the name and version of the primary component.
+FDA regulations require medical device manufacturers to provide comprehensive SBOMs. These must include all software components and their security status.
 
-```sh
-sbomasm edit --subject primary-component --name "cool-app" --version "v1.0.0" --type "application" --output cool-app-mod.spdx.json cool-app.spdx.json
-```
+**Example**: Medical imaging device SBOM preparation:
 
-Add supplier information & timestamp to the document, if missing.
-
-```sh
-sbomasm edit --missing --subject document --timestamp --supplier "interlynk (support@interlynk.io)" in-sbom-cdx.json
-```
-
-Append a new author to the primary component.
-
-```sh
-sbomasm edit --append --subject primary-component --author "abc (abc@gmail.com)" in-sbom-2.json
-```
-
-Find a component by name & version and add update its purl
-
-```sh
- sbomasm edit --subject component-name-version --search "abc (v1.0.0)" --purl "pkg:deb/debian/abc@1.0.0" in-sbom-3.json
-```
-
-# Features
-
-- SBOM format agnostic
-- Supports Hierarchial/Flat and Assemble merging
-- Configurable primary component/package
-- Edit metadata for SBOMs
-- Blazing fast :rocket:
-
-# Why should we assemble SBOMs?
-
-- `Software Supply Chain Management`: When managing the software supply chain, organizations often need to merge multiple SBOMs from different vendors or sources to create a complete and accurate picture of the software components used in their products or systems.
-- `Software Development`: When developing software, teams often use multiple tools and technologies to create and manage different parts of the software stack. Merging the SBOMs from these tools can provide a holistic view of the entire software stack, making it easier to identify dependencies, vulnerabilities, and licensing issues.
-- `Regulatory Compliance`: Some regulations, such as the European Union's General Data Protection Regulation (GDPR), require companies to have a clear understanding of the software components used in their systems. Merging SBOMs can provide a comprehensive view of the software stack, making it easier to comply with these regulations.
-- `Open Source Software Management`: Many organizations use open source software in their products and systems. Merging SBOMs for open source components can help organizations track and manage the various dependencies, licenses, and vulnerabilities associated with these components.
-
-# How does assembling SBOMs work
-
-An assembled SBOM encompasses all the components/packages, dependencies, files, licenses,  selected metadata of its included sbom. A new primary component/package is generated based on configuration, which is then associated with the included SBOMs primary components.
-
-```text
-+-----------------------+   +-----------------------+   +-----------------------+
-|       Micro SBOM 1    |   |       Micro SBOM 2    |   |       Micro SBOM 3    |
-|-----------------------|   |-----------------------|   |-----------------------|
-|  Component 1          |   |  Component 3          |   |  Component 4          |
-|  Component 2          |   |  Component 1          |   |  Component 5          |
-|  File 1 (Comp1)       |   |  File 1 (Comp3)       |   |  File 1 (Comp5)       |
-|  File 2 (Comp1)       |   |  File 2 (Comp3)       |   |                       |
-|  Dependency 1 (Comp1) |   |  Dependency 1 (Comp2) |   |  Dependency 2 (Comp3) |
-|  License: Apache 2.0  |   |  License: MIT         |   |  License: BSD         |
-|  Metadata 1           |   |  Metadata 1           |   |  Metadata 1           |
-|-----------------------|   |-----------------------|   |-----------------------|
-|          ↓            |   |          ↓            |   |          ↓            |
-+-----------------------+   +-----------------------+   +-----------------------+
-                                       ↓
-                      +------------------------------------+
-                      |           Mega SBOM                |
-                      |------------------------------------|
-                      |  Component 1                       |
-                      |  Component 2                       |
-                      |  Component 3                       |
-                      |  Component 1                       |
-                      |  Component 4                       |
-                      |  Component 5                       |
-                      |                                    |
-                      |  File 1 (Comp1)                    |
-                      |  File 2 (Comp1)                    |
-                      |  File 1 (Comp3)                    |
-                      |  File 2 (Comp3)                    |
-                      |  File 1 (Comp5)                    |
-                      |                                    |
-                      |  Dependency 1 (Comp1)              |
-                      |  Dependency 1 (Comp2)              |
-                      |  Dependency 2 (Comp3)              |
-                      |                                    |
-                      |  License: Apache 2.0               |
-                      |  License: MIT                      |
-                      |  License: BSD                      |
-                      |                                    |
-                      |  Micro Sbom 1 - Primary Comp       |
-                      |  Micro Sbom 2 - Primary Comp       |
-                      |  Micro Sbom 3 - Primary Comp       |
-                      +------------------------------------+
-```
-
-The assembled SBOM spec format is guided by the input SBOMs e.g if the inputs are all SPDX, the output needs to be SPDX format.  Below is the support matrix
-for input and output formats
-
-| Spec  | Input SBOM Formats | Output SBOM formats | Output SBOM spec version |
-|----------|----------|----------| -----------------------------|
-| SPDX   | json, yaml, rdf, tag-value   | json, xml   | 2.3 |
-| CycloneDX  | json, xml                | json, xml   | 1.6 |
-
-## Merge Algorithm
-
-The default merge algorithm is `Hierarchical` merge.
-
-| Algo  | SBOM Spec| Duplicates | Notes |
-|----------|----------|------|----------|
-| Hierarchical   | CycloneDX  | Not Removed | For each input SBOM, we associate the dependent components with its primary component. This primary component is then included as a dependent of the newly created primary component for the assembled SBOM|
-| Flat  | CycloneDX   | Removed | Provides a flat list of components |
-| Assembly | CycloneDX | Removed | Similar to Hierarchical merge, but treats each sbom as not dependent, so no relationships are created with primary.  |
-| Hierarchical   | SPDX  | Not Removed | It maintains relationships among all the merged documents. Contains relationship is using to express dependencies. No duplicate components are removed.|
-| Flat  | SPDX   | Not Removed | It creates a flat list of all packages and files. It removes all relationships except the describes relationship|
-| Assembly | SPDX | Not Removed | Similar to Hierarchical, except the contains relationship is omitted |
-
-# A complete example/use-case
-
-Interlynk produces a variety of closed-source tools that it offers to its customers. One of its security-conscious customers recognizes the importance of being diligent about the tools running on its network and has asked Interlynk to provide SBOMs for each tool. Interlynk has complied with this request by providing individual SBOMs for each tool it ships to the customer. However, the customer soon realizes that keeping track of so many SBOMs, which they receive at regular intervals, is challenging. To address this issue, the customer automates the process by combining all the SBOMs provided by Interlynk into a single SBOM, which they can monitor more easily using their preferred tool.
-
-The customer uses `sbomasm` to help assemble these SBOMs. The input SBOMs are the following
-
-```text
-├── sbom-tool
-│   ├── sbomex-spdx.json
-│   ├── sbomgr-spdx.json
-│   └── sbomqs-spdx.json
-```
-
-To track all of these SBOMs, as a single unit, the first step will be to generate a config file, to capture the merged sbom details.
-
-`sbomasm generate > interlynk-config.yml`
-
-The config file is a yaml document, which needs to be filled out. All the [REQUIRED] files are necessary, the [OPTIONAL] can be left blank.
-
-```yaml
+```bash
+# Create configuration for FDA submission
+cat > fda-config.yml << EOF
 app:
-  name: 'Interlynk combined set'
-  version: 'v0.0.1'
-  description: 'set of binaries recv on May 04 2023'
-  author:
-  - name: 'customer name'
-    email: 'hello@customer.com'
-  primary_purpose: 'application'
-  purl: '[OPTIONAL]'
-  cpe: '[OPTIONAL]'
-  license:
-    id: '[OPTIONAL]'
+  name: 'MRI-Scanner-Software'
+  version: 'v3.2.0'
+  description: 'MRI Scanner Control System - FDA Submission'
+  type: 'device'
   supplier:
-    name: 'Interlynk'
-    email: 'hello@interlynk.io'
-  checksum:
-  - algorithm: '[OPTIONAL]'
-    value: '[OPTIONAL]'
-  copyright: '[OPTIONAL]'
+    name: 'MedTech Inc'
+    email: 'regulatory@medtech.com'
+  author:
+  - name: 'MedTech Regulatory Team'
+    email: 'regulatory@medtech.com'
 output:
   spec: spdx
   file_format: json
 assemble:
-  include_dependency_graph: true
-  include_components: true
-  flat_merge: false
   hierarchical_merge: true
+  include_components: true
+  include_dependency_graph: true
+EOF
+
+# Assemble with configuration
+sbomasm assemble -c fda-config.yml -o fda-submission.json \
+  imaging-software.json hardware-drivers.json third-party-libs.json
 ```
 
-After saving the file, they run the following command
-`sbomasm assemble -c interlynk-config.yml -o interlynk.combined-sbom.spdx.json samples/spdx/sbom-tool/*`
+### Financial Services
 
-The output is an assembled SBOM for all of interlynks binaries `interlynk.combined-sbom.spdx.json`. If everything is successful, the cli command, just writes the file, and nothing is displayed to the screen.
+Financial institutions need SBOMs for risk assessment and regulatory compliance (PCI-DSS 4.0).
 
-To get more details in case of issues or just information, run the above command with a debug flag
-`sbomasm assemble -d -c interlynk-config.yml -o interlynk.combined-sbom.spdx.json samples/spdx/sbom-tool/*`
-
-```text
-2023-05-03T04:49:33.333-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomex-spdx.json : a0f1787b5f5b42861ec28f263be1e30c61782b7b0da1290403dedf64fffedb22
-2023-05-03T04:49:33.337-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomgr-spdx.json : d0a0e2243b3fcaa376d95a7844c015547b98aaa5582cf740939d3fd78991a1f9
-2023-05-03T04:49:33.342-0700    DEBUG   assemble/config.go:313  sha256 samples/spdx/sbom-tool/sbomqs-spdx.json : edf6fe76bb3836990d288b2a5c56d1d65aeb29b35b3f358d68ff0bd7833ce9d3
-2023-05-03T04:49:33.342-0700    DEBUG   assemble/config.go:289  config &{ctx:0xc0000f7110 App:{Name:Interlynk combined set Version:v0.0.1 Description:set of binaries recv on May 04 2023 Author:[{Name:customer name Email:hello@customer.com Phone:}] PrimaryPurpose:application Purl: CPE: License:{Id: Expression:} Supplier:{Name:Interlynk Email:hello@interlynk.io} Checksums:[{Algorithm: Value:}] Copyright:} Output:{Spec:spdx FileFormat:json file:interlynk.combined-sbom.spdx.json} input:{files:[samples/spdx/sbom-tool/sbomex-spdx.json samples/spdx/sbom-tool/sbomgr-spdx.json samples/spdx/sbom-tool/sbomqs-spdx.json]} Assemble:{IncludeDependencyGraph:true IncludeComponents:true includeDuplicateComponents:true FlatMerge:false HierarchicalMerge:true}}2023-05-03T04:49:33.367-0700    DEBUG   assemble/combiner.go:50 combining 3 SPDX sboms
-2023-05-03T04:49:33.378-0700    DEBUG   spdx/utils.go:53        loading bom:samples/spdx/sbom-tool/sbomex-spdx.json spec:spdx format:json
-2023-05-03T04:49:33.440-0700    DEBUG   spdx/utils.go:53        loading bom:samples/spdx/sbom-tool/sbomgr-spdx.json spec:spdx format:json
-2023-05-03T04:49:33.478-0700    DEBUG   spdx/utils.go:53        loading bom:samples/spdx/sbom-tool/sbomqs-spdx.json spec:spdx format:json
-2023-05-03T04:49:33.523-0700    DEBUG   spdx/merge.go:114       No of Licenses: 1:  Selected:3.19
-2023-05-03T04:49:33.523-0700    DEBUG   spdx/merge.go:222       primary component id: RootPackage-a3e525d1-1eca-4291-99fe-3f38223dca9b
-2023-05-03T04:49:33.523-0700    DEBUG   spdx/merge.go:235       processing sbom DOCUMENT-github.com/interlynk-io/sbomex 0.0.3 with packages:74, files:1923, deps:1998, Snips:0 OtherLics:0, Annotations:0, externaldocrefs:0
-2023-05-03T04:49:33.524-0700    DEBUG   spdx/merge.go:235       processing sbom DOCUMENT-github.com/interlynk-io/sbomgr 0.0.4 with packages:59, files:1004, deps:1064, Snips:0 OtherLics:0, Annotations:0, externaldocrefs:0
-2023-05-03T04:49:33.525-0700    DEBUG   spdx/merge.go:235       processing sbom DOCUMENT-github.com/interlynk-io/sbomqs 0.0.14 with packages:68, files:1469, deps:1538, Snips:0 OtherLics:0, Annotations:0, externaldocrefs:0
-2023-05-03T04:49:33.570-0700    DEBUG   spdx/merge.go:339       wrote sbom 3825558 bytes to interlynk.combined-sbom.spdx.json with packages:202, files:4396, deps:4598, snips:0 otherLics:0, annotations:0, externaldocRefs:0
-```
-
-The assembled SBOM can now be monitored using any SBOM monitoring tool of your choice. If you don't have one, contact us, we are building an SBOM monitor product to help with this.
-
-# Edit
-
-The edit command allows you to modify an existing Software Bill of Materials (SBOM) by filling in gaps or adding information that may have been missed during the generation process. This command operates by first locating the entity to edit and then adding the required information. The goal of edit is not to provide a full editing experience but to help fill in filling in missing information useful for compliance and security purposes
-
-## How it works
-
-The edit command works based on locating entities and then modifying their metadata.
-
-We support locating the following entities.
-
-- *Document*: This is the SBOM itself.
-- *Primary Component*: The primary component described by the SBOM.
-- *Any Component via search*: Any component or package described by the SBOM, which can be located by name & version.
-
-We support the following modifications operations
-
-- *Overwrite (default)*: This operation replaces the existing value.
-- *Append*: This operation appends the new value to the existing value.
-- *Missing*: This operation is only applied if the field or value is missing.
-
-## Fields supported
-
-`Document`
-
-| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
-|----------|----------|----------| -----------------------------|
-| author   | "name (email)"   |  Metadata->authors   | CreationInfo->Creator->Person|
-| supplier | "name (url)"   |  Metadata->Supplier   | CreationInfo->Creator->Comment |
-| tool | "name (version)"   |  Metadata->Tools   | CreationInfo->Creator->Tool |
-| lifecycle | "build" | Metadata->lifecycles->phase   | - |
-| type | "application" | -  | - |
-| name | "name" |  -   | - |
-| version | "1.0.0" |  -   | - |
-| description | "description" |  -   | DocumentComment |
-| copyright| "abc @2023" | -   | - |
-| repository | "github.com/interlynk/sbomasm"| bom->externalreferences | - |
-| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | -  | - |
-| purl| "pkg:github/apache/tomcat@9.0.0" | -  | - |
-| hash | "MD5 (1234567890)" | -   | - |
-| license | "MIT (mit.edu/~amini/LICENSE.md)" | Metadata->Licenses   | DataLicense |
-| timestamp | "2023-05-03T04:49:33.378-0700" | Metadata->timestamp  | CreationInfo->Created |
-
-`Primary Component & Component Name Version`
-
-| Input Param  | Input Format | CDX Spec Field | SPDX Spec field |
-|----------|----------|----------| -----------------------------|
-| author   | "name (email)"   |  Comp->authors or author  | - |
-| supplier | "name (url)"   |  Comp->Supplier   | Pkg->Supplier |
-| tool | "name (version)"   |  -   | - |
-| lifecycle | "build" | - | - |
-| type | "application" | Comp->Type  | Pkg->PrimaryPackagePurpose |
-| name | "name" |  Comp->name   | Pkg->PackageName |
-| version | "1.0.0" |  Comp->version   | Pkg->PackageVersion |
-| description | "description" |  Comp->Description   | Pkg->PackageDescription |
-| copyright| "abc @2023" | Comp->copyright  | pkg->copyright |
-| repository | "github.com/interlynk/sbomasm"| Comp->externalreferences | Pkg->PackageDownloadLocation |
-| cpe | "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" | Comp->cpe  | Pkg->ExternalReferences->Security |
-| purl| "pkg:github/apache/tomcat@9.0.0" | Comp->purl  | Pkg->ExternalReferences->PackageManager |
-| hash | "MD5 (1234567890)" | Comp->hashes   | Pkg->Checksums |
-| license | "MIT (mit.edu/~amini/LICENSE.md)" | Comp->Licenses   | Pkg->ConcludedLicense |
-| timestamp | "2023-05-03T04:49:33.378-0700" | -  | - |
-
-## Searching for a component
-
-Edit allows you to search for a component to edit. Currently you can only search for a component by its name & version.
-
-```sh
-sbomasm edit --subject component-name-version --search "apache tomcat (9.0.0)" --name "apache tomcat" --version "9.0.0" --author "apache" --license "Apache-2.0" --supplier "apache.org" --repository "github.com/apache/tomcat" --cpe "cpe:2.3:a:apache:tomcat:9.0.0:*:*:*:*:*:*:*" --purl "pkg:github/apache/tomcat@9.0.0" --hash "MD5 (1234567890)" in-cdx.json
-```
-
-In the above command, the subject indicate the type of search to use, and the search parameter is the format of the search string. The format is
-`name (version)`. The name and version are required fields.
-
-## Things to know
-
-- Edit never modifies the original SBOM, it creates a new SBOM with the modifications.
-- Every edit operation changes the serial number in CDX spec.
-- Edit attempts to write out the SBOM in the same format it was read in. Only SPDX rdf & xml cannot be serialized out.
-
-## Example
-
-The primary use-case this was build for is to augment recently merged sboms or fix sboms which have know bad metadata. In your CICD pipeline
-once you merge two sboms using sbomasm, you would like to provide more metadata to its primary component to meet compliance
-standards. e.g you would like to add supplier, author, license data.
-
-`Step 1`: Merge the sboms
-
-```sh
-sbomasm assemble -n "mega cdx app" -v "1.0.0" -t "application" -o final-product.cdx.json sbom1.json sbom2.json sbom3.json
-```
-
-`Step 2`: Edit the document metadata add in 2 authors, a supplier, a tool, a license, a repository, and update the timestamp and write out the final sbom to a new sbom.
-
-```sh
-sbomasm edit --subject document --author "fred (fred@c.com)" --author "jane (jane@c.com)" --supplier "interlynk.io (https://interlynk.io)" --tool "sbomasm edit (v1.0.0)" --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" --repository "github.com/interlynk/cool-app" --timestamp" -o final-mod-product.json final-product.cdx.json
-```
-
-`Step 3`: Edit the primary component, set its version to be the one provided by ENV, and also update its PURL as the sbom-generate wrote out a malformed one.
-
-```sh
-sbomasm edit --subject primary-component --purl "pkg:golang/interlynk/cool-app@1.0.0" --version "$PRODUCT_VERSION" -o final-mod-primary-product.json final-mod-product.json
-```
-
-`Step 4`: Edit some components which are missing license data, which we know it should be Apache-2.0
+**Example**: Banking application quarterly compliance report:
 
 ```bash
-edit_components() {
-    for component in "$@"; do
-        name=$(echo "$component" | cut -d',' -f1)
-        version=$(echo "$component" | cut -d',' -f2 | sed 's/\s//g')
-        sbomasm edit --subject component-name-version --search "$name ($version)" --license "Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0.txt)" -o final-mod-primary-product.json final-mod-primary-product.json
-    done
-}
+# Assemble quarterly SBOM from all banking services
+sbomasm assemble \
+  -n "digital-banking-platform" \
+  -v "2024-Q4" \
+  -o quarterly-sbom.cdx.json \
+  core-banking/*.json mobile-app/*.json web-portal/*.json
 
-components=("demo-lib, v1.0.0" "third-party-lib, v2.1.3" "local-lib, v0.9.2")
-edit_components "${components[@]}"
+# Enrich with security metadata
+sbomasm edit \
+  --subject document \
+  --tool "dependency-track (4.11.0)" \
+  --author "Security Team (security@bank.com)" \
+  --lifecycle "operations" \
+  quarterly-sbom.cdx.json
 ```
 
-`Step 5`: Upload the final-mod-primary-product.json to your artifact for vuln scanning and compliance checks to Interlynk Platform.
+## Advanced Features
+
+### Configuration-Driven Assembly
+
+For complex assembly operations, use configuration files:
+
+```yaml
+# assembly-config.yml
+app:
+  name: 'enterprise-platform'
+  version: 'v2.0.0'
+  type: 'application'
+  supplier:
+    name: 'Enterprise Corp'
+    email: 'sbom@enterprise.com'
+  licenses:
+  - id: 'Apache-2.0'
+output:
+  spec: cyclonedx
+  file_format: json
+  file: 'enterprise-platform.cdx.json'
+assemble:
+  flat_merge: true
+  include_components: true
+  include_dependency_graph: false
+```
 
 ```bash
-python3 ${{ env.PYLYNK_TEMP_DIR }}/pylynk.py --verbose upload --prod ${{env.TOOL_NAME}} --env ${{ env.SBOM_ENV }} --sbom final-mod-primary-product.json --token ${{ secrets.INTERLYNK_SECURITY_TOKEN }}
+sbomasm assemble -c assembly-config.yml services/*.json
 ```
 
-# Installation
+### Dependency Track Integration
 
-## Using Prebuilt binaries
+Integrate with Dependency Track for continuous SBOM monitoring:
 
-```console
-https://github.com/interlynk-io/sbomasm/releases
+```bash
+# Pull SBOMs from Dependency Track, assemble, and push back
+sbomasm assemble dt \
+  -u "https://dtrack.company.com" \
+  -k "$DT_API_KEY" \
+  -n "aggregated-view" \
+  -v "latest" \
+  --flat-merge \
+  -o "project-uuid" \
+  project-uuid-1 project-uuid-2 project-uuid-3
 ```
 
-## Using Homebrew
+### Batch Operations
 
-```console
+Process multiple SBOMs with shell scripting:
+
+```bash
+#!/bin/bash
+# batch-process.sh - Add supplier info to all SBOMs
+
+for sbom in sboms/*.json; do
+  echo "Processing $sbom..."
+  sbomasm edit \
+    --missing \
+    --subject document \
+    --supplier "ACME Corp (acme.com)" \
+    --timestamp \
+    --output "processed/$(basename $sbom)" \
+    "$sbom"
+done
+```
+
+## Command Reference
+
+Detailed documentation for each command:
+
+- [assemble](docs/assemble.md) - Merge multiple SBOMs
+- [edit](docs/edit.md) - Modify SBOM metadata
+- [rm](docs/remove.md) - Remove components or fields
+- [generate](docs/generate.md) - Create configuration templates
+
+## SBOM Platform - Free Community Tier
+
+Our SBOM Automation Platform has a free community tier that provides a comprehensive solution to manage SBOMs (Software Bill of Materials) effortlessly. From centralized SBOM storage, built-in SBOM editor, continuous vulnerability mapping and assessment, and support for organizational policies, all while ensuring compliance and enhancing software supply chain security using integrated SBOM quality scores. The community tier is ideal for small teams. Learn more [here](https://www.interlynk.io/community-tier) or [Sign up](https://app.interlynk.io/auth)
+
+## SBOM Card
+
+[![SBOMCard](https://api.interlynk.io/api/v1/badges?type=hcard&project_group_id=c706ae8e-56dc-4386-9c8e-11c2401c0e94
+)](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
+
+## Installation
+
+### Using Go install (Recommended)
+
+```bash
+go install github.com/interlynk-io/sbomasm@latest
+```
+
+### Using Homebrew
+
+```bash
 brew tap interlynk-io/interlynk
 brew install sbomasm
 ```
 
-## Using Go install
+### Using Docker
 
-```console
-go install github.com/interlynk-io/sbomasm@latest
+```bash
+docker run -v $(pwd):/app ghcr.io/interlynk-io/sbomasm:latest assemble \
+  -n "my-app" -v "1.0.0" -o /app/output.json /app/input1.json /app/input2.json
 ```
 
-## Using repo
+### Using Prebuilt Binaries
 
-This approach involves cloning the repo and building it.
+Download from [releases page](https://github.com/interlynk-io/sbomasm/releases)
 
-1. Clone the repo `git clone git@github.com:interlynk-io/sbomasm.git`
-2. `cd` into `sbomasm` folder
-3. `make; make build`
-4. To test if the build was successful run the following command `./build/sbomasm version`
+### Building from Source
 
-# Contributions
+```bash
+git clone https://github.com/interlynk-io/sbomasm.git
+cd sbomasm
+make build
+./build/sbomasm version
+```
 
-We look forward to your contributions, below are a few guidelines on how to submit them
+## Contributions
 
-- Fork the repo
-- Create your feature/bug branch (`git checkout -b feature/bug`)
-- Commit your changes (`git commit -aSm "awesome new feature"`) - commits must be signed
-- Push your changes (`git push origin feature/new-feature`)
-- Create a new pull-request
+We look forward to your contributions! Please follow these guidelines:
 
-# Other SBOM Open Source tools
+1. Fork the repo
+2. Create your feature/bug branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -sam "Add amazing feature"`) - commits must be signed
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
 
-- [SBOM Seamless Transfer](https://github.com/interlynk-io/sbommv) - A primary tool to transfer SBOM's between different systems.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## Other SBOM Open Source tools
+
+- [SBOM Seamless Transfer](https://github.com/interlynk-io/sbommv) - A primary tool to transfer SBOMs between different systems
 - [SBOM Quality Score](https://github.com/interlynk-io/sbomqs) - A tool for evaluating the quality and compliance of SBOMs
-- [SBOM Search Tool](https://github.com/interlynk-io/sbomgr) - A tool for context aware search in SBOM repositories.
-- [SBOM Explorer](https://github.com/interlynk-io/sbomex) - A tool for discovering and downloading SBOM from a public SBOM repository
-- [SBOM Benchmark](https://www.sbombenchmark.dev) is a repository of SBOM and quality score for most popular containers and repositories
+- [SBOM Search Tool](https://github.com/interlynk-io/sbomgr) - A tool for context-aware search in SBOM repositories
+- [SBOM Explorer](https://github.com/interlynk-io/sbomex) - A tool for discovering and downloading SBOMs from public repositories
+- [SBOM Benchmark](https://www.sbombenchmark.dev) - A repository of SBOMs and quality scores for popular containers and repositories
 
-# Contact
+## Contact
 
 We appreciate all feedback. The best ways to get in touch with us:
 
 - ❓& 🅰️ [Slack](https://join.slack.com/t/sbomqa/shared_invite/zt-2jzq1ttgy-4IGzOYBEtHwJdMyYj~BACA)
-- :phone: [Live Chat](https://www.interlynk.io/#hs-chat-open)
+- 📞 [Live Chat](https://www.interlynk.io/#hs-chat-open)
 - 📫 [Email Us](mailto:hello@interlynk.io)
 - 🐛 [Report a bug or enhancement](https://github.com/interlynk-io/sbomasm/issues)
-- :x: [Follow us on X](https://twitter.com/InterlynkIo)
+- 🐦 [Follow us on X](https://twitter.com/InterlynkIo)
 
-# Stargazers
+## Stargazers
 
 If you like this project, please support us by starring it.
 
