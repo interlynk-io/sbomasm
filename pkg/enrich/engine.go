@@ -64,14 +64,9 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 		return nil, err
 	}
 
-	newFile, err := os.Create(params.Output)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer newFile.Close()
-
-	if err := sbom.WriteSBOM(newFile, sbomDoc); err != nil {
-		return nil, fmt.Errorf("failed to write SBOM to file: %w", err)
+	// process the output
+	if err := processOutput(ctx, sbomDoc, params); err != nil {
+		return nil, err
 	}
 
 	summary := calculateSummary(ctx, enriched, skipped, skippedReasons)
@@ -92,4 +87,28 @@ func calculateSummary(ctx context.Context, enriched, skipped int, skippedReasons
 		Errors:         nil,
 	}
 	return summary
+}
+
+func processOutput(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Config) error {
+	log := logger.FromContext(ctx)
+
+	if params.Output != "" {
+		newFile, err := os.Create(params.Output)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %w", err)
+		}
+		defer newFile.Close()
+
+		if err := sbom.WriteSBOM(newFile, sbomDoc); err != nil {
+			return fmt.Errorf("failed to write SBOM to file: %w", err)
+		}
+		log.Debugf("updated SBOM written to file: %s", params.Output)
+	} else {
+		if err := sbom.WriteSBOM(os.Stdout, sbomDoc); err != nil {
+			return fmt.Errorf("failed to write SBOM to stdout: %w", err)
+		}
+		log.Debugf("no output file specified, writing to stdout")
+	}
+
+	return nil
 }

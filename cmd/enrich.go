@@ -31,7 +31,7 @@ import (
 var enrichCmd = &cobra.Command{
 	Use:   "enrich [flags] <input-file>",
 	Short: "Enrich SBOM licenses using ClearlyDefined",
-	Long: `Enrich missing or incorrect licenses in an SBOM file using the ClearlyDefined.
+	Long: `Enrich missing licenses in an SBOM file using the ClearlyDefined.
 
 	`,
 	Args:         cobra.ExactArgs(1),
