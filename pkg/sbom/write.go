@@ -26,7 +26,7 @@ import (
 )
 
 func WriteSBOM(w io.Writer, doc SBOMDocument) error {
-	switch d := doc.Raw().(type) {
+	switch d := doc.Document().(type) {
 	case *cydx.BOM:
 		encoder := cydx.NewBOMEncoder(w, cydx.BOMFileFormatJSON)
 		encoder.SetPretty(true)

@@ -48,7 +48,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 
 	switch c.doc.SpecType() {
 	case string(sbom.SBOMSpecSPDX):
-		raw, ok := c.doc.Raw().(*spdx.Document)
+		raw, ok := c.doc.Document().(*spdx.Document)
 		if !ok {
 			return nil, fmt.Errorf("unexpected SPDX document type")
 		}
@@ -76,7 +76,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 		return result, nil
 
 	case string(sbom.SBOMSpecCDX):
-		raw, ok := c.doc.Raw().(*cydx.BOM)
+		raw, ok := c.doc.Document().(*cydx.BOM)
 		if !ok {
 			return nil, fmt.Errorf("unexpected CycloneDX BOM type")
 		}
@@ -125,7 +125,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmParams) error {
 	log := logger.FromContext(ctx)
 	log.Debugf("Executing field removal")
-	if f.doc.Raw() == nil {
+	if f.doc.Document() == nil {
 		return nil
 	}
 

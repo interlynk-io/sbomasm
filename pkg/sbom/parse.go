@@ -17,17 +17,49 @@
 package sbom
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/pkg/logger"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx/common"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
 )
+
+func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
+	log := logger.FromContext(ctx)
+	log.Debugf("Parsing SBOM file: %s", sbomFile)
+
+	f, err := os.Open(sbomFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file %q: %w", sbomFile, err)
+	}
+	defer f.Close()
+
+	spec, format, err := Detect(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
+	}
+
+	log.Debugf("detected SBOM format: %s, spec: %s", format, spec)
+
+	// rewind before parsing
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("failed to rewind file: %w", err)
+	}
+
+	// parse into SBOM object
+	sbomDoc, err := ParseSBOM(f, spec, format)
+	if err != nil {
+		return nil, err
+	}
+	return sbomDoc, nil
+}
 
 func ParseSBOM(f *os.File, spec SBOMSpecFormat, format FileFormat) (SBOMDocument, error) {
 	if f == nil {

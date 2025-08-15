@@ -35,7 +35,7 @@ func RemoveDependencies(ctx context.Context, sbomDoc sbom.SBOMDocument, selected
 	var totalSelectedDependencies int
 	var totalRemovedDependencies int
 
-	switch doc := sbomDoc.Raw().(type) {
+	switch doc := sbomDoc.Document().(type) {
 	case *spdx.Document:
 
 		toRemove := make(map[string]bool)
@@ -94,7 +94,7 @@ func RemoveComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedCo
 	var totalSelectedComponents int
 	var totalRemovedComponents int
 
-	switch doc := sbomDoc.Raw().(type) {
+	switch doc := sbomDoc.Document().(type) {
 	case *spdx.Document:
 		var filtered []*v2_3.Package
 		toRemove := make(map[string]bool)
@@ -153,7 +153,7 @@ func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument
 
 	var dependencies []interface{}
 
-	switch sbomDoc := doc.Raw().(type) {
+	switch sbomDoc := doc.Document().(type) {
 	case *spdx.Document:
 
 		pkgIDs := make(map[string]bool)
@@ -214,7 +214,7 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	var totalComponents int
 	var totalSelectedComponents int
 
-	switch doc := sbomDoc.Raw().(type) {
+	switch doc := sbomDoc.Document().(type) {
 	case *spdx.Document:
 		for _, p := range doc.Packages {
 			totalComponents++
