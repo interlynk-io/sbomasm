@@ -72,9 +72,16 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		case cydx.Component:
 			if c.PackageURL != "" {
 				purls = append(purls, c.PackageURL)
+			} else {
+				continue
 			}
 
 		default:
+			continue
+		}
+
+		if len(purls) == 0 {
+			log.Errorf("no PURL found for component")
 			continue
 		}
 
@@ -84,6 +91,7 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 			if err == nil {
 				break
 			}
+			log.Warnf("failed to map PURL %s: %v", purl, err)
 		}
 
 		if err == nil {
@@ -91,6 +99,8 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 			if len(purls) > 1 {
 				log.Debugf("multiple PURLs found for component: %s", comp)
 			}
+		} else {
+			log.Errorf("no valid PURL for component %T", comp)
 		}
 	}
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
