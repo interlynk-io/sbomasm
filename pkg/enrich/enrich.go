@@ -18,7 +18,6 @@ package enrich
 
 import (
 	"context"
-	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
@@ -55,16 +54,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 			skippedCount++
 			continue
-		}
-
-		if strings.Contains(resp.Licensed.Declared, "LicenseRef") || strings.Contains(resp.Licensed.Declared, "OTHER") || resp.Licensed.Declared == "NOASSERTION" {
-			log.Debugf("License found, but non-standard license for component with PURL: %s: %s", purl, resp.Licensed.Declared)
-			if resp.Licensed.Declared == "NOASSERTION" || resp.Licensed.Declared == "OTHER" {
-				skippedReasons[purl] = NON_STANDARD_LICENSE_FOUND
-
-				skippedCount++
-				continue
-			}
 		}
 
 		switch c := comp.(type) {
