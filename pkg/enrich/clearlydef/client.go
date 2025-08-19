@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 )
 
@@ -40,7 +41,7 @@ type DefinitionResponse struct {
 	} `json:"licensed"`
 }
 
-func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[interface{}]DefinitionResponse {
+func Client(ctx context.Context, coordinates map[interface{}]coordinates.Coordinate) map[interface{}]DefinitionResponse {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
@@ -54,10 +55,10 @@ func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[int
 
 	for comp, coordinate := range coordinates {
 		// path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
-		path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Namespace), url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+		path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.CoordinateType, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
 
 		if coordinate.Namespace == "" {
-			path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+			path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.CoordinateType, coordinate.Provider, coordinate.Name, coordinate.Revision)
 		}
 
 		if cached, ok := cache[path]; ok {
@@ -67,7 +68,7 @@ func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[int
 
 		cdURL := API_BASE_DEFINITIONS_URL + "/" + path
 
-		if coordinate.Type == "go" {
+		if coordinate.CoordinateType == "go" {
 			path = fmt.Sprintf("?coordinates=%s", url.QueryEscape(cdURL))
 		}
 
@@ -81,7 +82,7 @@ func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[int
 				continue
 			}
 
-			if PKG_TYPE(coordinate.Type) == "GO" {
+			if PKG_TYPE(coordinate.CoordinateType) == "GO" {
 				req.Header.Set("Accept-Version", "1.0.0")
 				req.Header.Set("Content-Type", "application/json")
 			}
@@ -139,13 +140,13 @@ func Client(ctx context.Context, coordinates map[interface{}]Coordinate) map[int
 	return responses
 }
 
-func queueHarvest(ctx context.Context, coordinate Coordinate) {
+func queueHarvest(ctx context.Context, coordinate coordinates.Coordinate) {
 	log := logger.FromContext(ctx)
 	log.Debugf("queueing harvest for coordinate: %s", coordinate)
 
-	path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.Type, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", coordinate.CoordinateType, coordinate.Provider, coordinate.Namespace, coordinate.Name, coordinate.Revision)
 	if coordinate.Namespace == "" {
-		path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.Type, coordinate.Provider, url.PathEscape(coordinate.Name), url.PathEscape(coordinate.Revision))
+		path = fmt.Sprintf("%s/%s/-/%s/%s", coordinate.CoordinateType, coordinate.Provider, coordinate.Name, coordinate.Revision)
 	}
 
 	payload := fmt.Sprintf(`[{"tool":"package","coordinates":"%s"}]`, path)

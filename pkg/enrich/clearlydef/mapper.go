@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/package-url/packageurl-go"
 	"github.com/spdx/tools-golang/spdx"
@@ -49,14 +50,14 @@ type Coordinate struct {
 }
 
 // Mapper maps component into coordinates for clearlydefined
-func Mapper(ctx context.Context, components []interface{}) map[interface{}]Coordinate {
+func Mapper(ctx context.Context, components []interface{}) map[interface{}]coordinates.Coordinate {
 	log := logger.FromContext(ctx)
 	log.Debug("mapping components to clearlydefined coordinates")
 
-	coordinates := make(map[interface{}]Coordinate)
+	componentsToCoordinateMappings := make(map[interface{}]coordinates.Coordinate)
 
 	for _, comp := range components {
-		var coord Coordinate
+		var coord coordinates.Coordinate
 		var err error
 		var purls []string
 
@@ -79,72 +80,46 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]Coord
 
 		// select first valid PURL
 		for _, purl := range purls {
-			coord, err = parsePURL(ctx, purl)
+			coord, err = mapPURLToCoordinate(ctx, purl)
 			if err == nil {
 				break
 			}
 		}
 
 		if err == nil {
-			coordinates[comp] = coord
+			componentsToCoordinateMappings[comp] = coord
 			if len(purls) > 1 {
 				log.Debugf("multiple PURLs found for component: %s", comp)
 			}
 		}
 	}
-	log.Debugf("mapped %d components to coordinates", len(coordinates))
+	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
-	return coordinates
+	return componentsToCoordinateMappings
 }
 
-// parsePURL converts a PURL to a ClearlyDefined coordinate
-func parsePURL(ctx context.Context, purl string) (Coordinate, error) {
+// mapPURLToCoordinate converts a PURL to a ClearlyDefined coordinate
+func mapPURLToCoordinate(ctx context.Context, purl string) (coordinates.Coordinate, error) {
 	log := logger.FromContext(ctx)
-	log.Debugf("parsing PURL: %s", purl)
+	log.Debugf("mapping PURL to coordinate: %s", purl)
 
 	if !strings.HasPrefix(purl, "pkg:") {
 		log.Error("invalid PURL")
-		return Coordinate{}, errors.New("invalid PURL")
+		return coordinates.Coordinate{}, errors.New("invalid PURL")
 	}
 
 	// parse PURL directly using packageurl-go
 	pkgPURL, err := packageurl.FromString(purl)
 	if err != nil {
 		log.Errorf("failed to parse PURL %s: %v", purl, err)
-		return Coordinate{}, fmt.Errorf("failed to parse PURL: %w", err)
+		return coordinates.Coordinate{}, fmt.Errorf("failed to parse PURL: %w", err)
 	}
 
-	if pkgPURL.Type == "" || pkgPURL.Name == "" || pkgPURL.Version == "" {
-		log.Errorf("invalid PURL %s: missing type, name, or version", purl)
-		return Coordinate{}, errors.New("invalid PURL: missing type, name, or version")
+	if coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String()); err == nil {
+		return *coordinate, nil
+	} else {
+		log.Warnf("Coordinate conversion not supported for: %q\n", pkgPURL.String())
 	}
 
-	log.Debugf("purl package_type=%s, namespace=%s, name=%s, version=%s", pkgPURL.Type, pkgPURL.Namespace, pkgPURL.Name, pkgPURL.Version)
-
-	switch PKG_TYPE(pkgPURL.Type) {
-
-	case NPM:
-		return constructNPMCoordinate(ctx, pkgPURL)
-
-	case GO:
-		return constructGOCoordinate(ctx, pkgPURL)
-
-	case PYPI:
-		return constructPYPICoordinate(ctx, pkgPURL)
-
-	case MAVEN:
-		return constructMAVENCoordinate(ctx, pkgPURL)
-
-	case NUGET:
-		return constructNUGETCoordinate(ctx, pkgPURL)
-
-	case GEM:
-		return constructGEMCoordinate(ctx, pkgPURL)
-
-	case DEB:
-		return constructDEBCoordinate(ctx, pkgPURL)
-
-	default:
-		return Coordinate{}, errors.New("unsupported package type")
-	}
+	return coordinates.Coordinate{}, fmt.Errorf("unsupported package type: %s", pkgPURL.Type)
 }

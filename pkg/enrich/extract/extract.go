@@ -33,7 +33,7 @@ type Params struct {
 	Verbose bool
 }
 
-// Components selects components needing license enrichment
+// Components selects components requiring license enrichment
 func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("extracting components for enrichment")
