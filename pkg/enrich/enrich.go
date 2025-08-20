@@ -19,6 +19,7 @@ package enrich
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
@@ -35,6 +36,31 @@ const (
 
 func NewConfig() *Config {
 	return &Config{}
+}
+
+// TODO: replace this by sbomqs library
+// SPDXLicenseList is a subset of common SPDX license IDs
+var SPDXLicenseList = map[string]bool{
+	"MIT":          true,
+	"Apache-2.0":   true,
+	"GPL-2.0":      true,
+	"GPL-3.0":      true,
+	"BSD-2-Clause": true,
+	"BSD-3-Clause": true,
+}
+
+// isSPDXLicenseID checks if the license is a valid SPDX ID
+func isSPDXLicenseID(license string) bool {
+	// Check if the license is in the SPDX license list
+	return SPDXLicenseList[license]
+}
+
+// isLicenseExpression checks if the license contains operators indicating an expression
+func isLicenseExpression(license string) bool {
+	return strings.Contains(license, "+") ||
+		strings.Contains(license, "WITH") ||
+		strings.Contains(license, "AND") ||
+		strings.Contains(license, "OR")
 }
 
 // Enricher updates licenses in the SBOM
@@ -99,26 +125,27 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				continue
 			}
 
-			// extract the component pointer in the document
 			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
-
 				if targetComp.Licenses == nil {
-					targetComp.Licenses = &cydx.Licenses{{License: &cydx.License{ID: resp.Licensed.Declared}}}
+					targetComp.Licenses = &cydx.Licenses{}
+				}
+
+				declaredLicense := resp.Licensed.Declared
+				if isSPDXLicenseID(declaredLicense) {
+					// SPDX ID (e.g. MIT, Apache-2.0)
+					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense}})
+				} else if isLicenseExpression(declaredLicense) {
+					// License Expression (e.g. "MIT OR Apache-2.0")
+					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: declaredLicense})
 				} else {
-					for _, lic := range *targetComp.Licenses {
-						if lic.License != nil {
-							(*targetComp.Licenses)[0].License.ID = resp.Licensed.Declared
-						} else if lic.Expression != "" {
-							(*targetComp.Licenses)[0].Expression = resp.Licensed.Declared
-						}
-					}
+					// Custom License (e.g., LicenseRef-scancode-ms-net-library, OTHER, NOASSERTION)
+					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense}})
 				}
 
 				enrichedCount++
-
-				fmt.Printf("Added license %s to %s@%s \n", resp.Licensed.Declared, c.Name, c.Version)
+				fmt.Printf("Added license %s to %s@%s\n", resp.Licensed.Declared, c.Name, c.Version)
 			} else {
-				fmt.Printf("Skipping %s@%s, license already exists (%s) \n", c.Name, c.Version, resp.Licensed.Declared)
+				fmt.Printf("Skipping %s@%s, license already exists (%s)\n", c.Name, c.Version, resp.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 			}
 		}

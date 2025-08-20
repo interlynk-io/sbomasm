@@ -85,9 +85,11 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 	}
 
 	if len(coordList) == 0 {
-		log.Debug("no new coordinates to query")
+		fmt.Println("No coordinates to query, as coordinate list is empty.")
 		return nil, nil
 	}
+	log.Debugf("querying %d coordinates", len(coordList))
+	log.Debugf("coordinates: %v", coordList)
 
 	// POST request to /definitions
 	cs, err := json.Marshal(coordList)
@@ -107,15 +109,13 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
 	}
 
-	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
 	}
 
 	var defs map[string]DefinitionResponse
@@ -127,8 +127,11 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 	for coord, def := range defs {
 		if comp, ok := coordToComp[coord]; ok {
 			if def.Licensed.Declared == "" {
-				log.Warnf("no license data for coordinate %s; queuing harvest", coord)
-				queueHarvest(ctx, componentsToCoordinateMappings[comp])
+				err = queueHarvest(ctx, retryClient, componentsToCoordinateMappings[comp])
+				if err != nil {
+					fmt.Println("failed to queue harvest:", err)
+				}
+
 			} else {
 				responses[comp] = def
 				log.Debugf("def response for %s: %+v", coord, def)
@@ -147,11 +150,13 @@ func constructPathFromCoordinate(coordinate coordinates.Coordinate) string {
 	return path
 }
 
-func queueHarvest(ctx context.Context, coordinate coordinates.Coordinate) {
-	log := logger.FromContext(ctx)
-	log.Debugf("queueing harvest for coordinate: %s", coordinate)
+func queueHarvest(ctx context.Context, retryClient *retryablehttp.Client, coordinate coordinates.Coordinate) error {
+	// log := logger.FromContext(ctx)
 
 	path := constructPathFromCoordinate(coordinate)
+	if path == "" {
+		return fmt.Errorf("invalid coordinate for harvest: %+v", coordinate)
+	}
 
 	payload := []struct {
 		Tool        string `json:"tool"`
@@ -163,36 +168,30 @@ func queueHarvest(ctx context.Context, coordinate coordinates.Coordinate) {
 		},
 	}
 
-	// payload := fmt.Sprintf(`[{"tool":"package","coordinates":"%s"}]`, path)
-
-	body, err := json.Marshal(payload)
+	cs, err := json.Marshal(payload)
 	if err != nil {
-		log.Errorf("error marshalling harvest payload: %v", err)
-		return
+		return fmt.Errorf("error marshalling harvest payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", API_BASE_HARVEST_URL, bytes.NewBuffer(body))
+	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_HARVEST_URL, bytes.NewBuffer(cs))
 	if err != nil {
-		log.Errorf("error creating harvest request: %v", err)
-		return
+		return fmt.Errorf("error creating harvest request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	resp, err := client.Do(req)
+	resp, err := retryClient.Do(req)
 	if err != nil {
-		log.Errorf("failed to queue harvest: %v", err)
-		return
+		return fmt.Errorf("error sending harvest request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Errorf("unexpected status code for harvest: %d", resp.StatusCode)
-		return
+		return fmt.Errorf("unexpected status code for harvest: %d", resp.StatusCode)
 	}
 
-	log.Debug("successfully queued harvest")
+	fmt.Printf("Successfully queued harvest for %s\n", coordinate)
+
+	return nil
 }
