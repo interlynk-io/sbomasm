@@ -24,11 +24,8 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sbomasm",
-	Short: "sbomasm is your primary tool to assemble SBOMs, for easy management and distribution.",
-	Long: `sbomasm is your primary tool to assemble SBOMs, for easy management and distribution. The tool
-can process both spdx and cyclonedx input sboms, it autotects the file formats for input sboms. The tool
-can output both spdx and cyclonedx sboms. Multiple algorithms are supported for assembling component sboms
-into a final sbom.
+	Short: "sbomasm your complete SBOM management toolkit",
+	Long: `sbomasm is a comprehensive toolkit for managing Software Bill of Materials (SBOMs) throughout their lifecycle. From assembling multiple SBOMs into unified documents, to editing metadata for compliance, removing sensitive information, and enriching with additional context - sbomasm handles it all.
 `,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
