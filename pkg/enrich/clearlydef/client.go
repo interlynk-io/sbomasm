@@ -23,11 +23,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/guacsec/sw-id-core/coordinates"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -36,6 +37,18 @@ const (
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
 )
 
+type transport struct {
+	Wrapped http.RoundTripper
+	RL      *rate.Limiter
+}
+
+func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if err := t.RL.Wait(r.Context()); err != nil {
+		return nil, err
+	}
+	return t.Wrapped.RoundTrip(r)
+}
+
 type DefinitionResponse struct {
 	Licensed struct {
 		Declared string `json:"declared"`
@@ -43,109 +56,87 @@ type DefinitionResponse struct {
 }
 
 // Client queries the ClearlyDefined API for license data
-func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate) map[interface{}]DefinitionResponse {
+func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate) (map[interface{}]DefinitionResponse, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
-	cache := make(map[string]DefinitionResponse)
 	responses := make(map[interface{}]DefinitionResponse)
-	client := &http.Client{Timeout: 10 * time.Second}
+
+	retryClient := retryablehttp.NewClient()
+	Transport := &transport{
+		Wrapped: http.DefaultTransport,
+		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
+	}
+	retryClient.HTTPClient.Transport = Transport
 
 	coordList := []string{}
 	coordToComp := make(map[string]interface{})
 
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
-
-		// Validate coordinate
 		if coordinate.CoordinateType == "" || coordinate.Provider == "" || coordinate.Name == "" || coordinate.Revision == "" {
 			log.Warnf("invalid coordinate for component %T: %+v", comp, coordinate)
 			continue
 		}
 
 		path := constructPathFromCoordinate(coordinate)
-
-		if _, ok := cache[path]; ok {
-			responses[comp] = cache[path]
-			continue
-		}
 		coordList = append(coordList, path)
 		coordToComp[path] = comp
 	}
 
 	if len(coordList) == 0 {
 		log.Debug("no new coordinates to query")
-		return responses
+		return nil, nil
 	}
 
 	// POST request to /definitions
 	cs, err := json.Marshal(coordList)
 	if err != nil {
-		log.Errorf("error marshalling coordinates: %v", err)
-		return responses
+		return nil, fmt.Errorf("error marshalling coordinates: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
+	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
 	if err != nil {
 		log.Errorf("error creating POST request: %v", err)
-		return responses
+		return nil, fmt.Errorf("error creating POST request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	for attempt := 1; attempt <= 3; attempt++ {
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Errorf("failed to query ClearlyDefined (attempt %d/3): %v", attempt, err)
-			continue
-		}
-
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Errorf("failed to read response body (attempt %d/3): %v", attempt, err)
-			continue
-		}
-
-		if resp.StatusCode == 429 {
-			resetTime := resp.Header.Get("x-ratelimit-reset")
-			log.Warnf("rate limit exceeded; retrying after %s", resetTime)
-			if resetTime != "" {
-				if reset, err := strconv.ParseInt(resetTime, 10, 64); err == nil {
-					time.Sleep(time.Until(time.Unix(reset, 0)))
-				}
-			}
-			continue
-		}
-
-		if resp.StatusCode != 200 {
-			log.Errorf("unexpected status code (attempt %d/3): %d, body: %s", attempt, resp.StatusCode, string(body))
-			continue
-		}
-
-		var defs map[string]DefinitionResponse
-		if err := json.Unmarshal(body, &defs); err != nil {
-			log.Errorf("failed to decode response (attempt %d/3): %v, body: %s", attempt, err, string(body))
-			continue
-		}
-
-		// Map responses back to components
-		for coord, def := range defs {
-			if comp, ok := coordToComp[coord]; ok {
-				if def.Licensed.Declared == "" {
-					log.Warnf("no license data for coordinate %s; queuing harvest", coord)
-					queueHarvest(ctx, componentsToCoordinateMappings[comp])
-				} else {
-					cache[coord] = def
-					responses[comp] = def
-					log.Debugf("def response for %s: %+v", coord, def)
-				}
-			}
-		}
-		break
+	resp, err := retryClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
 	}
 
-	return responses
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
+	}
+
+	var defs map[string]DefinitionResponse
+	if err := json.Unmarshal(body, &defs); err != nil {
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	// Map responses back to components
+	for coord, def := range defs {
+		if comp, ok := coordToComp[coord]; ok {
+			if def.Licensed.Declared == "" {
+				log.Warnf("no license data for coordinate %s; queuing harvest", coord)
+				queueHarvest(ctx, componentsToCoordinateMappings[comp])
+			} else {
+				responses[comp] = def
+				log.Debugf("def response for %s: %+v", coord, def)
+			}
+		}
+	}
+
+	return responses, nil
 }
 
 func constructPathFromCoordinate(coordinate coordinates.Coordinate) string {

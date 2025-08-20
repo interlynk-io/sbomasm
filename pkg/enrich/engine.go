@@ -53,10 +53,13 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	}
 
 	// map the component to a clearlydefined coordinates
-	coordinates := clearlydef.Mapper(ctx, components)
+	componentsToCoordinateMappings := clearlydef.Mapper(ctx, components)
 
 	// crawl the clearlydefined coordinates via client to get definitions
-	responses := clearlydef.Client(ctx, coordinates)
+	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings)
+	if err != nil {
+		return nil, err
+	}
 
 	// enrich the sbom
 	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force)

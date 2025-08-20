@@ -88,12 +88,10 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to run enrich engine: %w", err)
 	}
 
-	if enrichConfig.Verbose {
-		fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
+	fmt.Printf("Enriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
 
-		for _, err := range summary.Errors {
-			fmt.Printf("Error: %v\n", err)
-		}
+	for _, err := range summary.Errors {
+		fmt.Printf("Error: %v\n", err)
 	}
 
 	return nil

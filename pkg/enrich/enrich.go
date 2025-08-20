@@ -18,6 +18,7 @@ package enrich
 
 import (
 	"context"
+	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
@@ -63,10 +64,10 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				c.PackageLicenseConcluded = resp.Licensed.Declared
 				enrichedCount++
 
-				log.Debugf("Enriched license %s to SPDX package %s@%s", resp.Licensed.Declared, c.PackageName, c.PackageVersion)
+				fmt.Printf("Enriched license %s to %s@%s\n", resp.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
-				log.Debugf("Skipping SPDX package %s@%s: license already exits (%s)", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
+				fmt.Printf("Skipping %s@%s: license already exists (%s)\n", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
 			}
 
 		case cydx.Component:
@@ -115,12 +116,11 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 				enrichedCount++
 
-				log.Debugf("Added license %s to CycloneDX component %s@%s (BOMRef: %s)", resp.Licensed.Declared, c.Name, c.Version, c.BOMRef)
+				fmt.Printf("Added license %s to %s@%s \n", resp.Licensed.Declared, c.Name, c.Version)
 			} else {
-				log.Debugf("Skipped CycloneDX component %s@%s (BOMRef: %s)", c.Name, c.Version, c.BOMRef)
+				fmt.Printf("Skipping %s@%s, license already exists (%s) \n", c.Name, c.Version, resp.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 			}
-
 		}
 	}
 
