@@ -35,7 +35,7 @@ const (
 	API_BASE_URL             = "https://api.clearlydefined.io"
 	API_BASE_DEFINITIONS_URL = API_BASE_URL + "/definitions"
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
-	chunkSize                = 500
+	chunkSize                = 100
 )
 
 type transport struct {

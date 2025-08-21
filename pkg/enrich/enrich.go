@@ -66,6 +66,7 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 	skippedReasons := make(map[string]string)
 
 	for _, component := range components {
+		fmt.Println()
 		purl := getPurl(component)
 
 		compDefResponse, ok := responses[component]
