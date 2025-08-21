@@ -35,6 +35,7 @@ const (
 	API_BASE_URL             = "https://api.clearlydefined.io"
 	API_BASE_DEFINITIONS_URL = API_BASE_URL + "/definitions"
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
+	chunkSize                = 500
 )
 
 type transport struct {
@@ -49,10 +50,33 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return t.Wrapped.RoundTrip(r)
 }
 
+// DefinitionResponse represents the ClearlyDefined API response
 type DefinitionResponse struct {
 	Licensed struct {
 		Declared string `json:"declared"`
+		Facets   Facets `json:"facets"`
 	} `json:"licensed"`
+}
+
+// Facets struct
+type Facets struct {
+	Core struct {
+		Attribution Attribution `json:"attribution"`
+		Discovered  Discovered  `json:"discovered"`
+		Files       int         `json:"files"`
+	} `json:"core"`
+}
+
+// Attribution struct
+type Attribution struct {
+	Unknown int      `json:"unknown"`
+	Parties []string `json:"parties"`
+}
+
+// Discovered struct
+type Discovered struct {
+	Unknown     int      `json:"unknown"`
+	Expressions []string `json:"expressions"`
 }
 
 // Client queries the ClearlyDefined API for license data
@@ -74,22 +98,22 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
-		if coordinate.CoordinateType == "" || coordinate.Provider == "" || coordinate.Name == "" || coordinate.Revision == "" {
-			log.Warnf("invalid coordinate for component %T: %+v", comp, coordinate)
-			continue
-		}
+		// if coordinate.CoordinateType == "" || coordinate.Provider == "" || coordinate.Name == "" || coordinate.Revision == "" {
+		// 	log.Warnf("invalid coordinate for component %T: %+v", comp, coordinate)
+		// 	continue
+		// }
 
-		path := constructPathFromCoordinate(coordinate)
-		coordList = append(coordList, path)
-		coordToComp[path] = comp
+		coordinatePath := constructPathFromCoordinate(coordinate)
+		coordList = append(coordList, coordinatePath)
+		coordToComp[coordinatePath] = comp
 	}
 
 	if len(coordList) == 0 {
-		fmt.Println("No coordinates to query, as coordinate list is empty.")
+		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
 	log.Debugf("querying %d coordinates", len(coordList))
-	log.Debugf("coordinates: %v", coordList)
+	log.Debugf("list of coordinates: %v", coordList)
 
 	// POST request to /definitions
 	cs, err := json.Marshal(coordList)
