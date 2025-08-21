@@ -25,6 +25,7 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomqs/pkg/licenses"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -51,8 +52,12 @@ var SPDXLicenseList = map[string]bool{
 
 // isSPDXLicenseID checks if the license is a valid SPDX ID
 func isSPDXLicenseID(license string) bool {
-	// Check if the license is in the SPDX license list
-	return SPDXLicenseList[license]
+	lic := licenses.LookupExpression(license, nil)
+	if len(lic) > 1 || lic == nil || len(lic) == 0 {
+		return false
+	}
+
+	return lic[0].Spdx()
 }
 
 // isLicenseExpression checks if the license contains operators indicating an expression
@@ -124,21 +129,22 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				log.Warnf("component %s@%s not found in CycloneDX BOM", c.Name, c.Version)
 				continue
 			}
-
+			fmt.Println()
 			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
 				if targetComp.Licenses == nil {
 					targetComp.Licenses = &cydx.Licenses{}
 				}
 
 				declaredLicense := resp.Licensed.Declared
+
 				if isSPDXLicenseID(declaredLicense) {
-					// SPDX ID (e.g. MIT, Apache-2.0)
+					log.Debugf("SPDX ID detected: %s", declaredLicense)
 					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense}})
 				} else if isLicenseExpression(declaredLicense) {
-					// License Expression (e.g. "MIT OR Apache-2.0")
+					log.Debugf("License expression detected: %s", declaredLicense)
 					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: declaredLicense})
 				} else {
-					// Custom License (e.g., LicenseRef-scancode-ms-net-library, OTHER, NOASSERTION)
+					log.Debugf("Custom license detected: %s", declaredLicense)
 					*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense}})
 				}
 
