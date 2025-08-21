@@ -19,11 +19,13 @@ package enrich
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomqs/pkg/licenses"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -37,6 +39,24 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
+// isSPDXLicenseID checks if the license is a valid SPDX ID
+func isSPDXLicenseID(license string) bool {
+	lic := licenses.LookupExpression(license, nil)
+	if len(lic) > 1 || lic == nil || len(lic) == 0 {
+		return false
+	}
+
+	return lic[0].Spdx()
+}
+
+// isLicenseExpression checks if the license contains operators indicating an expression
+func isLicenseExpression(license string) bool {
+	return strings.Contains(license, "+") ||
+		strings.Contains(license, "WITH") ||
+		strings.Contains(license, "AND") ||
+		strings.Contains(license, "OR")
+}
+
 // Enricher updates licenses in the SBOM
 func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) (sbom.SBOMDocument, int, int, map[string]string, error) {
 	log := logger.FromContext(ctx)
@@ -45,26 +65,27 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 	var enrichedCount, skippedCount int
 	skippedReasons := make(map[string]string)
 
-	for _, comp := range components {
-		resp, ok := responses[comp]
-		purl := getPurl(comp)
+	for _, component := range components {
+		fmt.Println()
+		purl := getPurl(component)
 
-		if !ok || resp.Licensed.Declared == "" {
-			log.Debugf("No license data for component with PURL: %s; harvest queued", purl)
+		compDefResponse, ok := responses[component]
+		if !ok || compDefResponse.Licensed.Declared == "" {
+			log.Debugf("No license data for component with PURL: %s", purl)
 			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
 
 			skippedCount++
 			continue
 		}
 
-		switch c := comp.(type) {
+		switch c := component.(type) {
 
 		case *spdx.Package:
 			if force || c.PackageLicenseConcluded == "" || c.PackageLicenseConcluded == "NOASSERTION" {
-				c.PackageLicenseConcluded = resp.Licensed.Declared
+				c.PackageLicenseConcluded = compDefResponse.Licensed.Declared
 				enrichedCount++
 
-				fmt.Printf("Enriched license %s to %s@%s\n", resp.Licensed.Declared, c.PackageName, c.PackageVersion)
+				fmt.Printf("Enriched license %s to %s@%s\n", compDefResponse.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 				fmt.Printf("Skipping %s@%s: license already exists (%s)\n", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
@@ -99,26 +120,50 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				continue
 			}
 
-			// extract the component pointer in the document
 			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
-
 				if targetComp.Licenses == nil {
-					targetComp.Licenses = &cydx.Licenses{{License: &cydx.License{ID: resp.Licensed.Declared}}}
-				} else {
-					for _, lic := range *targetComp.Licenses {
-						if lic.License != nil {
-							(*targetComp.Licenses)[0].License.ID = resp.Licensed.Declared
-						} else if lic.Expression != "" {
-							(*targetComp.Licenses)[0].Expression = resp.Licensed.Declared
-						}
+					targetComp.Licenses = &cydx.Licenses{}
+				}
+
+				addedLicenses := make(map[string]bool)
+				declaredLicense := compDefResponse.Licensed.Declared
+				discoverdLicense := compDefResponse.Licensed.Facets.Core.Discovered.Expressions
+				log.Debugf("Declared license: %s", declaredLicense)
+				log.Debugf("Discovered licenses: %v", discoverdLicense)
+
+				if declaredLicense != "" && !addedLicenses[declaredLicense] {
+
+					if isSPDXLicenseID(declaredLicense) {
+						log.Debugf("SPDX ID detected: %s", declaredLicense)
+						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense}})
+
+					} else if isLicenseExpression(declaredLicense) {
+						log.Debugf("License expression detected: %s", declaredLicense)
+						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: declaredLicense})
+
+					} else {
+						log.Debugf("Custom license detected: %s", declaredLicense)
+						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense}})
+					}
+					addedLicenses[declaredLicense] = true
+
+					enrichedCount++
+					fmt.Printf("Added declared license %s to %s@%s\n", compDefResponse.Licensed.Declared, c.Name, c.Version)
+				}
+
+				// Combine discovered expressions into a single expression with AND
+				if len(discoverdLicense) > 0 {
+					combinedExpression := strings.Join(discoverdLicense, " AND ")
+
+					if !addedLicenses[combinedExpression] && combinedExpression != declaredLicense {
+						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: combinedExpression})
+						addedLicenses[combinedExpression] = true
+						fmt.Printf("Added discovered expression %s for %s@%s \n", combinedExpression, c.Name, c.Version)
 					}
 				}
 
-				enrichedCount++
-
-				fmt.Printf("Added license %s to %s@%s \n", resp.Licensed.Declared, c.Name, c.Version)
 			} else {
-				fmt.Printf("Skipping %s@%s, license already exists (%s) \n", c.Name, c.Version, resp.Licensed.Declared)
+				fmt.Printf("Skipping %s@%s, license already exists (%s)\n", c.Name, c.Version, compDefResponse.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 			}
 		}
