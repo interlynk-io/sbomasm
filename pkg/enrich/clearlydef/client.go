@@ -98,11 +98,6 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
-		// if coordinate.CoordinateType == "" || coordinate.Provider == "" || coordinate.Name == "" || coordinate.Revision == "" {
-		// 	log.Warnf("invalid coordinate for component %T: %+v", comp, coordinate)
-		// 	continue
-		// }
-
 		coordinatePath := constructPathFromCoordinate(coordinate)
 		coordList = append(coordList, coordinatePath)
 		coordToComp[coordinatePath] = comp
@@ -112,53 +107,69 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
+
 	log.Debugf("querying %d coordinates", len(coordList))
 	log.Debugf("list of coordinates: %v", coordList)
 
-	// POST request to /definitions
-	cs, err := json.Marshal(coordList)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling coordinates: %w", err)
-	}
+	// Process coordinates in chunks
+	for i := 0; i < len(coordList); i += chunkSize {
+		if err := ctx.Err(); err != nil {
+			log.Errorf("context error: %v", err)
+			return responses, err
+		}
 
-	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
-	if err != nil {
-		log.Errorf("error creating POST request: %v", err)
-		return nil, fmt.Errorf("error creating POST request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+		end := i + chunkSize
+		if end > len(coordList) {
+			end = len(coordList)
+		}
 
-	resp, err := retryClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
-	}
+		chunk := coordList[i:end]
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
-	}
+		// POST request for the chunk
+		cs, err := json.Marshal(chunk)
+		if err != nil {
+			log.Errorf("error marshalling coordinates: %v", err)
+			continue
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
+		req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
+		if err != nil {
+			log.Errorf("error creating POST request: %v", err)
+			return nil, fmt.Errorf("error creating POST request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
 
-	var defs map[string]DefinitionResponse
-	if err := json.Unmarshal(body, &defs); err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
+		resp, err := retryClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
+		}
 
-	// Map responses back to components
-	for coord, def := range defs {
-		if comp, ok := coordToComp[coord]; ok {
-			if def.Licensed.Declared == "" {
-				err = queueHarvest(ctx, retryClient, componentsToCoordinateMappings[comp])
-				if err != nil {
-					fmt.Println("failed to queue harvest:", err)
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading response body: %w", err)
+		}
+
+		var defs map[string]DefinitionResponse
+		if err := json.Unmarshal(body, &defs); err != nil {
+			return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+		}
+
+		// Map responses back to components
+		for coord, def := range defs {
+			if comp, ok := coordToComp[coord]; ok {
+				if def.Licensed.Declared == "" {
+					err = queueHarvest(ctx, retryClient, componentsToCoordinateMappings[comp])
+					if err != nil {
+						fmt.Println("failed to queue harvest:", err)
+					}
+
+				} else {
+					responses[comp] = def
 				}
-
-			} else {
-				responses[comp] = def
-				log.Debugf("def response for %s: %+v", coord, def)
 			}
 		}
 	}

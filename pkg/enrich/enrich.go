@@ -127,6 +127,8 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				addedLicenses := make(map[string]bool)
 				declaredLicense := compDefResponse.Licensed.Declared
 				discoverdLicense := compDefResponse.Licensed.Facets.Core.Discovered.Expressions
+				log.Debugf("Declared license: %s", declaredLicense)
+				log.Debugf("Discovered licenses: %v", discoverdLicense)
 
 				if declaredLicense != "" && !addedLicenses[declaredLicense] {
 
