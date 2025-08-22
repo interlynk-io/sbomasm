@@ -103,6 +103,11 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				log.Warnf("invalid CycloneDX BOM for component %s@%s", c.Name, c.Version)
 			}
 
+			specVersion := doc.SpecVersion
+			isCDX_1_6_Version := specVersion == cydx.SpecVersion1_6
+
+			fmt.Println("Spec Version:", specVersion)
+
 			found := false
 			if doc.Metadata != nil && doc.Metadata.Component != nil && doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
 				targetComp = doc.Metadata.Component
@@ -139,7 +144,11 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 					if isSPDXLicenseID(declaredLicense) {
 						log.Debugf("SPDX ID detected: %s", declaredLicense)
-						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense}})
+						if isCDX_1_6_Version {
+							*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense, Acknowledgement: cydx.LicenseAcknowledgementDeclared}})
+						} else {
+							*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{ID: declaredLicense}})
+						}
 
 					} else if isLicenseExpression(declaredLicense) {
 						log.Debugf("License expression detected: %s", declaredLicense)
@@ -147,7 +156,11 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 					} else {
 						log.Debugf("Custom license detected: %s", declaredLicense)
-						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense}})
+						if isCDX_1_6_Version {
+							*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense, Acknowledgement: cydx.LicenseAcknowledgementDeclared}})
+						} else {
+							*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{License: &cydx.License{Name: declaredLicense}})
+						}
 					}
 					addedLicenses[declaredLicense] = true
 
