@@ -53,7 +53,6 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 	log.Debug("mapping components to clearlydefined coordinates")
 
 	componentsToCoordinateMappings := make(map[interface{}]coordinates.Coordinate)
-	totalComponents := len(components)
 	missingPurl := 0
 	invalidPurl := 0
 	validPurl := 0
@@ -89,12 +88,12 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 			log.Debugf("%w", err)
 			continue
 		}
-		validPurl++
 
+		validPurl++
 		componentsToCoordinateMappings[comp] = *coord
 
 	}
-	fmt.Printf("Out of %d components, has %d missing PURLs, with %d invalid PURLs, and containing %d PURLs\n\n", totalComponents, missingPurl, invalidPurl, validPurl)
+	fmt.Printf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
@@ -103,17 +102,9 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 // mapPURLToCoordinate converts a PURL to a ClearlyDefined coordinate
 func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordinate, error) {
 	log := logger.FromContext(ctx)
-	// log.Debugf("initialized mapping PURL to coordinate: %s", purl)
 
-	// if !strings.HasPrefix(purl, "pkg:") {
-	// 	log.Error("invalid PURL")
-	// 	return nil, errors.New("invalid PURL")
-	// }
-
-	// parse PURL directly using packageurl-go
 	pkgPURL, err := packageurl.FromString(purl)
 	if err != nil {
-		log.Errorf("failed to parse PURL %s: %v", purl, err)
 		return nil, fmt.Errorf("failed to parse PURL: %w", err)
 	}
 
@@ -122,6 +113,6 @@ func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordin
 		return nil, err
 	}
 
-	log.Debugf("mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
+	log.Debugf("successfully mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
 	return coordinate, nil
 }

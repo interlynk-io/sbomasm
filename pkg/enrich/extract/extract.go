@@ -81,7 +81,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
 
-	fmt.Printf("\nTotal components selected for %s enrichment: %d, out of %d\n\n", params.Fields, totalSelectedComponents, totalComponents)
+	fmt.Printf("\nTotal Components: %d\t Selected For Enrichment: %d\n\n", totalComponents, totalSelectedComponents)
 
 	log.Debugf("extracted %d components out of %d for enrichment", len(selectedComponents), totalComponents)
 	return selectedComponents, nil
