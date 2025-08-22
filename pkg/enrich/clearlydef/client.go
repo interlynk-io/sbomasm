@@ -54,29 +54,7 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 type DefinitionResponse struct {
 	Licensed struct {
 		Declared string `json:"declared"`
-		Facets   Facets `json:"facets"`
 	} `json:"licensed"`
-}
-
-// Facets struct
-type Facets struct {
-	Core struct {
-		Attribution Attribution `json:"attribution"`
-		Discovered  Discovered  `json:"discovered"`
-		Files       int         `json:"files"`
-	} `json:"core"`
-}
-
-// Attribution struct
-type Attribution struct {
-	Unknown int      `json:"unknown"`
-	Parties []string `json:"parties"`
-}
-
-// Discovered struct
-type Discovered struct {
-	Unknown     int      `json:"unknown"`
-	Expressions []string `json:"expressions"`
 }
 
 // Client queries the ClearlyDefined API for license data
