@@ -40,11 +40,25 @@ type Config struct {
 }
 
 type EnrichSummary struct {
-	Enriched       int
-	Skipped        int
-	Failed         int
-	Errors         []error
-	SkippedReasons map[string]string
+	TotalComponents    int
+	SelectedComponents int
+	Enriched           int
+	Skipped            int
+	Failed             int
+	Errors             []error
+	SkippedReasons     map[string]string
+}
+
+func NewEnrichSummary() *EnrichSummary {
+	return &EnrichSummary{
+		TotalComponents:    0,
+		SelectedComponents: 0,
+		Enriched:           0,
+		Skipped:            0,
+		SkippedReasons:     make(map[string]string),
+		Failed:             0,
+		Errors:             nil,
+	}
 }
 
 // SupportedEnrichFields defines the valid fields for enrichment.

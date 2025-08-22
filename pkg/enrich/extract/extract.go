@@ -34,7 +34,7 @@ type Params struct {
 }
 
 // Components selects components requiring license enrichment
-func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, error) {
+func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, int, int, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("extracting components for enrichment")
 
@@ -74,17 +74,18 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported SBOM format")
+		return nil, totalComponents, totalSelectedComponents, fmt.Errorf("unsupported SBOM format")
 	}
 
 	if len(selectedComponents) == 0 {
-		return nil, fmt.Errorf("no components matched the selection criteria")
+		return nil, totalComponents, totalSelectedComponents, fmt.Errorf("no components matched the selection criteria")
 	}
 
-	fmt.Printf("\nTotal Components: %d\t Selected For Enrichment: %d\n\n", totalComponents, totalSelectedComponents)
+	fmt.Printf("\nTotal Components: %d\t Selected For Enrichment: %d\n", totalComponents, totalSelectedComponents)
 
-	log.Debugf("extracted %d components out of %d for enrichment", len(selectedComponents), totalComponents)
-	return selectedComponents, nil
+	log.Debugf("extracted %d components out of %d for enrichment", totalSelectedComponents, totalComponents)
+
+	return selectedComponents, totalComponents, totalSelectedComponents, nil
 }
 
 // shouldSelectSPDXComponent checks if an SPDX package needs license enrichment

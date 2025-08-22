@@ -27,18 +27,6 @@ import (
 	"github.com/spdx/tools-golang/spdx"
 )
 
-type PKG_TYPE string
-
-const (
-	NPM   PKG_TYPE = "npm"
-	GO    PKG_TYPE = "golang"
-	PYPI  PKG_TYPE = "pypi"
-	MAVEN PKG_TYPE = "maven"
-	NUGET PKG_TYPE = "nuget"
-	GEM   PKG_TYPE = "gem"
-	DEB   PKG_TYPE = "deb"
-)
-
 type Coordinate struct {
 	Type      string
 	Provider  string

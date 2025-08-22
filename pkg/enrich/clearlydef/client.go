@@ -125,10 +125,10 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 
 		if end > len(coordList) {
 			end = len(coordList)
-			fmt.Printf("\nProcessing components: %d of %d\n", end, len(coordList))
+			fmt.Printf("Processing components: %d of %d\n", end, len(coordList))
 
 		}
-		fmt.Printf("\nProcessing components: %d of %d\n", end, len(coordList))
+		fmt.Printf("Processing Components For Request: %d of %d\n", end, len(coordList))
 
 		chunk := coordList[i:end]
 

@@ -34,6 +34,7 @@ const (
 	NO_LICENSE_DATA_FOUND      = "no license data found"
 	NON_STANDARD_LICENSE_FOUND = "non-standard license found"
 	LICENSE_ALREADY_EXISTS     = "license already exists"
+	NO_PURL_FOUND              = "no PURL found"
 )
 
 func NewConfig() *Config {
@@ -72,10 +73,16 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 	for _, component := range components {
 		purl := getPurl(component)
+		if purl == "" {
+			log.Debugf("component has no PURL")
+			skippedReasons[purl] = NO_PURL_FOUND
+			skippedCount++
+			continue
+		}
 
 		compWithCorrespondingDefResponse, ok := responses[component]
 		if !ok {
-			log.Debugf("No license data for component with PURL: %s", purl)
+			log.Debugf("component has no Response")
 			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
 			skippedCount++
 			continue
@@ -202,21 +209,22 @@ func getPurl(comp interface{}) string {
 	var purls []string
 
 	switch c := comp.(type) {
-	case *cydx.Component:
-		if c.PackageURL != "" {
-			purls = append(purls, c.PackageURL)
-		}
-
 	case *spdx.Package:
 		for _, ref := range c.PackageExternalReferences {
 			if ref.RefType == "purl" {
 				purls = append(purls, ref.Locator)
 			}
 		}
-	}
-	if len(purls) > 0 {
-		return purls[0]
+
+	case cydx.Component:
+		if c.PackageURL != "" {
+			purls = append(purls, c.PackageURL)
+		}
 	}
 
-	return ""
+	if len(purls) == 0 || purls == nil {
+		return ""
+	}
+
+	return purls[0]
 }

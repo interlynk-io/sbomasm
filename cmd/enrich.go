@@ -90,7 +90,7 @@ func runEnrich(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to run enrich engine: %w", err)
 	}
 
-	fmt.Printf("\nEnriched: %d, Skipped: %d, Failed: %d\n", summary.Enriched, summary.Skipped, summary.Failed)
+	fmt.Printf("\nTotal: %d, Selected: %d, Enriched: %d, Skipped: %d, Failed: %d\n", summary.TotalComponents, summary.SelectedComponents, summary.Enriched, summary.Skipped, summary.Failed)
 
 	for _, err := range summary.Errors {
 		fmt.Printf("Error: %v\n", err)
