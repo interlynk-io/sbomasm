@@ -176,18 +176,8 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 				// Combine discovered expressions into a single expression with OR
 				if len(discoverdLicense) > 0 {
-					combinedExpression := strings.Join(discoverdLicense, licenseExpJoinBy)
-
-					if !addedLicenses[combinedExpression] {
-						if targetComp.Evidence == nil {
-							targetComp.Evidence = &cydx.Evidence{
-								Licenses: &cydx.Licenses{},
-							}
-						}
-						*targetComp.Evidence.Licenses = append(*targetComp.Evidence.Licenses, cydx.LicenseChoice{Expression: combinedExpression})
-						addedLicenses[combinedExpression] = true
-						log.Debugf("Added discovered expression %s for %s@%s under Evidence.Licenses section\n", combinedExpression, c.Name, c.Version)
-					}
+					// TODO: Next follow up
+					// Addd discovered license as Evidence
 				}
 
 			} else {
