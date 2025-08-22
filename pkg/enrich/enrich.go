@@ -88,17 +88,24 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			continue
 		}
 
+		if compWithCorrespondingDefResponse.Licensed.Declared == "NOASSERTION" || compWithCorrespondingDefResponse.Licensed.Declared == "OTHER" {
+			log.Debugf("component has invalid license")
+			skippedReasons[purl] = NON_STANDARD_LICENSE_FOUND
+			skippedCount++
+			continue
+		}
+
 		switch c := component.(type) {
 
 		case *spdx.Package:
-			if force || c.PackageLicenseDeclared == "" || c.PackageLicenseDeclared == "NOASSERTION" {
+			if force || c.PackageLicenseDeclared == "" || c.PackageLicenseDeclared == "NOASSERTION" || c.PackageLicenseDeclared == "OTHER" {
 				c.PackageLicenseDeclared = compWithCorrespondingDefResponse.Licensed.Declared
 				enrichedCount++
 				bar.Increment()
-
 				log.Debugf("Enriched license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				skippedCount++
 				log.Debugf("Skipping %s@%s: license already exists (%s)\n", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
 			}
 
@@ -183,8 +190,10 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			} else {
 				log.Debugf("Skipping %s@%s, license already exists (%s)\n", c.Name, c.Version, compWithCorrespondingDefResponse.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				skippedCount++
 			}
 		}
+
 	}
 
 	// finish bar

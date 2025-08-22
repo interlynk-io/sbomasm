@@ -61,6 +61,9 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 		return summary, nil
 	}
 
+	summary.TotalComponents = total
+	summary.SelectedComponents = selected
+
 	// map the component to a clearlydefined coordinates
 	componentsToCoordinateMappings := clearlydef.Mapper(ctx, components)
 
@@ -71,7 +74,7 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	}
 
 	// enrich the sbom
-	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force)
+	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force, params.LicenseExpressionJoinBy)
 	if err != nil {
 		return nil, err
 	}
