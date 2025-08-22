@@ -24,19 +24,27 @@ import (
 	"github.com/interlynk-io/sbomqs/pkg/sbom"
 )
 
+var supportedLicenseExpressions = map[string]bool{
+	"OR":   true,
+	"AND":  true,
+	"WITH": true,
+	"+":    true,
+}
+
 type Target struct {
 	Component sbom.GetComponent
 	Field     string
 }
 
 type Config struct {
-	Fields     []string
-	Output     string
-	SBOMFile   string
-	Force      bool
-	Debug      bool
-	MaxRetries int
-	MaxWait    time.Duration
+	Fields                  []string
+	Output                  string
+	SBOMFile                string
+	Force                   bool
+	Debug                   bool
+	MaxRetries              int
+	MaxWait                 time.Duration
+	LicenseExpressionJoinBy string
 }
 
 type EnrichSummary struct {
@@ -78,6 +86,10 @@ func (p *Config) Validate() error {
 		if !SupportedEnrichFields[strings.ToLower(field)] {
 			return fmt.Errorf("unsupported field: %s (supported: %v)", field, SupportedEnrichFields)
 		}
+	}
+
+	if !supportedLicenseExpressions[p.LicenseExpressionJoinBy] {
+		return fmt.Errorf("unsupported license expression: %s (only supports: %v)", p.LicenseExpressionJoinBy, supportedLicenseExpressions)
 	}
 
 	return nil

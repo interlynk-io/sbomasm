@@ -60,7 +60,7 @@ func isLicenseExpression(license string) bool {
 }
 
 // Enricher updates licenses in the SBOM
-func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) (sbom.SBOMDocument, int, int, map[string]string, error) {
+func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool, licenseExpJoinBy string) (sbom.SBOMDocument, int, int, map[string]string, error) {
 	log := logger.FromContext(ctx)
 	fmt.Printf("\nEnriching SBOM...\n")
 
@@ -174,9 +174,9 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 					log.Debugf("Added declared license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.Name, c.Version)
 				}
 
-				// Combine discovered expressions into a single expression with AND
+				// Combine discovered expressions into a single expression with OR
 				if len(discoverdLicense) > 0 {
-					combinedExpression := strings.Join(discoverdLicense, " AND ")
+					combinedExpression := strings.Join(discoverdLicense, licenseExpJoinBy)
 
 					if !addedLicenses[combinedExpression] {
 						if targetComp.Evidence == nil {

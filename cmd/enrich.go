@@ -56,8 +56,9 @@ func init() {
 	enrichCmd.Flags().StringP("output", "o", "", "Output path of file to save the enriched SBOM")
 	enrichCmd.Flags().BoolP("debug", "d", false, "Enable debug logging")
 	enrichCmd.Flags().BoolP("force", "f", false, "Forcefully replace the existing fields with new one.")
-	enrichCmd.Flags().IntP("max-retries", "r", 2, "Maximum number of retries for failed requests(default: 2)")
+	enrichCmd.Flags().IntP("max-retries", "r", 2, "Maximum number of retries for failed requests (default: 2)")
 	enrichCmd.Flags().IntP("max-wait", "w", 5, "Maximum wait time for requests(default: 5sec)")
+	enrichCmd.Flags().StringP("license-exp-join", "j", "OR", "Join license expressions by operator (default: OR), e.g. 'AND', 'WITH', '+'")
 }
 
 func runEnrich(cmd *cobra.Command, args []string) error {
@@ -115,6 +116,9 @@ func extractEnrichConfig(cmd *cobra.Command, args []string) (*enrich.Config, err
 
 	maxWait, _ := cmd.Flags().GetInt("max-wait")
 	enrichConfig.MaxWait = time.Duration(maxWait) * time.Second
+
+	licenseExpJoinBy, _ := cmd.Flags().GetString("license-exp-join")
+	enrichConfig.LicenseExpressionJoinBy = licenseExpJoinBy
 
 	force, _ := cmd.Flags().GetBool("force")
 	enrichConfig.Force = force
