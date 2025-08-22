@@ -34,6 +34,7 @@ const (
 	NO_LICENSE_DATA_FOUND      = "no license data found"
 	NON_STANDARD_LICENSE_FOUND = "non-standard license found"
 	LICENSE_ALREADY_EXISTS     = "license already exists"
+	NO_PURL_FOUND              = "no PURL found"
 )
 
 func NewConfig() *Config {
@@ -59,7 +60,7 @@ func isLicenseExpression(license string) bool {
 }
 
 // Enricher updates licenses in the SBOM
-func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool) (sbom.SBOMDocument, int, int, map[string]string, error) {
+func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []interface{}, responses map[interface{}]clearlydef.DefinitionResponse, force bool, licenseExpJoinBy string) (sbom.SBOMDocument, int, int, map[string]string, error) {
 	log := logger.FromContext(ctx)
 	fmt.Printf("\nEnriching SBOM...\n")
 
@@ -72,11 +73,24 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 	for _, component := range components {
 		purl := getPurl(component)
+		if purl == "" {
+			log.Debugf("component has no PURL")
+			skippedReasons[purl] = NO_PURL_FOUND
+			skippedCount++
+			continue
+		}
 
 		compWithCorrespondingDefResponse, ok := responses[component]
 		if !ok {
-			log.Debugf("No license data for component with PURL: %s", purl)
+			log.Debugf("component has no Response")
 			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
+			skippedCount++
+			continue
+		}
+
+		if compWithCorrespondingDefResponse.Licensed.Declared == "NOASSERTION" || compWithCorrespondingDefResponse.Licensed.Declared == "OTHER" {
+			log.Debugf("component has invalid license")
+			skippedReasons[purl] = NON_STANDARD_LICENSE_FOUND
 			skippedCount++
 			continue
 		}
@@ -84,14 +98,14 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 		switch c := component.(type) {
 
 		case *spdx.Package:
-			if force || c.PackageLicenseDeclared == "" || c.PackageLicenseDeclared == "NOASSERTION" {
+			if force || c.PackageLicenseDeclared == "" || c.PackageLicenseDeclared == "NOASSERTION" || c.PackageLicenseDeclared == "OTHER" {
 				c.PackageLicenseDeclared = compWithCorrespondingDefResponse.Licensed.Declared
 				enrichedCount++
 				bar.Increment()
-
 				log.Debugf("Enriched license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				skippedCount++
 				log.Debugf("Skipping %s@%s: license already exists (%s)\n", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
 			}
 
@@ -167,27 +181,19 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 					log.Debugf("Added declared license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.Name, c.Version)
 				}
 
-				// Combine discovered expressions into a single expression with AND
+				// Combine discovered expressions into a single expression with OR
 				if len(discoverdLicense) > 0 {
-					combinedExpression := strings.Join(discoverdLicense, " AND ")
-
-					if !addedLicenses[combinedExpression] {
-						if targetComp.Evidence == nil {
-							targetComp.Evidence = &cydx.Evidence{
-								Licenses: &cydx.Licenses{},
-							}
-						}
-						*targetComp.Evidence.Licenses = append(*targetComp.Evidence.Licenses, cydx.LicenseChoice{Expression: combinedExpression})
-						addedLicenses[combinedExpression] = true
-						log.Debugf("Added discovered expression %s for %s@%s under Evidence.Licenses section\n", combinedExpression, c.Name, c.Version)
-					}
+					// TODO: Next follow up
+					// Addd discovered license as Evidence
 				}
 
 			} else {
 				log.Debugf("Skipping %s@%s, license already exists (%s)\n", c.Name, c.Version, compWithCorrespondingDefResponse.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				skippedCount++
 			}
 		}
+
 	}
 
 	// finish bar
@@ -202,21 +208,22 @@ func getPurl(comp interface{}) string {
 	var purls []string
 
 	switch c := comp.(type) {
-	case *cydx.Component:
-		if c.PackageURL != "" {
-			purls = append(purls, c.PackageURL)
-		}
-
 	case *spdx.Package:
 		for _, ref := range c.PackageExternalReferences {
 			if ref.RefType == "purl" {
 				purls = append(purls, ref.Locator)
 			}
 		}
-	}
-	if len(purls) > 0 {
-		return purls[0]
+
+	case cydx.Component:
+		if c.PackageURL != "" {
+			purls = append(purls, c.PackageURL)
+		}
 	}
 
-	return ""
+	if len(purls) == 0 || purls == nil {
+		return ""
+	}
+
+	return purls[0]
 }
