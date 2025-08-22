@@ -53,6 +53,9 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 	log.Debug("mapping components to clearlydefined coordinates")
 
 	componentsToCoordinateMappings := make(map[interface{}]coordinates.Coordinate)
+	missingPurl := 0
+	invalidPurl := 0
+	validPurl := 0
 
 	for _, comp := range components {
 		var coord *coordinates.Coordinate
@@ -70,28 +73,27 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		case cydx.Component:
 			if c.PackageURL != "" {
 				purls = append(purls, c.PackageURL)
-			} else {
-				continue
 			}
-
-		default:
-			continue
 		}
 
 		if len(purls) == 0 {
+			missingPurl++
 			log.Debugf("no PURL found for component %T", comp)
 			continue
 		}
 
 		coord, err = mapPURLToCoordinate(ctx, purls[0])
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			invalidPurl++
+			log.Debugf("%w", err)
 			continue
 		}
 
+		validPurl++
 		componentsToCoordinateMappings[comp] = *coord
 
 	}
+	fmt.Printf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
@@ -100,25 +102,17 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 // mapPURLToCoordinate converts a PURL to a ClearlyDefined coordinate
 func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordinate, error) {
 	log := logger.FromContext(ctx)
-	// log.Debugf("initialized mapping PURL to coordinate: %s", purl)
 
-	// if !strings.HasPrefix(purl, "pkg:") {
-	// 	log.Error("invalid PURL")
-	// 	return nil, errors.New("invalid PURL")
-	// }
-
-	// parse PURL directly using packageurl-go
 	pkgPURL, err := packageurl.FromString(purl)
 	if err != nil {
-		log.Errorf("failed to parse PURL %s: %v", purl, err)
 		return nil, fmt.Errorf("failed to parse PURL: %w", err)
 	}
 
 	coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert PURL %s to coordinate: %w", pkgPURL.String(), err)
+		return nil, err
 	}
 
-	log.Debugf("mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
+	log.Debugf("successfully mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
 	return coordinate, nil
 }

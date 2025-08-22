@@ -42,9 +42,8 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	log.Debugf("parsed SBOM document successfully: %s", sbomDoc.SpecType())
 
 	extractParams := &extract.Params{
-		Fields:  params.Fields,
-		Force:   params.Force,
-		Verbose: params.Verbose,
+		Fields: params.Fields,
+		Force:  params.Force,
 	}
 
 	components, err := extract.Components(ctx, sbomDoc, extractParams)
@@ -56,7 +55,7 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	componentsToCoordinateMappings := clearlydef.Mapper(ctx, components)
 
 	// crawl the clearlydefined coordinates via client to get definitions
-	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings)
+	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings, params.MaxRetries, params.MaxWait)
 	if err != nil {
 		return nil, err
 	}
