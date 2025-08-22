@@ -77,10 +77,6 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		return nil, totalComponents, totalSelectedComponents, fmt.Errorf("unsupported SBOM format")
 	}
 
-	if len(selectedComponents) == 0 {
-		return nil, totalComponents, totalSelectedComponents, fmt.Errorf("no components matched the selection criteria")
-	}
-
 	fmt.Printf("\nTotal Components: %d\t Selected For Enrichment: %d\n", totalComponents, totalSelectedComponents)
 
 	log.Debugf("extracted %d components out of %d for enrichment", totalSelectedComponents, totalComponents)
