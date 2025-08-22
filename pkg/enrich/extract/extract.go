@@ -81,7 +81,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
 
-	fmt.Printf("Selected components for %s enrichment: %d, out of %d\n", params.Fields, totalSelectedComponents, totalComponents)
+	fmt.Printf("\nTotal components selected for %s enrichment: %d, out of %d\n\n", params.Fields, totalSelectedComponents, totalComponents)
 
 	log.Debugf("extracted %d components out of %d for enrichment", len(selectedComponents), totalComponents)
 	return selectedComponents, nil
@@ -92,7 +92,7 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
 	for _, field := range params.Fields {
 		// when field is license
 		if field == "license" {
-			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" {
+			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" || pkg.PackageLicenseDeclared == "" || pkg.PackageLicenseDeclared == "NOASSERTION" {
 				return true
 			}
 		}

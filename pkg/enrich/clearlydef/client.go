@@ -35,7 +35,7 @@ const (
 	API_BASE_URL             = "https://api.clearlydefined.io"
 	API_BASE_DEFINITIONS_URL = API_BASE_URL + "/definitions"
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
-	chunkSize                = 100
+	chunkSize                = 50
 )
 
 type transport struct {
@@ -80,13 +80,16 @@ type Discovered struct {
 }
 
 // Client queries the ClearlyDefined API for license data
-func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate) (map[interface{}]DefinitionResponse, error) {
+func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration) (map[interface{}]DefinitionResponse, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
 	responses := make(map[interface{}]DefinitionResponse)
 
 	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = maxRetries
+	retryClient.RetryWaitMax = maxWait
+
 	Transport := &transport{
 		Wrapped: http.DefaultTransport,
 		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
@@ -107,6 +110,7 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
+	// bar := pb.StartNew(len(coordList))
 
 	log.Debugf("querying %d coordinates", len(coordList))
 	log.Debugf("list of coordinates: %v", coordList)
@@ -114,48 +118,56 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 	// Process coordinates in chunks
 	for i := 0; i < len(coordList); i += chunkSize {
 		if err := ctx.Err(); err != nil {
-			log.Errorf("context error: %v", err)
 			return responses, err
 		}
 
 		end := i + chunkSize
+
 		if end > len(coordList) {
 			end = len(coordList)
+			fmt.Printf("\nProcessing components: %d of %d\n", end, len(coordList))
+
 		}
+		fmt.Printf("\nProcessing components: %d of %d\n", end, len(coordList))
 
 		chunk := coordList[i:end]
 
 		// POST request for the chunk
 		cs, err := json.Marshal(chunk)
 		if err != nil {
-			log.Errorf("error marshalling coordinates: %v", err)
+			fmt.Printf("Error marshalling coordinates: %v\n", err)
 			continue
 		}
 
 		req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
 		if err != nil {
-			log.Errorf("error creating POST request: %v", err)
-			return nil, fmt.Errorf("error creating POST request: %w", err)
+			log.Debugf("Error creating POST request: %v", err)
+			continue
+			// return nil, fmt.Errorf("error creating POST request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := retryClient.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
+			log.Debugf("Error querying ClearlyDefined: %v", err)
+			continue
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
+			log.Debugf("Unexpected status code from ClearlyDefined: %d", resp.StatusCode)
+			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			log.Debugf("Error reading response body: %v", err)
+			continue
 		}
 
 		var defs map[string]DefinitionResponse
 		if err := json.Unmarshal(body, &defs); err != nil {
-			return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
+			log.Debugf("Error unmarshalling JSON: %v", err)
+			continue
 		}
 
 		// Map responses back to components
@@ -164,9 +176,8 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 				if def.Licensed.Declared == "" {
 					err = queueHarvest(ctx, retryClient, componentsToCoordinateMappings[comp])
 					if err != nil {
-						fmt.Println("failed to queue harvest:", err)
+						log.Debugf("failed to queue harvest for %s: %v", coord, err)
 					}
-
 				} else {
 					responses[comp] = def
 				}
@@ -186,8 +197,6 @@ func constructPathFromCoordinate(coordinate coordinates.Coordinate) string {
 }
 
 func queueHarvest(ctx context.Context, retryClient *retryablehttp.Client, coordinate coordinates.Coordinate) error {
-	// log := logger.FromContext(ctx)
-
 	path := constructPathFromCoordinate(coordinate)
 	if path == "" {
 		return fmt.Errorf("invalid coordinate for harvest: %+v", coordinate)

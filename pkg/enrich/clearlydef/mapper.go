@@ -53,6 +53,10 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 	log.Debug("mapping components to clearlydefined coordinates")
 
 	componentsToCoordinateMappings := make(map[interface{}]coordinates.Coordinate)
+	totalComponents := len(components)
+	missingPurl := 0
+	invalidPurl := 0
+	validPurl := 0
 
 	for _, comp := range components {
 		var coord *coordinates.Coordinate
@@ -70,28 +74,27 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		case cydx.Component:
 			if c.PackageURL != "" {
 				purls = append(purls, c.PackageURL)
-			} else {
-				continue
 			}
-
-		default:
-			continue
 		}
 
 		if len(purls) == 0 {
+			missingPurl++
 			log.Debugf("no PURL found for component %T", comp)
 			continue
 		}
 
 		coord, err = mapPURLToCoordinate(ctx, purls[0])
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			invalidPurl++
+			log.Debugf("%w", err)
 			continue
 		}
+		validPurl++
 
 		componentsToCoordinateMappings[comp] = *coord
 
 	}
+	fmt.Printf("Out of %d components, has %d missing PURLs, with %d invalid PURLs, and containing %d PURLs\n\n", totalComponents, missingPurl, invalidPurl, validPurl)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
@@ -116,7 +119,7 @@ func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordin
 
 	coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert PURL %s to coordinate: %w", pkgPURL.String(), err)
+		return nil, err
 	}
 
 	log.Debugf("mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))

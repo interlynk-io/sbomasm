@@ -19,6 +19,7 @@ package enrich
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/interlynk-io/sbomqs/pkg/sbom"
 )
@@ -29,12 +30,13 @@ type Target struct {
 }
 
 type Config struct {
-	Fields   []string
-	Output   string
-	SBOMFile string
-	Verbose  bool
-	Force    bool
-	Debug    bool
+	Fields     []string
+	Output     string
+	SBOMFile   string
+	Force      bool
+	Debug      bool
+	MaxRetries int
+	MaxWait    time.Duration
 }
 
 type EnrichSummary struct {
