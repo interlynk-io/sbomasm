@@ -106,8 +106,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			specVersion := doc.SpecVersion
 			isCDX_1_6_Version := specVersion == cydx.SpecVersion1_6
 
-			fmt.Println("Spec Version:", specVersion)
-
 			found := false
 			if doc.Metadata != nil && doc.Metadata.Component != nil && doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
 				targetComp = doc.Metadata.Component
