@@ -78,7 +78,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			log.Debugf("No license data for component with PURL: %s", purl)
 			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
 			skippedCount++
-			bar.Increment()
 			continue
 		}
 
@@ -88,6 +87,7 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			if force || c.PackageLicenseDeclared == "" || c.PackageLicenseDeclared == "NOASSERTION" {
 				c.PackageLicenseDeclared = compWithCorrespondingDefResponse.Licensed.Declared
 				enrichedCount++
+				bar.Increment()
 
 				log.Debugf("Enriched license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.PackageName, c.PackageVersion)
 			} else {
@@ -105,7 +105,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 			found := false
 			if doc.Metadata != nil && doc.Metadata.Component != nil && doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
-				// if doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
 				targetComp = doc.Metadata.Component
 				found = true
 
@@ -153,6 +152,7 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 					addedLicenses[declaredLicense] = true
 
 					enrichedCount++
+					bar.Increment()
 					log.Debugf("Added declared license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.Name, c.Version)
 				}
 
@@ -160,10 +160,15 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				if len(discoverdLicense) > 0 {
 					combinedExpression := strings.Join(discoverdLicense, " AND ")
 
-					if !addedLicenses[combinedExpression] && combinedExpression != declaredLicense {
-						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: combinedExpression})
+					if !addedLicenses[combinedExpression] {
+						if targetComp.Evidence == nil {
+							targetComp.Evidence = &cydx.Evidence{
+								Licenses: &cydx.Licenses{},
+							}
+						}
+						*targetComp.Evidence.Licenses = append(*targetComp.Evidence.Licenses, cydx.LicenseChoice{Expression: combinedExpression})
 						addedLicenses[combinedExpression] = true
-						log.Debugf("Added discovered expression %s for %s@%s \n", combinedExpression, c.Name, c.Version)
+						log.Debugf("Added discovered expression %s for %s@%s under Evidence.Licenses section\n", combinedExpression, c.Name, c.Version)
 					}
 				}
 
@@ -172,7 +177,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 			}
 		}
-		bar.Increment()
 	}
 
 	// finish bar
