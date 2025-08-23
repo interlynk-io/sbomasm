@@ -22,6 +22,9 @@ sbomasm edit --subject document --supplier "ACME Corp (acme.com)" --timestamp sb
 # Remove sensitive information
 sbomasm rm --subject component-data --search "internal-tool" sbom.json
 
+# Enrich SBOM with missing license information
+sbomasm enrich --fields license -o enriched.json sbom.json
+
 # Generate assembly configuration
 sbomasm generate > config.yml
 ```
@@ -98,7 +101,7 @@ Modern software development involves complex supply chains with multiple compone
 - 🔀 **Assemble**: Merge multiple SBOMs into comprehensive documents
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
 - 🗑️ **Remove**: Strip sensitive components or fields
-- 🚀 **Enrich** (coming soon): Augment SBOMs with additional context
+- 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
 - 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
@@ -176,6 +179,40 @@ sbomasm rm \
   --output public.json \
   internal.json
 ```
+
+### Enriching SBOMs
+
+Enhance SBOMs with missing license information using ClearlyDefined data:
+
+#### Basic License Enrichment
+
+```bash
+# Enrich SBOM with missing license information
+sbomasm enrich \
+  --fields license \
+  --output enriched.json \
+  original.json
+```
+
+#### Advanced Enrichment Options
+
+```bash
+# Force update existing licenses with more complete data
+sbomasm enrich \
+  --fields license \
+  --force \
+  --license-exp-join "AND" \
+  --max-retries 3 \
+  --max-wait 10 \
+  --output complete.json \
+  incomplete.json
+```
+
+This command is particularly useful for:
+- Filling gaps in automatically generated SBOMs that lack license information
+- Ensuring compliance with procurement and legal requirements
+- Standardizing license expressions across components
+- Meeting regulatory requirements that mandate complete license documentation
 
 ## Industry Use Cases
 
@@ -372,6 +409,7 @@ Detailed documentation for each command:
 - [assemble](docs/assemble.md) - Merge multiple SBOMs
 - [edit](docs/edit.md) - Modify SBOM metadata
 - [rm](docs/remove.md) - Remove components or fields
+- [enrich](docs/enrich.md) - Enrich SBOMs with missing license information
 - [generate](docs/generate.md) - Create configuration templates
 
 ## SBOM Platform - Free Community Tier
