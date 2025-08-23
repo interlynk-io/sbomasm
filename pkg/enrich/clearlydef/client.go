@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -56,25 +57,37 @@ type DefinitionResponse struct {
 	} `json:"licensed"`
 }
 
+func NewRetryableClient(ctx context.Context, maxRetries int, maxWait time.Duration) *retryablehttp.Client {
+	log := logger.FromContext(ctx)
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = maxRetries
+	retryClient.RetryWaitMax = maxWait
+
+	// custom logger
+	rcLogger := &logger.ZapRetryLogger{Debug: true, Logger: log}
+	retryClient.Logger = rcLogger
+
+	// custom transport with rate limiter
+	transport := &transport{
+		Wrapped: http.DefaultTransport,
+		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
+	}
+	retryClient.HTTPClient.Transport = transport
+
+	return retryClient
+}
+
 // Client queries the ClearlyDefined API for license data
 func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration, chunkSize int) (map[interface{}]DefinitionResponse, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
 	responses := make(map[interface{}]DefinitionResponse)
-
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = maxRetries
-	retryClient.RetryWaitMax = maxWait
-
-	Transport := &transport{
-		Wrapped: http.DefaultTransport,
-		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
-	}
-	retryClient.HTTPClient.Transport = Transport
-
 	coordList := []string{}
 	coordToComp := make(map[string]interface{})
+
+	retryClient := NewRetryableClient(ctx, maxRetries, maxWait)
 
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
@@ -87,7 +100,9 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
-	// bar := pb.StartNew(len(coordList))
+
+	fmt.Printf("\nFetching Components Response...\n")
+	bar := pb.StartNew(len(coordList))
 
 	log.Debugf("querying %d coordinates", len(coordList))
 	log.Debugf("list of coordinates: %v", coordList)
@@ -103,9 +118,7 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		if end >= len(coordList) {
 			end = len(coordList)
 		}
-
-		fmt.Printf("Processing Components For Response: %d of %d\n", end, len(coordList))
-
+		bar.SetCurrent(int64(end))
 		chunk := coordList[i:end]
 
 		// POST request for the chunk
@@ -119,7 +132,6 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		if err != nil {
 			log.Debugf("Error creating POST request: %v", err)
 			continue
-			// return nil, fmt.Errorf("error creating POST request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
@@ -160,6 +172,7 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 			}
 		}
 	}
+	bar.Finish()
 
 	return responses, nil
 }
