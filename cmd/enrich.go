@@ -59,6 +59,7 @@ func init() {
 	enrichCmd.Flags().IntP("max-retries", "r", 2, "Maximum number of retries for failed requests (default: 2)")
 	enrichCmd.Flags().IntP("max-wait", "w", 5, "Maximum wait time for requests(default: 5sec)")
 	enrichCmd.Flags().StringP("license-exp-join", "j", "OR", "Join license expressions by operator (default: OR), e.g. 'AND', 'WITH', '+'")
+	enrichCmd.Flags().IntP("chunk-size", "c", 100, "Chunk size for processing number of components (default: 100)")
 }
 
 func runEnrich(cmd *cobra.Command, args []string) error {
@@ -119,6 +120,9 @@ func extractEnrichConfig(cmd *cobra.Command, args []string) (*enrich.Config, err
 
 	licenseExpJoinBy, _ := cmd.Flags().GetString("license-exp-join")
 	enrichConfig.LicenseExpressionJoinBy = licenseExpJoinBy
+
+	chunkSize, _ := cmd.Flags().GetInt("chunk-size")
+	enrichConfig.ChunkSize = chunkSize
 
 	force, _ := cmd.Flags().GetBool("force")
 	enrichConfig.Force = force

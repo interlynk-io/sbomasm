@@ -68,7 +68,7 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	componentsToCoordinateMappings := clearlydef.Mapper(ctx, components)
 
 	// crawl the clearlydefined coordinates via client to get definitions
-	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings, params.MaxRetries, params.MaxWait)
+	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings, params.MaxRetries, params.MaxWait, params.ChunkSize)
 	if err != nil {
 		return nil, err
 	}

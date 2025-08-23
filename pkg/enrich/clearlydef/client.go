@@ -35,7 +35,6 @@ const (
 	API_BASE_URL             = "https://api.clearlydefined.io"
 	API_BASE_DEFINITIONS_URL = API_BASE_URL + "/definitions"
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
-	chunkSize                = 50
 )
 
 type transport struct {
@@ -58,7 +57,7 @@ type DefinitionResponse struct {
 }
 
 // Client queries the ClearlyDefined API for license data
-func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration) (map[interface{}]DefinitionResponse, error) {
+func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration, chunkSize int) (map[interface{}]DefinitionResponse, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
@@ -101,13 +100,11 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 
 		end := i + chunkSize
 
-		if end > len(coordList) {
+		if end >= len(coordList) {
 			end = len(coordList)
-			fmt.Printf("Processing components For Response: %d of %d\n", end, len(coordList))
-
-		} else {
-			fmt.Printf("Processing Components For Response: %d of %d\n", end, len(coordList))
 		}
+
+		fmt.Printf("Processing Components For Response: %d of %d\n", end, len(coordList))
 
 		chunk := coordList[i:end]
 

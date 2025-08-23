@@ -45,6 +45,7 @@ type Config struct {
 	MaxRetries              int
 	MaxWait                 time.Duration
 	LicenseExpressionJoinBy string
+	ChunkSize               int
 }
 
 type EnrichSummary struct {
