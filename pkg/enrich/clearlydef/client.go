@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -35,7 +36,6 @@ const (
 	API_BASE_URL             = "https://api.clearlydefined.io"
 	API_BASE_DEFINITIONS_URL = API_BASE_URL + "/definitions"
 	API_BASE_HARVEST_URL     = API_BASE_URL + "/harvest"
-	chunkSize                = 50
 )
 
 type transport struct {
@@ -54,50 +54,40 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 type DefinitionResponse struct {
 	Licensed struct {
 		Declared string `json:"declared"`
-		Facets   Facets `json:"facets"`
 	} `json:"licensed"`
 }
 
-// Facets struct
-type Facets struct {
-	Core struct {
-		Attribution Attribution `json:"attribution"`
-		Discovered  Discovered  `json:"discovered"`
-		Files       int         `json:"files"`
-	} `json:"core"`
-}
-
-// Attribution struct
-type Attribution struct {
-	Unknown int      `json:"unknown"`
-	Parties []string `json:"parties"`
-}
-
-// Discovered struct
-type Discovered struct {
-	Unknown     int      `json:"unknown"`
-	Expressions []string `json:"expressions"`
-}
-
-// Client queries the ClearlyDefined API for license data
-func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration) (map[interface{}]DefinitionResponse, error) {
+func NewRetryableClient(ctx context.Context, maxRetries int, maxWait time.Duration) *retryablehttp.Client {
 	log := logger.FromContext(ctx)
-	log.Debug("querying clearlydefined API")
-
-	responses := make(map[interface{}]DefinitionResponse)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = maxRetries
 	retryClient.RetryWaitMax = maxWait
 
-	Transport := &transport{
+	// custom logger
+	rcLogger := &logger.ZapRetryLogger{Debug: true, Logger: log}
+	retryClient.Logger = rcLogger
+
+	// custom transport with rate limiter
+	transport := &transport{
 		Wrapped: http.DefaultTransport,
 		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
 	}
-	retryClient.HTTPClient.Transport = Transport
+	retryClient.HTTPClient.Transport = transport
 
+	return retryClient
+}
+
+// Client queries the ClearlyDefined API for license data
+func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration, chunkSize int) (map[interface{}]DefinitionResponse, error) {
+	log := logger.FromContext(ctx)
+	log.Debug("querying clearlydefined API")
+
+	responses := make(map[interface{}]DefinitionResponse)
 	coordList := []string{}
 	coordToComp := make(map[string]interface{})
+
+	retryClient := NewRetryableClient(ctx, maxRetries, maxWait)
 
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
@@ -110,7 +100,9 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
-	// bar := pb.StartNew(len(coordList))
+
+	fmt.Printf("\nFetching Components Response...\n")
+	bar := pb.StartNew(len(coordList))
 
 	log.Debugf("querying %d coordinates", len(coordList))
 	log.Debugf("list of coordinates: %v", coordList)
@@ -123,14 +115,10 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 
 		end := i + chunkSize
 
-		if end > len(coordList) {
+		if end >= len(coordList) {
 			end = len(coordList)
-			fmt.Printf("Processing components For Response: %d of %d\n", end, len(coordList))
-
-		} else {
-			fmt.Printf("Processing Components For Response: %d of %d\n", end, len(coordList))
 		}
-
+		bar.SetCurrent(int64(end))
 		chunk := coordList[i:end]
 
 		// POST request for the chunk
@@ -144,7 +132,6 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 		if err != nil {
 			log.Debugf("Error creating POST request: %v", err)
 			continue
-			// return nil, fmt.Errorf("error creating POST request: %w", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 
@@ -185,6 +172,7 @@ func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]
 			}
 		}
 	}
+	bar.Finish()
 
 	return responses, nil
 }

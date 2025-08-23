@@ -82,14 +82,14 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 		compWithCorrespondingDefResponse, ok := responses[component]
 		if !ok {
-			log.Debugf("component has no Response")
+			log.Debugf("response of a component %s not found", purl)
 			skippedReasons[purl] = NO_LICENSE_DATA_FOUND
 			skippedCount++
 			continue
 		}
 
 		if compWithCorrespondingDefResponse.Licensed.Declared == "NOASSERTION" || compWithCorrespondingDefResponse.Licensed.Declared == "OTHER" {
-			log.Debugf("component has invalid license")
+			log.Debugf("response contains invalid license for %s", purl)
 			skippedReasons[purl] = NON_STANDARD_LICENSE_FOUND
 			skippedCount++
 			continue
@@ -148,9 +148,8 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 				addedLicenses := make(map[string]bool)
 				declaredLicense := compWithCorrespondingDefResponse.Licensed.Declared
-				discoverdLicense := compWithCorrespondingDefResponse.Licensed.Facets.Core.Discovered.Expressions
+
 				log.Debugf("Declared license: %s", declaredLicense)
-				log.Debugf("Discovered licenses: %v", discoverdLicense)
 
 				if declaredLicense != "" && !addedLicenses[declaredLicense] {
 
@@ -180,13 +179,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 					bar.Increment()
 					log.Debugf("Added declared license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.Name, c.Version)
 				}
-
-				// Combine discovered expressions into a single expression with OR
-				if len(discoverdLicense) > 0 {
-					// TODO: Next follow up
-					// Addd discovered license as Evidence
-				}
-
 			} else {
 				log.Debugf("Skipping %s@%s, license already exists (%s)\n", c.Name, c.Version, compWithCorrespondingDefResponse.Licensed.Declared)
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
@@ -198,7 +190,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 	// finish bar
 	bar.Finish()
-	// fmt.Printf("Enrichment complete: %d enriched, %d skipped\n", enrichedCount, skippedCount)
 
 	return sbomDoc, enrichedCount, skippedCount, skippedReasons, nil
 }

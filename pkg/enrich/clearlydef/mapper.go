@@ -81,7 +81,7 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		componentsToCoordinateMappings[comp] = *coord
 
 	}
-	fmt.Printf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
+	log.Debugf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
