@@ -31,30 +31,49 @@ sbomasm generate > config.yml
 
 ## Table of Contents
 
-- [Community Recognition](#community-recognition)
-- [Why sbomasm?](#why-sbomasm)
-- [Core Features](#core-features)
-- [Basic Usage](#basic-usage)
-  - [Assembling SBOMs](#assembling-sboms)
-  - [Editing SBOMs](#editing-sboms)
-  - [Removing Components](#removing-components)
-- [Industry Use Cases](#industry-use-cases)
-  - [Microservices & Kubernetes](#microservices--kubernetes)
-  - [Automotive Industry](#automotive-industry)
-  - [Healthcare & Medical Devices](#healthcare--medical-devices)
-  - [Financial Services](#financial-services)
-- [Advanced Features](#advanced-features)
-  - [Configuration-Driven Assembly](#configuration-driven-assembly)
-  - [Dependency Track Integration](#dependency-track-integration)
-  - [Batch Operations](#batch-operations)
-- [Command Reference](#command-reference)
-- [SBOM Platform - Free Community Tier](#sbom-platform---free-community-tier)
-- [SBOM Card](#sbom-card)
-- [Installation](#installation)
-- [Contributions](#contributions)
-- [Other SBOM Open Source tools](#other-sbom-open-source-tools)
-- [Contact](#contact)
-- [Stargazers](#stargazers)
+- [`sbomasm`: The Complete SBOM Management Toolkit](#sbomasm-the-complete-sbom-management-toolkit)
+  - [Quick Start](#quick-start)
+  - [Table of Contents](#table-of-contents)
+  - [Community Recognition](#community-recognition)
+    - [Industry Adoption \& Standards](#industry-adoption--standards)
+    - [Community Feedback](#community-feedback)
+    - [Tool Ecosystem Integration](#tool-ecosystem-integration)
+  - [Why sbomasm?](#why-sbomasm)
+  - [Core Features](#core-features)
+  - [sbomasm Blogs](#sbomasm-blogs)
+  - [Basic Usage](#basic-usage)
+    - [Assembling SBOMs](#assembling-sboms)
+      - [Simple Assembly](#simple-assembly)
+      - [Container and Application Assembly](#container-and-application-assembly)
+    - [Editing SBOMs](#editing-sboms)
+      - [Add Missing Supplier Information](#add-missing-supplier-information)
+      - [Update Component Licenses](#update-component-licenses)
+    - [Removing Components](#removing-components)
+    - [Enriching SBOMs](#enriching-sboms)
+      - [Basic License Enrichment](#basic-license-enrichment)
+      - [Advanced Enrichment Options](#advanced-enrichment-options)
+  - [Industry Use Cases](#industry-use-cases)
+    - [Microservices \& Kubernetes](#microservices--kubernetes)
+    - [Automotive Industry](#automotive-industry)
+    - [Healthcare \& Medical Devices](#healthcare--medical-devices)
+    - [Financial Services](#financial-services)
+  - [Advanced Features](#advanced-features)
+    - [Configuration-Driven Assembly](#configuration-driven-assembly)
+    - [Dependency Track Integration](#dependency-track-integration)
+    - [Batch Operations](#batch-operations)
+  - [Command Reference](#command-reference)
+  - [SBOM Platform - Free Community Tier](#sbom-platform---free-community-tier)
+  - [SBOM Card](#sbom-card)
+  - [Installation](#installation)
+    - [Using Go install (Recommended)](#using-go-install-recommended)
+    - [Using Homebrew](#using-homebrew)
+    - [Using Docker](#using-docker)
+    - [Using Prebuilt Binaries](#using-prebuilt-binaries)
+    - [Building from Source](#building-from-source)
+  - [Contributions](#contributions)
+  - [Other SBOM Open Source tools](#other-sbom-open-source-tools)
+  - [Contact](#contact)
+  - [Stargazers](#stargazers)
 
 ## Community Recognition
 
@@ -82,8 +101,6 @@ sbomasm generate > config.yml
 
 - **GitLab/GitHub CI**: Widely adopted in CI/CD pipelines for automated SBOM assembly
 
-  
-
 ## Why sbomasm?
 
 Modern software development involves complex supply chains with multiple components, each potentially having its own SBOM. Organizations face several challenges:
@@ -105,6 +122,11 @@ Modern software development involves complex supply chains with multiple compone
 - 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
+
+## sbomasm Blogs
+
+- [Lean, Clean, and Compliance-Ready: sbomasm’s New Removal Capabilities](https://www.linkedin.com/pulse/lean-clean-compliance-ready-sbomasms-new-removal-vivek-kumar-sahu-a2fqe/)
+- [sbomasm enriches licenses using ClearlyDefined datasets](https://www.linkedin.com/pulse/sbomasm-enriches-licenses-using-clearlydefined-datasets-sahu-dogec/)
 
 ## Basic Usage
 
@@ -209,6 +231,7 @@ sbomasm enrich \
 ```
 
 This command is particularly useful for:
+
 - Filling gaps in automatically generated SBOMs that lack license information
 - Ensuring compliance with procurement and legal requirements
 - Standardizing license expressions across components
@@ -219,6 +242,7 @@ This command is particularly useful for:
 ### Microservices & Kubernetes
 
 Modern cloud-native applications consist of dozens of microservices, each with their own dependencies. Organizations using Kubernetes need to track components across:
+
 - Application code dependencies
 - Container base images
 - Kubernetes operators and controllers
