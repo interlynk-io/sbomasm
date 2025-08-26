@@ -86,7 +86,7 @@ func spdxEdit(c *configParams) error {
 func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 	log := logger.FromContext(ctx)
 
-	var d common.AnyDocument
+	var d sbom.SBOMDocument
 	var err error
 
 	f, err := os.Open(path)
@@ -111,7 +111,7 @@ func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 		return nil, err
 	}
 
-	return d.(*spdx.Document), nil
+	return d.Document().(*spdx.Document), nil
 }
 
 func writeSpdxSbom(doc common.AnyDocument, m *configParams) error {
