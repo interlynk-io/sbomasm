@@ -16,6 +16,7 @@ package edit
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/interlynk-io/sbomasm/pkg/sbom"
@@ -70,16 +71,19 @@ func Edit(eParams *EditParams) error {
 	}
 	log.Debugf("input sbom spec: %s format: %s", spec, format)
 
-	if spec == "cyclonedx" {
+	switch spec {
+	case sbom.SBOMSpecCDX:
 		if err = cdxEdit(c); err != nil {
 			return err
 		}
-	}
 
-	if spec == "spdx" {
+	case sbom.SBOMSpecSPDX:
 		if err = spdxEdit(c); err != nil {
 			return err
 		}
+
+	default:
+		return fmt.Errorf("unsupported spec: %s", spec)
 	}
 
 	return nil

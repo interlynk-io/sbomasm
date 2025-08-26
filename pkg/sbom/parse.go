@@ -61,7 +61,7 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	return sbomDoc, nil
 }
 
-func ParseSBOM(f *os.File, spec SBOMSpecFormat, format FileFormat) (SBOMDocument, error) {
+func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, error) {
 	if f == nil {
 		return nil, fmt.Errorf("no SBOM file provided")
 	}

@@ -28,12 +28,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type SBOMSpecFormat string
+type SBOMSpec string
 
 const (
-	SBOMSpecSPDX    SBOMSpecFormat = "spdx"
-	SBOMSpecCDX     SBOMSpecFormat = "cdx"
-	SBOMSpecUnknown SBOMSpecFormat = "unknown"
+	SBOMSpecSPDX    SBOMSpec = "spdx"
+	SBOMSpecCDX     SBOMSpec = "cdx"
+	SBOMSpecUnknown SBOMSpec = "unknown"
 )
 
 type FileFormat string
@@ -56,7 +56,7 @@ type cdxbasic struct {
 	BOMFormat string `json:"bomFormat" xml:"-"`
 }
 
-func Detect(f io.ReadSeeker) (SBOMSpecFormat, FileFormat, error) {
+func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
 	defer f.Seek(0, io.SeekStart)
 
 	f.Seek(0, io.SeekStart)
@@ -101,10 +101,10 @@ func Detect(f io.ReadSeeker) (SBOMSpecFormat, FileFormat, error) {
 		}
 	}
 
-	return "", "", fmt.Errorf("unknown spec or format")
+	return SBOMSpecUnknown, FileFormatUnknown, fmt.Errorf("unknown spec or format")
 }
 
-func DetectSbom(path string) (string, string, error) {
+func DetectSbom(path string) (SBOMSpec, FileFormat, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", "", err
@@ -115,5 +115,5 @@ func DetectSbom(path string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return string(spec), string(format), nil
+	return spec, format, nil
 }
