@@ -34,6 +34,7 @@ sbomasm generate > config.yml
 - [Community Recognition](#community-recognition)
 - [Why sbomasm?](#why-sbomasm)
 - [Core Features](#core-features)
+- [sbomasm Blog](#sbomasm-blog)
 - [Basic Usage](#basic-usage)
   - [Assembling SBOMs](#assembling-sboms)
   - [Editing SBOMs](#editing-sboms)
@@ -105,6 +106,11 @@ Modern software development involves complex supply chains with multiple compone
 - 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
+
+## sbomasm Blog
+
+- [Lean, Clean, and Compliance-Ready: sbomasm’s New Removal Capabilities](https://www.linkedin.com/pulse/lean-clean-compliance-ready-sbomasms-new-removal-vivek-kumar-sahu-a2fqe/)
+- [sbomasm enriches licenses using ClearlyDefined datasets](https://www.linkedin.com/pulse/sbomasm-enriches-licenses-using-clearlydefined-datasets-sahu-dogec/)
 
 ## Basic Usage
 
