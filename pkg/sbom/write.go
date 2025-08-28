@@ -33,7 +33,7 @@ func WriteSBOM(w io.Writer, doc SBOMDocument) error {
 		return encoder.Encode(d)
 
 	case *spdx.Document:
-		output, err := json.MarshalIndent(d, "", "    ")
+		output, err := json.MarshalIndent(d, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal SPDX document: %w", err)
 		}
