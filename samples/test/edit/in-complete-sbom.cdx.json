@@ -1,0 +1,108 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuid:4d2edcda-fcc4-42fe-8e9d-87cf33e47b94",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-04-25T00:42:27Z",
+    
+    "component": {
+        "bom-ref": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module#cmd/kyverno",
+        "type": "application",
+        "name": "github.com/kyverno/kyverno",
+        "version": "v1.14.0",
+        "purl": "pkg:golang/github.com/kyverno/kyverno@v1.14.0",
+        "cpe": "cpe:/golang/github.com/kyverno/kyverno:v1.14.0",
+        "hashes": [
+          {
+            "alg": "SHA-256",
+            "content": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+          }
+        ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
+      "type": "library",
+      "name": "github.com/fluxcd/pkg/oci",
+      "version": "v0.45.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e"
+        }
+      ],
+      "purl": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0",
+      "cpe": "cpe:2.3:a:fluxcd:oci:v0.45.0:*:*:*:*:*:*:*"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module",
+      "type": "library",
+      "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+      "version": "v1.17.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "834119270cfbc645d0899008e718bd7f75961580655f508f4eb47e3434e84644"
+        }
+      ],
+      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0",
+      "cpe": "cpe:/golang/github.com/azure/azure-sdk-for-go/sdk/azcore:v1.17.0"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module",
+      "type": "library",
+      "name": "github.com/sigstore/rekor",
+      "version": "v1.3.9",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335"
+        }
+      ],
+      "purl": "pkg:golang/github.com/sigstore/rekor@v1.3.9",
+      "cpe": "cpe:/golang/github.com/sigstore/rekor:v1.3.9"
+    },
+    {
+      "bom-ref": "pkg:golang/cel.dev/expr@v0.19.1?type=module",
+      "type": "library",
+      "name": "cel.dev/expr",
+      "version": "v0.19.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "35c898aed0d1211d253429c7d4b1497a0763b29371f5f239f4eed359cb9afd6e"
+        }
+      ],
+      "purl": "pkg:golang/cel.dev/expr@v0.19.1",
+      "cpe": "cpe:/golang/cel.dev/expr:v0.19.1"
+    }
+],
+"dependencies": [
+    {
+      "ref": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module#cmd/kyverno",
+      "dependsOn": [
+        "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
+        "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module"
+        ]
+    },
+    {
+      "ref": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
+      "dependsOn": [
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module",
+      "dependsOn": [
+        "pkg:golang/cel.dev/expr@v0.19.1?type=module"
+      ]
+    }
+  ]
+}
