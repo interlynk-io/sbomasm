@@ -190,10 +190,6 @@ func (d *spdxEditDoc) authors() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
-		return errNotSupported
-	}
-
 	authors := []spdx.Creator{}
 
 	for _, author := range d.c.authors {
