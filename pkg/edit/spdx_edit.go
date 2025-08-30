@@ -98,6 +98,10 @@ func (d *spdxEditDoc) update() {
 			if err == errNotSupported {
 				log.Infof(fmt.Sprintf("SPDX error updating %s: %s", item.name, err))
 			}
+
+			if err == errInvalidInput {
+				log.Infof(fmt.Sprintf("%s: %s", item.name, err))
+			}
 		}
 	}
 }
