@@ -16,7 +16,7 @@ require (
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.51.0
 	github.com/spdx/tools-golang v0.5.5
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/time v0.12.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -46,7 +46,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
-	github.com/spf13/pflag v1.0.7 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
