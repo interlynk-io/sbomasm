@@ -31,6 +31,16 @@ type cdxEditDoc struct {
 	c    *configParams
 }
 
+var supportedCDXMetadataLifeCycle map[string]bool = map[string]bool{
+	"design":       true,
+	"pre-build":    true,
+	"build":        true,
+	"post-build":   true,
+	"operations":   true,
+	"discovery":    true,
+	"decommission": true,
+}
+
 func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
 	doc := &cdxEditDoc{}
 
@@ -109,8 +119,14 @@ func (d *cdxEditDoc) lifeCycles() error {
 	lc := []cydx.Lifecycle{}
 
 	for _, phase := range d.c.lifecycles {
+
+		newPhase := strings.ToLower(phase)
+		if !supportedCDXMetadataLifeCycle[newPhase] {
+			return errInvalidInput
+		}
+
 		lc = append(lc, cydx.Lifecycle{
-			Phase: cydx.LifecyclePhase(phase),
+			Phase: cydx.LifecyclePhase(newPhase),
 		})
 	}
 
