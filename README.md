@@ -5,7 +5,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/interlynk-io/sbomasm/badge)](https://securityscorecards.dev/viewer/?uri=github.com/interlynk-io/sbomasm)
 ![GitHub all releases](https://img.shields.io/github/downloads/interlynk-io/sbomasm/total)
 
-`sbomasm` is a comprehensive toolkit for managing Software Bill of Materials (SBOMs) throughout their lifecycle. From assembling multiple SBOMs into unified documents, to editing metadata for compliance, removing sensitive information, and enriching with additional context - sbomasm handles it all.
+`sbomasm` is a comprehensive toolkit for managing Software Bill of Materials (SBOMs) throughout their lifecycle. From assembling multiple SBOMs into unified documents, to editing metadata for compliance, removing sensitive information, enriching with additional context and cryptorgaphically sign and verify SBOMs - sbomasm handles it all.
 
 ## Quick Start
 
@@ -24,6 +24,9 @@ sbomasm rm --subject component-data --search "internal-tool" sbom.json
 
 # Generate assembly configuration
 sbomasm generate > config.yml
+
+# Sign an SBOM using ShiftLeftCyber's SecureSBOM API
+sbomasm sign --key-id ${KEY_ID} --output sbom-signed.json sbom.json
 ```
 
 ## Table of Contents
@@ -35,6 +38,7 @@ sbomasm generate > config.yml
   - [Assembling SBOMs](#assembling-sboms)
   - [Editing SBOMs](#editing-sboms)
   - [Removing Components](#removing-components)
+  - [Signing and Verifying](#signing-and-veirfying)
 - [Industry Use Cases](#industry-use-cases)
   - [Microservices & Kubernetes](#microservices--kubernetes)
   - [Automotive Industry](#automotive-industry)
@@ -99,6 +103,7 @@ Modern software development involves complex supply chains with multiple compone
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
 - 🗑️ **Remove**: Strip sensitive components or fields
 - 🚀 **Enrich** (coming soon): Augment SBOMs with additional context
+- 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber) 
 - 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
@@ -175,6 +180,40 @@ sbomasm rm \
   --search "internal-telemetry" \
   --output public.json \
   internal.json
+```
+
+### Signing and Veirfying
+
+SBOMs are intended to be shared. Unsigned SBOMs are like unsealed envelopes. Anyone can open it up and alter what is
+inside. Cryptographically signing your SBOM allows SBOM producers to **prove authenticity and establish trust**
+and SBOM consumers to have the confidence that the SBOM has not been tampered with and comes from a verified source.
+
+Signing and Verifying SBOMs using sbomasm uses the SecureSBOM API from ShiftLefrCyber. This service requires an
+API Key. To obtain an API key use the following: [ContactUs](https://shiftleftcyber.io/contactus/)
+
+**Prerequisites**
+
+1. **API Key:** Obtain an API Key from ShiftLeftCyber
+2. **Key Management:** Generate or use existing signing keys through the SecureSBOM Service
+3. **Envorionment Setup:** Set your API key as an environment variable for convenience 
+
+```bash
+export SECURE_SBOM_API_KEY="your-api-key-here"
+```
+
+```bash
+# Generate a Signing Key for signing and online verification
+sbomasm securesbomkey generate
+
+# Use the generated key to Sign a CycloneDX SBOM according to CycloneDX 1.6 Specification
+sbomasm sign --key-id (KEY_ID From generate command) --output sbom.cdx.signed.json sbom.json
+
+# Verify the Signed SBOM using the API
+sbomasm verify --key-id (KEY_ID From generate command) sbom.cdx.signed.json
+
+# Offline Verification
+
+Coming Soon
 ```
 
 ## Industry Use Cases
@@ -373,6 +412,7 @@ Detailed documentation for each command:
 - [edit](docs/edit.md) - Modify SBOM metadata
 - [rm](docs/remove.md) - Remove components or fields
 - [generate](docs/generate.md) - Create configuration templates
+- [sign/verify](docs/securesbom.md) - Cryptographically Sign & Verify SBOMs
 
 ## SBOM Platform - Free Community Tier
 
