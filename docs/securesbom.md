@@ -39,11 +39,24 @@ The sections below provide comprehensive guidance on implementation, from basic 
 
 `sbomasm` supports the following commands to utilize the SecureSBOM API:
 
+- `securesbomkey` - Manage cryptographic keys for signing and verification
 - `sign` - Cryptographically sign an SBOM to prove authenticity
 - `verify` - Verify the cryptographic signature of a signed SBOM
-- `securesbomkeys` - Manage cryptographic keys for signing and verification
 
 ## Basic Usage
+
+### Key Management
+
+```bash
+# Generate a new signing key
+sbomasm securesbomkey generate
+
+# List available keys
+sbomasm securesbomkey list
+
+# Get public key for sharing
+sbomasm securesbomkey public <key-id>
+```
 
 ### Signing an SBOM
 
@@ -55,19 +68,6 @@ sbomasm sign --key-id <your-key-id> <input-sbom>
 
 ```bash
 sbomasm verify --key-id <key-id> <signed-sbom>
-```
-
-### Key Management
-
-```bash
-# Generate a new signing key
-sbomasm securesbomkeys generate
-
-# List available keys
-sbomasm securesbomkeys list
-
-# Get public key for sharing
-sbomasm securesbomkeys public <key-id>
 ```
 
 ## Command Options
@@ -99,7 +99,6 @@ sbomasm securesbomkeys public <key-id>
 - `--api-key <string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
 
 #### Output Options
-- `-v, --verbose`: Show detailed verification information including signature metadata
 - `-q, --quiet`: Suppress output except for errors (exit code indicates success/failure)
 
 #### Network Options
@@ -161,14 +160,16 @@ sbomasm verify --key-id prod-key-2024 signed-sbom.json
 export SECURE_SBOM_API_KEY="your-api-key-here"
 ```
 
-Output example: - FIX THIS
+Output example:
 ```
-✓ SBOM signature verification successful
-  Algorithm: RSA-SHA256
-  Key ID: my-key-2024
-  Signed: 2024-01-15T10:30:00Z
-  Signer: build-system@company.com
-  Valid: true
+Loading signed SBOM...
+Connecting to Secure SBOM API...
+Verifying SBOM signature with key 045728s6-h18q-649z-67fdb-27c2afcab510...
+✓ SBOM signature is VALID
+Message: signature is valid
+Key ID: 045728s6-h18q-649z-67fdb-27c2afcab510
+Algorithm: ES256
+Verified at: 2025-09-08T06:51:41-04:00
 ```
 
 ## Advanced Use Cases
