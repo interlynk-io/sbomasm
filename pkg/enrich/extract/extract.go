@@ -34,7 +34,7 @@ type Params struct {
 }
 
 // Components selects components requiring license enrichment
-func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, error) {
+func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) ([]interface{}, int, int, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("extracting components for enrichment")
 
@@ -47,7 +47,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 	case *spdx.Document:
 		for _, pkg := range doc.Packages {
 			totalComponents++
-			if shouldSelectSPDXComponent(*pkg, params) {
+			if shouldSelectSPDXComponent(ctx, *pkg, params) {
 				selectedComponents = append(selectedComponents, pkg)
 				totalSelectedComponents++
 			}
@@ -57,7 +57,7 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		if doc.Components != nil {
 			for _, component := range *doc.Components {
 				totalComponents++
-				if shouldSelectCDXComponent(&component, params) {
+				if shouldSelectCDXComponent(ctx, &component, params) {
 					selectedComponents = append(selectedComponents, component)
 					totalSelectedComponents++
 				}
@@ -67,32 +67,43 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		// check primary component too - metadata.component
 		if doc.Metadata != nil && doc.Metadata.Component != nil {
 			totalComponents++
-			if shouldSelectCDXComponent(doc.Metadata.Component, params) {
+			if shouldSelectCDXComponent(ctx, doc.Metadata.Component, params) {
 				totalSelectedComponents++
 				selectedComponents = append(selectedComponents, *doc.Metadata.Component)
 			}
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported SBOM format")
+		return nil, totalComponents, totalSelectedComponents, fmt.Errorf("unsupported SBOM format")
 	}
 
-	if len(selectedComponents) == 0 {
-		return nil, fmt.Errorf("no components matched the selection criteria")
-	}
+	log.Debugf("\nTotal Components: %d\t Selected For Enrichment: %d\n", totalComponents, totalSelectedComponents)
 
-	fmt.Printf("Selected components for %s enrichment: %d, out of %d\n", params.Fields, totalSelectedComponents, totalComponents)
+	log.Debugf("extracted %d components out of %d for enrichment", totalSelectedComponents, totalComponents)
 
-	log.Debugf("extracted %d components out of %d for enrichment", len(selectedComponents), totalComponents)
-	return selectedComponents, nil
+	return selectedComponents, totalComponents, totalSelectedComponents, nil
 }
 
 // shouldSelectSPDXComponent checks if an SPDX package needs license enrichment
-func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
+func shouldSelectSPDXComponent(ctx context.Context, pkg spdx.Package, params *Params) bool {
+	log := logger.FromContext(ctx)
+
+	var purls []string
+
+	for _, ref := range pkg.PackageExternalReferences {
+		if ref.RefType == "purl" {
+			purls = append(purls, ref.Locator)
+		}
+	}
+	if len(purls) == 0 || purls == nil {
+		log.Debugf("Skip component: No PURL found for package %s@%s", pkg.PackageName, pkg.PackageVersion)
+		return false
+	}
+
 	for _, field := range params.Fields {
 		// when field is license
 		if field == "license" {
-			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" {
+			if params.Force || pkg.PackageLicenseConcluded == "" || pkg.PackageLicenseConcluded == "NOASSERTION" || pkg.PackageLicenseDeclared == "" || pkg.PackageLicenseDeclared == "NOASSERTION" {
 				return true
 			}
 		}
@@ -103,7 +114,14 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *Params) bool {
 }
 
 // shouldSelectCDXComponent checks if a CycloneDX component needs license enrichment
-func shouldSelectCDXComponent(comp *cydx.Component, params *Params) bool {
+func shouldSelectCDXComponent(ctx context.Context, comp *cydx.Component, params *Params) bool {
+	log := logger.FromContext(ctx)
+
+	if comp.PackageURL == "" {
+		log.Debugf("Skip component: No PURL found for component %s", comp.Name)
+		return false
+	}
+
 	for _, field := range params.Fields {
 		// when field is license
 		if field == "license" {

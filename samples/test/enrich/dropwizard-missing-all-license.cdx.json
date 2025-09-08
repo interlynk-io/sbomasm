@@ -1,0 +1,139 @@
+{
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.4",
+  "serialNumber" : "urn:uuid:6f803dea-ec4c-4c25-b4b8-b1d40af961da",
+  "version" : 1,
+  "metadata" : {
+    "timestamp" : "2022-06-19T15:03:46Z",
+    "tools" : [
+      {
+        "vendor" : "OWASP Foundation",
+        "name" : "CycloneDX Maven plugin",
+        "version" : "2.7.0"
+      }
+    ],
+    "component" : {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-core",
+      "version" : "2.0.31",
+      "description" : "Dropwizard is a Java framework for developing ops-friendly, high-performance, RESTful web applications.",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-core@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-core@2.0.31?type=jar"
+    }
+  },
+  "components" : [
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-json-logging",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-json-logging@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-json-logging@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard.archetypes",
+      "name" : "dropwizard-archetypes",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard.archetypes/dropwizard-archetypes@2.0.31?type=pom",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard.archetypes/dropwizard-archetypes@2.0.31?type=pom"
+    },
+    {
+      "group" : "io.dropwizard.archetypes",
+      "name" : "java-simple",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard.archetypes/java-simple@2.0.31?type=maven-archetype",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard.archetypes/java-simple@2.0.31?type=maven-archetype"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-example",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-example@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-example@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-assets",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-assets@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-assets@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-http2",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-http2@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-http2@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-metrics-graphite",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-metrics-graphite@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-metrics-graphite@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-views-mustache",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-views-mustache@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-views-mustache@2.0.31?type=jar"
+    },
+     {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-views",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-views@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-views@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-views-freemarker",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-views-freemarker@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-views-freemarker@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-forms",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-forms@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-forms@2.0.31?type=jar"
+    },
+    {
+      "group" : "io.dropwizard",
+      "name" : "dropwizard-auth",
+      "version" : "2.0.31",
+      "purl" : "pkg:maven/io.dropwizard/dropwizard-auth@2.0.31?type=jar",
+      "type" : "library",
+      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-auth@2.0.31?type=jar"
+    }
+  ],
+  "dependencies" : [
+    {
+      "ref" : "pkg:maven/io.dropwizard/dropwizard-core@2.0.31?type=jar",
+      "dependsOn" : [
+        "pkg:maven/io.dropwizard/dropwizard-util@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-jackson@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-validation@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-configuration@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-logging@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-metrics@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-jersey@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-servlets@2.0.31?type=jar",
+        "pkg:maven/io.dropwizard/dropwizard-jetty@2.0.31?type=jar"
+      ]
+    }
+  ]
+}

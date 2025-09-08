@@ -28,7 +28,7 @@ type logKey struct{}
 
 func InitProdLogger() {
 	l, _ := zap.NewProduction()
-	//l, _ := zap.NewDevelopment()
+	// l, _ := zap.NewDevelopment()
 	defer l.Sync()
 	if logger != nil {
 		panic("logger already initialized")
@@ -59,4 +59,16 @@ func FromContext(ctx context.Context) *zap.SugaredLogger {
 	}
 
 	return zap.NewNop().Sugar()
+}
+
+type ZapRetryLogger struct {
+	Debug  bool
+	Logger *zap.SugaredLogger
+}
+
+// implement Logger: https://pkg.go.dev/github.com/hashicorp/go-retryablehttp#Logger
+func (z *ZapRetryLogger) Printf(format string, args ...interface{}) {
+	if z.Debug {
+		z.Logger.Debugf(format, args...)
+	}
 }

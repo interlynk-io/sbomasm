@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cheggaaa/pb/v3"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -49,92 +50,129 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return t.Wrapped.RoundTrip(r)
 }
 
+// DefinitionResponse represents the ClearlyDefined API response
 type DefinitionResponse struct {
 	Licensed struct {
 		Declared string `json:"declared"`
 	} `json:"licensed"`
 }
 
+func NewRetryableClient(ctx context.Context, maxRetries int, maxWait time.Duration) *retryablehttp.Client {
+	log := logger.FromContext(ctx)
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = maxRetries
+	retryClient.RetryWaitMax = maxWait
+
+	// custom logger
+	rcLogger := &logger.ZapRetryLogger{Debug: true, Logger: log}
+	retryClient.Logger = rcLogger
+
+	// custom transport with rate limiter
+	transport := &transport{
+		Wrapped: http.DefaultTransport,
+		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
+	}
+	retryClient.HTTPClient.Transport = transport
+
+	return retryClient
+}
+
 // Client queries the ClearlyDefined API for license data
-func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate) (map[interface{}]DefinitionResponse, error) {
+func Client(ctx context.Context, componentsToCoordinateMappings map[interface{}]coordinates.Coordinate, maxRetries int, maxWait time.Duration, chunkSize int) (map[interface{}]DefinitionResponse, error) {
 	log := logger.FromContext(ctx)
 	log.Debug("querying clearlydefined API")
 
 	responses := make(map[interface{}]DefinitionResponse)
-
-	retryClient := retryablehttp.NewClient()
-	Transport := &transport{
-		Wrapped: http.DefaultTransport,
-		RL:      rate.NewLimiter(rate.Every(time.Minute), 250),
-	}
-	retryClient.HTTPClient.Transport = Transport
-
 	coordList := []string{}
 	coordToComp := make(map[string]interface{})
 
+	retryClient := NewRetryableClient(ctx, maxRetries, maxWait)
+
 	// Map coordinates into a single POST request
 	for comp, coordinate := range componentsToCoordinateMappings {
-		if coordinate.CoordinateType == "" || coordinate.Provider == "" || coordinate.Name == "" || coordinate.Revision == "" {
-			log.Warnf("invalid coordinate for component %T: %+v", comp, coordinate)
-			continue
-		}
-
-		path := constructPathFromCoordinate(coordinate)
-		coordList = append(coordList, path)
-		coordToComp[path] = comp
+		coordinatePath := constructPathFromCoordinate(coordinate)
+		coordList = append(coordList, coordinatePath)
+		coordToComp[coordinatePath] = comp
 	}
 
 	if len(coordList) == 0 {
-		log.Debug("no new coordinates to query")
+		fmt.Println("No coordinates to query, coordinate list is empty.")
 		return nil, nil
 	}
 
-	// POST request to /definitions
-	cs, err := json.Marshal(coordList)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling coordinates: %w", err)
-	}
+	fmt.Printf("\nFetching Components Response...\n")
+	bar := pb.StartNew(len(coordList))
 
-	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
-	if err != nil {
-		log.Errorf("error creating POST request: %v", err)
-		return nil, fmt.Errorf("error creating POST request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	log.Debugf("querying %d coordinates", len(coordList))
+	log.Debugf("list of coordinates: %v", coordList)
 
-	resp, err := retryClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error querying ClearlyDefined: %w", err)
-	}
+	// Process coordinates in chunks
+	for i := 0; i < len(coordList); i += chunkSize {
+		if err := ctx.Err(); err != nil {
+			return responses, err
+		}
 
-	defer resp.Body.Close()
+		end := i + chunkSize
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
+		if end >= len(coordList) {
+			end = len(coordList)
+		}
+		bar.SetCurrent(int64(end))
+		chunk := coordList[i:end]
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error querying ClearlyDefined: %v", resp.Status)
-	}
+		// POST request for the chunk
+		cs, err := json.Marshal(chunk)
+		if err != nil {
+			fmt.Printf("Error marshalling coordinates: %v\n", err)
+			continue
+		}
 
-	var defs map[string]DefinitionResponse
-	if err := json.Unmarshal(body, &defs); err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
-	}
+		req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_DEFINITIONS_URL, bytes.NewBuffer(cs))
+		if err != nil {
+			log.Debugf("Error creating POST request: %v", err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
 
-	// Map responses back to components
-	for coord, def := range defs {
-		if comp, ok := coordToComp[coord]; ok {
-			if def.Licensed.Declared == "" {
-				log.Warnf("no license data for coordinate %s; queuing harvest", coord)
-				queueHarvest(ctx, componentsToCoordinateMappings[comp])
-			} else {
-				responses[comp] = def
-				log.Debugf("def response for %s: %+v", coord, def)
+		resp, err := retryClient.Do(req)
+		if err != nil {
+			log.Debugf("Error querying ClearlyDefined: %v", err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			log.Debugf("Unexpected status code from ClearlyDefined: %d", resp.StatusCode)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Debugf("Error reading response body: %v", err)
+			continue
+		}
+
+		var defs map[string]DefinitionResponse
+		if err := json.Unmarshal(body, &defs); err != nil {
+			log.Debugf("Error unmarshalling JSON: %v", err)
+			continue
+		}
+
+		// Map responses back to components
+		for coord, def := range defs {
+			if comp, ok := coordToComp[coord]; ok {
+				if def.Licensed.Declared == "" {
+					err = queueHarvest(ctx, retryClient, componentsToCoordinateMappings[comp])
+					if err != nil {
+						log.Debugf("failed to queue harvest for %s: %v", coord, err)
+					}
+				} else {
+					responses[comp] = def
+				}
 			}
 		}
 	}
+	bar.Finish()
 
 	return responses, nil
 }
@@ -147,11 +185,11 @@ func constructPathFromCoordinate(coordinate coordinates.Coordinate) string {
 	return path
 }
 
-func queueHarvest(ctx context.Context, coordinate coordinates.Coordinate) {
-	log := logger.FromContext(ctx)
-	log.Debugf("queueing harvest for coordinate: %s", coordinate)
-
+func queueHarvest(ctx context.Context, retryClient *retryablehttp.Client, coordinate coordinates.Coordinate) error {
 	path := constructPathFromCoordinate(coordinate)
+	if path == "" {
+		return fmt.Errorf("invalid coordinate for harvest: %+v", coordinate)
+	}
 
 	payload := []struct {
 		Tool        string `json:"tool"`
@@ -163,36 +201,30 @@ func queueHarvest(ctx context.Context, coordinate coordinates.Coordinate) {
 		},
 	}
 
-	// payload := fmt.Sprintf(`[{"tool":"package","coordinates":"%s"}]`, path)
-
-	body, err := json.Marshal(payload)
+	cs, err := json.Marshal(payload)
 	if err != nil {
-		log.Errorf("error marshalling harvest payload: %v", err)
-		return
+		return fmt.Errorf("error marshalling harvest payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", API_BASE_HARVEST_URL, bytes.NewBuffer(body))
+	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", API_BASE_HARVEST_URL, bytes.NewBuffer(cs))
 	if err != nil {
-		log.Errorf("error creating harvest request: %v", err)
-		return
+		return fmt.Errorf("error creating harvest request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	resp, err := client.Do(req)
+	resp, err := retryClient.Do(req)
 	if err != nil {
-		log.Errorf("failed to queue harvest: %v", err)
-		return
+		return fmt.Errorf("error sending harvest request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Errorf("unexpected status code for harvest: %d", resp.StatusCode)
-		return
+		return fmt.Errorf("unexpected status code for harvest: %d", resp.StatusCode)
 	}
 
-	log.Debug("successfully queued harvest")
+	fmt.Printf("Successfully queued harvest for %s\n", coordinate)
+
+	return nil
 }

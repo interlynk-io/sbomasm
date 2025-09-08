@@ -18,27 +18,13 @@ package clearlydef
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/package-url/packageurl-go"
 	"github.com/spdx/tools-golang/spdx"
-)
-
-type PKG_TYPE string
-
-const (
-	NPM   PKG_TYPE = "npm"
-	GO    PKG_TYPE = "golang"
-	PYPI  PKG_TYPE = "pypi"
-	MAVEN PKG_TYPE = "maven"
-	NUGET PKG_TYPE = "nuget"
-	GEM   PKG_TYPE = "gem"
-	DEB   PKG_TYPE = "deb"
 )
 
 type Coordinate struct {
@@ -55,9 +41,12 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 	log.Debug("mapping components to clearlydefined coordinates")
 
 	componentsToCoordinateMappings := make(map[interface{}]coordinates.Coordinate)
+	missingPurl := 0
+	invalidPurl := 0
+	validPurl := 0
 
 	for _, comp := range components {
-		var coord coordinates.Coordinate
+		var coord *coordinates.Coordinate
 		var err error
 		var purls []string
 
@@ -72,64 +61,46 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		case cydx.Component:
 			if c.PackageURL != "" {
 				purls = append(purls, c.PackageURL)
-			} else {
-				continue
 			}
-
-		default:
-			continue
 		}
 
 		if len(purls) == 0 {
-			log.Errorf("no PURL found for component")
+			missingPurl++
+			log.Debugf("no PURL found for component %T", comp)
 			continue
 		}
 
-		// select first valid PURL
-		for _, purl := range purls {
-			coord, err = mapPURLToCoordinate(ctx, purl)
-			if err == nil {
-				break
-			}
-			log.Warnf("failed to map PURL %s: %v", purl, err)
+		coord, err = mapPURLToCoordinate(ctx, purls[0])
+		if err != nil {
+			invalidPurl++
+			log.Debugf("%w", err)
+			continue
 		}
 
-		if err == nil {
-			componentsToCoordinateMappings[comp] = coord
-			if len(purls) > 1 {
-				log.Debugf("multiple PURLs found for component: %s", comp)
-			}
-		} else {
-			log.Errorf("no valid PURL for component %T", comp)
-		}
+		validPurl++
+		componentsToCoordinateMappings[comp] = *coord
+
 	}
+	log.Debugf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
 }
 
 // mapPURLToCoordinate converts a PURL to a ClearlyDefined coordinate
-func mapPURLToCoordinate(ctx context.Context, purl string) (coordinates.Coordinate, error) {
+func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordinate, error) {
 	log := logger.FromContext(ctx)
-	log.Debugf("mapping PURL to coordinate: %s", purl)
 
-	if !strings.HasPrefix(purl, "pkg:") {
-		log.Error("invalid PURL")
-		return coordinates.Coordinate{}, errors.New("invalid PURL")
-	}
-
-	// parse PURL directly using packageurl-go
 	pkgPURL, err := packageurl.FromString(purl)
 	if err != nil {
-		log.Errorf("failed to parse PURL %s: %v", purl, err)
-		return coordinates.Coordinate{}, fmt.Errorf("failed to parse PURL: %w", err)
+		return nil, fmt.Errorf("failed to parse PURL: %w", err)
 	}
 
-	if coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String()); err == nil {
-		return *coordinate, nil
-	} else {
-		log.Warnf("Coordinate conversion not supported for: %q\n", pkgPURL.String())
+	coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String())
+	if err != nil {
+		return nil, err
 	}
 
-	return coordinates.Coordinate{}, fmt.Errorf("unsupported package type: %s", pkgPURL.Type)
+	log.Debugf("successfully mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
+	return coordinate, nil
 }

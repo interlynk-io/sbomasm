@@ -19,9 +19,17 @@ package enrich
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/interlynk-io/sbomqs/pkg/sbom"
 )
+
+var supportedLicenseExpressions = map[string]bool{
+	"OR":   true,
+	"AND":  true,
+	"WITH": true,
+	"+":    true,
+}
 
 type Target struct {
 	Component sbom.GetComponent
@@ -29,20 +37,37 @@ type Target struct {
 }
 
 type Config struct {
-	Fields   []string
-	Output   string
-	SBOMFile string
-	Verbose  bool
-	Force    bool
-	Debug    bool
+	Fields                  []string
+	Output                  string
+	SBOMFile                string
+	Force                   bool
+	Debug                   bool
+	MaxRetries              int
+	MaxWait                 time.Duration
+	LicenseExpressionJoinBy string
+	ChunkSize               int
 }
 
 type EnrichSummary struct {
-	Enriched       int
-	Skipped        int
-	Failed         int
-	Errors         []error
-	SkippedReasons map[string]string
+	TotalComponents    int
+	SelectedComponents int
+	Enriched           int
+	Skipped            int
+	Failed             int
+	Errors             []error
+	SkippedReasons     map[string]string
+}
+
+func NewEnrichSummary() *EnrichSummary {
+	return &EnrichSummary{
+		TotalComponents:    0,
+		SelectedComponents: 0,
+		Enriched:           0,
+		Skipped:            0,
+		SkippedReasons:     make(map[string]string),
+		Failed:             0,
+		Errors:             nil,
+	}
 }
 
 // SupportedEnrichFields defines the valid fields for enrichment.
@@ -62,6 +87,10 @@ func (p *Config) Validate() error {
 		if !SupportedEnrichFields[strings.ToLower(field)] {
 			return fmt.Errorf("unsupported field: %s (supported: %v)", field, SupportedEnrichFields)
 		}
+	}
+
+	if !supportedLicenseExpressions[p.LicenseExpressionJoinBy] {
+		return fmt.Errorf("unsupported license expression: %s (only supports: %v)", p.LicenseExpressionJoinBy, supportedLicenseExpressions)
 	}
 
 	return nil

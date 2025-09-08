@@ -39,6 +39,14 @@ type spdxEditDoc struct {
 	c   *configParams
 }
 
+var supportedSPDXMetadataLifeCycle map[string]bool = map[string]bool{
+	"design":     true,
+	"source":     true,
+	"pre-build":  true,
+	"build":      true,
+	"post-build": true,
+}
+
 func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 	doc := &spdxEditDoc{}
 
@@ -97,6 +105,10 @@ func (d *spdxEditDoc) update() {
 		if err := item.f(); err != nil {
 			if err == errNotSupported {
 				log.Infof(fmt.Sprintf("SPDX error updating %s: %s", item.name, err))
+			}
+
+			if err == errInvalidInput {
+				log.Infof(fmt.Sprintf("%s: %s", item.name, err))
 			}
 		}
 	}
@@ -188,10 +200,6 @@ func (d *spdxEditDoc) supplier() error {
 func (d *spdxEditDoc) authors() error {
 	if !d.c.shouldAuthors() {
 		return errNoConfiguration
-	}
-
-	if d.c.search.subject != "document" {
-		return errNotSupported
 	}
 
 	authors := []spdx.Creator{}
@@ -609,7 +617,19 @@ func (d *spdxEditDoc) lifeCycles() error {
 		return errNotSupported
 	}
 
-	lifecycles := fmt.Sprintf("lifecycle: %s", strings.Join(d.c.lifecycles, ","))
+	for _, phase := range d.c.lifecycles {
+		newPhase := strings.ToLower(phase)
+		if !supportedSPDXMetadataLifeCycle[newPhase] {
+			return errInvalidInput
+		}
+	}
+
+	var lifecycles string
+	if len(d.c.lifecycles) > 1 {
+		lifecycles = fmt.Sprintf("lifecycle: %s", strings.Join(d.c.lifecycles, ","))
+	} else {
+		lifecycles = fmt.Sprintf("lifecycle: %s", d.c.lifecycles[0])
+	}
 
 	if d.c.onMissing() {
 		if d.bom.CreationInfo == nil {

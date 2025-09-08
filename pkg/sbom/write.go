@@ -17,23 +17,32 @@
 package sbom
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
-	cydx "github.com/CycloneDX/cyclonedx-go"
-	spdxjson "github.com/spdx/tools-golang/json"
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/spdx/tools-golang/spdx"
 )
 
 func WriteSBOM(w io.Writer, doc SBOMDocument) error {
 	switch d := doc.Document().(type) {
-	case *cydx.BOM:
-		encoder := cydx.NewBOMEncoder(w, cydx.BOMFileFormatJSON)
+	case *cyclonedx.BOM:
+		encoder := cyclonedx.NewBOMEncoder(w, cyclonedx.BOMFileFormatJSON)
 		encoder.SetPretty(true)
 		return encoder.Encode(d)
 
 	case *spdx.Document:
-		return spdxjson.Write(d, w)
+		output, err := json.MarshalIndent(d, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal SPDX document: %w", err)
+		}
+		_, err = w.Write(output)
+		if err != nil {
+			return fmt.Errorf("failed to write SPDX document: %w", err)
+		}
+		return nil
+
 	default:
 		return fmt.Errorf("unsupported SBOM type for writing")
 	}

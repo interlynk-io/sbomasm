@@ -33,6 +33,8 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("starting enrich engine")
 
+	summary := NewEnrichSummary()
+
 	// parse the SBOM document
 	sbomDoc, err := sbom.Parser(ctx, params.SBOMFile)
 	if err != nil {
@@ -42,27 +44,37 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 	log.Debugf("parsed SBOM document successfully: %s", sbomDoc.SpecType())
 
 	extractParams := &extract.Params{
-		Fields:  params.Fields,
-		Force:   params.Force,
-		Verbose: params.Verbose,
+		Fields: params.Fields,
+		Force:  params.Force,
 	}
 
-	components, err := extract.Components(ctx, sbomDoc, extractParams)
+	components, total, selected, err := extract.Components(ctx, sbomDoc, extractParams)
 	if err != nil {
 		return nil, err
 	}
+
+	// if no components were found, return early
+	// if no components selected return early
+	if total == 0 || selected == 0 {
+		summary.TotalComponents = total
+		summary.SelectedComponents = selected
+		return summary, nil
+	}
+
+	summary.TotalComponents = total
+	summary.SelectedComponents = selected
 
 	// map the component to a clearlydefined coordinates
 	componentsToCoordinateMappings := clearlydef.Mapper(ctx, components)
 
 	// crawl the clearlydefined coordinates via client to get definitions
-	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings)
+	responses, err := clearlydef.Client(ctx, componentsToCoordinateMappings, params.MaxRetries, params.MaxWait, params.ChunkSize)
 	if err != nil {
 		return nil, err
 	}
 
 	// enrich the sbom
-	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force)
+	sbomDoc, enriched, skipped, skippedReasons, err := Enricher(ctx, sbomDoc, components, responses, params.Force, params.LicenseExpressionJoinBy)
 	if err != nil {
 		return nil, err
 	}
@@ -72,24 +84,11 @@ func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {
 		return nil, err
 	}
 
-	summary := calculateSummary(ctx, enriched, skipped, skippedReasons)
+	summary.Enriched = enriched
+	summary.Skipped = skipped
+	summary.SkippedReasons = skippedReasons
 
-	return &summary, nil
-}
-
-// calculateSummary counts enriched/skipped/failed components
-func calculateSummary(ctx context.Context, enriched, skipped int, skippedReasons map[string]string) EnrichSummary {
-	log := logger.FromContext(ctx)
-	log.Debugf("enrichment summary: Enriched: %d, Skipped: %d", enriched, skipped)
-
-	summary := EnrichSummary{
-		Enriched:       enriched,
-		Skipped:        skipped,
-		SkippedReasons: skippedReasons,
-		Failed:         0,
-		Errors:         nil,
-	}
-	return summary
+	return summary, nil
 }
 
 func processOutput(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Config) error {

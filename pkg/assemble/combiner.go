@@ -39,7 +39,7 @@ func newCombiner(c *config) *combiner {
 func (c *combiner) combine() error {
 	log := logger.FromContext(*c.c.ctx)
 
-	if strings.EqualFold(c.finalSpec, "cyclonedx") {
+	if strings.EqualFold(c.finalSpec, string(sbom.SBOMSpecCDX)) {
 		log.Debugf("combining %d CycloneDX sboms", len(c.c.input.files))
 		ms := toCDXMergerSettings(c.c)
 
@@ -49,7 +49,7 @@ func (c *combiner) combine() error {
 		}
 	}
 
-	if strings.EqualFold(c.finalSpec, "spdx") {
+	if strings.EqualFold(c.finalSpec, string(sbom.SBOMSpecSPDX)) {
 		log.Debugf("combining %d SPDX sboms", len(c.c.input.files))
 
 		ms := toSpdxMergerSettings(c.c)
@@ -71,7 +71,7 @@ func (c *combiner) canCombine() error {
 		if err != nil {
 			return fmt.Errorf("unable to detect sbom format for %s: %v", doc, err)
 		}
-		specs = append(specs, spec)
+		specs = append(specs, string(spec))
 	}
 
 	// all input specs should be of the same type

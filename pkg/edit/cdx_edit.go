@@ -25,10 +25,36 @@ import (
 	"github.com/samber/lo"
 )
 
+var supportedCDXComponentTypes map[string]bool = map[string]bool{
+	"application":            true,
+	"framework":              true,
+	"library":                true,
+	"container":              true,
+	"platform":               true,
+	"operating-system":       true,
+	"device":                 true,
+	"device-driver":          true,
+	"firmware":               true,
+	"file":                   true,
+	"machine-learning-model": true,
+	"data":                   true,
+	"cryptographic-asset":    true,
+}
+
 type cdxEditDoc struct {
 	bom  *cydx.BOM
 	comp *cydx.Component
 	c    *configParams
+}
+
+var supportedCDXMetadataLifeCycle map[string]bool = map[string]bool{
+	"design":       true,
+	"pre-build":    true,
+	"build":        true,
+	"post-build":   true,
+	"operations":   true,
+	"discovery":    true,
+	"decommission": true,
 }
 
 func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
@@ -84,6 +110,9 @@ func (d *cdxEditDoc) update() {
 			if err == errNotSupported {
 				log.Infof(fmt.Sprintf("CDX error updating %s: %s", item.name, err))
 			}
+			if err == errInvalidInput {
+				log.Infof(fmt.Sprintf("%s: %s", item.name, err))
+			}
 		}
 	}
 }
@@ -109,8 +138,14 @@ func (d *cdxEditDoc) lifeCycles() error {
 	lc := []cydx.Lifecycle{}
 
 	for _, phase := range d.c.lifecycles {
+
+		newPhase := strings.ToLower(phase)
+		if !supportedCDXMetadataLifeCycle[newPhase] {
+			return errInvalidInput
+		}
+
 		lc = append(lc, cydx.Lifecycle{
-			Phase: cydx.LifecyclePhase(phase),
+			Phase: cydx.LifecyclePhase(newPhase),
 		})
 	}
 
@@ -136,16 +171,22 @@ func (d *cdxEditDoc) typ() error {
 		return errNoConfiguration
 	}
 
+	newType := strings.ToLower(d.c.typ)
+
+	if !supportedCDXComponentTypes[newType] {
+		return errInvalidInput
+	}
+
 	if d.c.search.subject == "document" {
 		return errNotSupported
 	}
 
 	if d.c.onMissing() {
 		if d.comp.Type == "" {
-			d.comp.Type = cydx.ComponentType(d.c.typ)
+			d.comp.Type = cydx.ComponentType(newType)
 		}
 	} else {
-		d.comp.Type = cydx.ComponentType(d.c.typ)
+		d.comp.Type = cydx.ComponentType(newType)
 	}
 
 	return nil
