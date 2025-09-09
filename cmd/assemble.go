@@ -28,20 +28,33 @@ import (
 // assembleCmd represents the assemble command
 var assembleCmd = &cobra.Command{
 	Use:   "assemble",
-	Short: "helps assembling sboms into a final sbom",
-	Long: `The assemble command will help assembling sboms into a final sbom.
+	Short: "Combine multiple SBOMs into a single SBOM",
+	Long: `The assemble command combines multiple SBOMs into a single SBOM using various merge strategies.
 
-Basic Example:
-    $ sbomasm assemble -n "mega-app" -v "1.0.0" -t "application" in-sbom1.json in-sbom2.json
-    $ sbomasm assemble -n "mega-app" -v "1.0.0" -t "application" -f -o "mega_app_flat.sbom.json" in-sbom1.json in-sbom2.json
+Merge Strategies:
+  • Hierarchical (default): Preserves SBOM structure, nests components under new root
+  • Flat: Flattens all components to same level under new root
+  • Assembly: Combines as assembly with shared dependencies
+  • Augment: Enriches primary SBOM without creating new root
 
-Advanced Example:
-	$ sbomasm generate > config.yaml (edit the config file to add your settings)
-	$ sbomasm assemble -c config.yaml -o final_sbom_cdx.json in-sbom1.json in-sbom2.json
+Examples:
 
-Augment Merge Example:
-	$ sbomasm assemble --augmentMerge --primary sbom-1.json sbom-2.json -o merged.json
-	$ sbomasm assemble --augmentMerge --merge-mode overwrite --match cpe --primary sbom-1.json sbom-2.json -o merged.json
+Hierarchical Merge (default):
+  $ sbomasm assemble -n "my-app" -v "1.0.0" -t "application" service1.json service2.json -o final.json
+
+Flat Merge:
+  $ sbomasm assemble -f -n "my-app" -v "1.0.0" -t "application" lib1.json lib2.json -o flat.json
+
+Assembly Merge:
+  $ sbomasm assemble -a -n "my-app" -v "1.0.0" -t "application" module1.json module2.json -o assembly.json
+
+Augment Merge (enrich existing SBOM):
+  $ sbomasm assemble --augmentMerge --primary base.json delta.json -o enriched.json
+  $ sbomasm assemble --augmentMerge --primary base.json --match cpe --merge-mode overwrite vendor-sbom.json
+
+Config File:
+  $ sbomasm generate > config.yaml
+  $ sbomasm assemble -c config.yaml sbom1.json sbom2.json sbom3.json -o final.json
 	`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -90,34 +103,38 @@ Augment Merge Example:
 
 func init() {
 	rootCmd.AddCommand(assembleCmd)
+	// Output flags
 	assembleCmd.Flags().StringP("output", "o", "", "path to assembled sbom, defaults to stdout")
 	assembleCmd.Flags().StringP("configPath", "c", "", "path to config file")
 
-	assembleCmd.Flags().StringP("name", "n", "", "name of the assembled sbom")
-	assembleCmd.Flags().StringP("version", "v", "", "version of the assembled sbom")
+	// Component metadata flags (for non-augment merges)
+	assembleCmd.Flags().StringP("name", "n", "", "name of the assembled sbom (required for non-augment merges)")
+	assembleCmd.Flags().StringP("version", "v", "", "version of the assembled sbom (required for non-augment merges)")
 	assembleCmd.Flags().StringP("type", "t", "", "product type of the assembled sbom (application, framework, library, container, device, firmware)")
 	assembleCmd.MarkFlagsRequiredTogether("name", "version", "type")
 
-	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
-	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
-	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge")
+	// Merge strategy flags
+	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge - combine all components at same level under new root")
+	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge - preserve original SBOM structures under new root")
+	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge - combine as assembly with shared dependencies")
 	
 	// Augment merge flags
 	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
-	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge")
+	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge (required for augment merge)")
 	assembleCmd.Flags().StringP("match", "", "purl", "matching strategy for augment merge: purl, cpe, name-version")
 	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
 	
 	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge", "augmentMerge")
 
-	assembleCmd.Flags().BoolP("outputSpecCdx", "g", true, "output in cdx format")
-	assembleCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in spdx format")
+	// Output format flags
+	assembleCmd.Flags().BoolP("outputSpecCdx", "g", true, "output in CycloneDX format")
+	assembleCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in SPDX format")
 	assembleCmd.MarkFlagsMutuallyExclusive("outputSpecCdx", "outputSpecSpdx")
 
-	assembleCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom")
+	assembleCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom (e.g., 1.5, 1.6 for CycloneDX)")
 
-	assembleCmd.Flags().BoolP("xml", "x", false, "output in xml format")
-	assembleCmd.Flags().BoolP("json", "j", true, "output in json format")
+	assembleCmd.Flags().BoolP("xml", "x", false, "output in XML format")
+	assembleCmd.Flags().BoolP("json", "j", true, "output in JSON format")
 	assembleCmd.MarkFlagsMutuallyExclusive("xml", "json")
 }
 
