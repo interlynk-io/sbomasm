@@ -105,6 +105,85 @@ Another important use case is the ability to fill in missing metadata for existi
 By the way, could you share when the next release that includes this feature is planned?
 Thank you very much for moving this feature forward!
 
+### Comment by (riteshnoronha)
+
+@ToyaHirotaka thanks for the feedback, here are the refinements. I'm thinking we can do this around Sept 25 or so. A detailed review of the requirements would be ideal, to speed up the process. 
+
+## Augment Merge
+
+**Purpose**: Merge all components and dependencies from `sbom-2` into `sbom-1`.
+
+* **Matching Strategy**
+
+  * Components/packages must be matched by one of:
+
+    * `purl` (**default**)
+    * `cpe`
+    * `name-version`
+
+* **Merge Modes**
+
+  * `if-missing-or-empty` (**default**) – only fill missing/empty fields.
+  * `overwrite` – replace existing fields with incoming values.
+
+* **Format Restriction**
+
+  * Augment merge is only supported for matching primary formats:
+
+    * SPDX → SPDX
+    * CDX → CDX
+
+* **Fields to Merge**
+
+  * **SPDX**:
+
+    * name, version, description, supplier, originator, download-location, package-verification-code, package-checksum, license (concluded/declared/otherLicensingInfo), copyright, primaryPackagePurpose, cpe, purl, relationships
+  * **CycloneDX (CDX)**:
+
+    * name, version, description, supplier, manufacturer, author/s, publisher, group, scope, hashes, licenses, copyright, cpe, purl, dependencies
+
+* **Examples**
+
+  ```bash
+  # Default augment merge (purl, if-missing-or-empty)
+  sbomasm assemble --augmentMerge --primary sbom-1.json sbom-2.json -o merged-sbom.json
+
+  # Augment merge with overwrite mode, match by cpe
+  sbomasm assemble --augmentMerge --merge-mode overwrite --match cpe --primary sbom-1.json sbom-2.json -o merged-sbom.json
+
+  # Augment merge with overwrite mode, match by name-version
+  sbomasm assemble --augmentMerge --merge-mode overwrite --match name-version --primary sbom-1.json sbom-2.json -o merged-sbom.json
+  ```
+
+## Attach Merge
+
+**Purpose**: Merge a component SBOM (`sbom-2`) into a specific component of the primary SBOM (`sbom-1`).
+
+* **Requirements**
+
+  * Must provide a component identifier (`--id`).
+  * Matching is based on `purl` (default).
+
+* **Example**
+
+  ```bash
+  sbomasm assemble --attachMerge --primary sbom-1.json --match purl \
+    --id "pkg:maven/org.apache.commons/commons-lang3@3.12.0" common-lang3.json -o merged-sbom.json
+  ```
+
+
+### Comment by (ToyaHirotaka)
+
+Thanks @riteshnoronha for the detailed explanation and roadmap, and for so quickly taking my suggestions on board. I really appreciate the effort — it already looks almost perfect, and you’re moving impressively fast. CycloneDX support is also much appreciated — thank you for considering it.
+
+Can the new augment feature handle multiple components in a single run? If not, what would be the recommended way to handle augmentation when missing or incorrect information affects multiple components within the same SBOM—should we prepare separate delta SBOMs and run augmentation multiple times, or do you plan to support multiple identifiers/config entries in the future?
+
+Looking forward to the next release, and thanks again for all your great work!
+
+### Comment by (riteshnoronha)
+
+@ToyaHirotaka the new augment command, can update multiple components at the same time. If you look at the command, the augment accepts an SBOM, and it will add all the components to the primary. 
+
 ## Your Tasks
 
 You are an experienced software developer tasked with diagnosing issues.
