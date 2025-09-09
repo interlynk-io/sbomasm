@@ -91,12 +91,16 @@ type input struct {
 }
 
 type assemble struct {
-	IncludeDependencyGraph     bool `yaml:"include_dependency_graph"`
-	IncludeComponents          bool `yaml:"include_components"`
+	IncludeDependencyGraph     bool   `yaml:"include_dependency_graph"`
+	IncludeComponents          bool   `yaml:"include_components"`
 	includeDuplicateComponents bool
-	FlatMerge                  bool `yaml:"flat_merge"`
-	HierarchicalMerge          bool `yaml:"hierarchical_merge"`
-	AssemblyMerge              bool `yaml:"assembly_merge"`
+	FlatMerge                  bool   `yaml:"flat_merge"`
+	HierarchicalMerge          bool   `yaml:"hierarchical_merge"`
+	AssemblyMerge              bool   `yaml:"assembly_merge"`
+	AugmentMerge               bool   `yaml:"augment_merge"`
+	PrimaryFile                string `yaml:"primary_file"`
+	MatchStrategy              string `yaml:"match_strategy"`  // purl, cpe, name-version
+	MergeMode                  string `yaml:"merge_mode"`      // if-missing-or-empty, overwrite
 }
 
 type config struct {
@@ -206,6 +210,7 @@ func (c *config) readAndMerge(p *Params) error {
 		c.Assemble.FlatMerge = p.FlatMerge
 		c.Assemble.HierarchicalMerge = p.HierMerge
 		c.Assemble.AssemblyMerge = p.AssemblyMerge
+		c.Assemble.AugmentMerge = p.AugmentMerge
 	}
 
 	c.input.files = p.Input
@@ -215,6 +220,13 @@ func (c *config) readAndMerge(p *Params) error {
 	c.Output.Url = p.Url
 	c.Output.ApiKey = p.ApiKey
 	c.ctx = p.Ctx
+	
+	// Set augment merge specific fields
+	if p.AugmentMerge {
+		c.Assemble.PrimaryFile = p.PrimaryFile
+		c.Assemble.MatchStrategy = p.MatchStrategy
+		c.Assemble.MergeMode = p.MergeMode
+	}
 	if c.ctx == nil {
 		return errors.New("config context is not initialized")
 	}
@@ -274,15 +286,57 @@ func (c *config) validate() error {
 		return strings.Trim(v, " ")
 	}
 
-	if !validValue(c.App.Name) {
-		return fmt.Errorf("app name is not set")
-	}
-	c.App.Name = sanitize(c.App.Name)
+	// Skip app name/version validation for augment merge
+	if !c.Assemble.AugmentMerge {
+		if !validValue(c.App.Name) {
+			return fmt.Errorf("app name is not set")
+		}
+		c.App.Name = sanitize(c.App.Name)
 
-	if !validValue(c.App.Version) {
-		return fmt.Errorf("app version is not set")
+		if !validValue(c.App.Version) {
+			return fmt.Errorf("app version is not set")
+		}
+		c.App.Version = sanitize(c.App.Version)
+	} else {
+		// For augment merge, validate specific requirements
+		if c.Assemble.PrimaryFile == "" {
+			return fmt.Errorf("primary SBOM file is required for augment merge")
+		}
+		
+		// Validate match strategy
+		validStrategies := []string{"purl", "cpe", "name-version"}
+		if c.Assemble.MatchStrategy == "" {
+			c.Assemble.MatchStrategy = "purl" // Default
+		} else {
+			found := false
+			for _, s := range validStrategies {
+				if c.Assemble.MatchStrategy == s {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid match strategy '%s', must be one of: purl, cpe, name-version", c.Assemble.MatchStrategy)
+			}
+		}
+		
+		// Validate merge mode
+		validModes := []string{"if-missing-or-empty", "overwrite"}
+		if c.Assemble.MergeMode == "" {
+			c.Assemble.MergeMode = "if-missing-or-empty" // Default
+		} else {
+			found := false
+			for _, m := range validModes {
+				if c.Assemble.MergeMode == m {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid merge mode '%s', must be one of: if-missing-or-empty, overwrite", c.Assemble.MergeMode)
+			}
+		}
 	}
-	c.App.Version = sanitize(c.App.Version)
 
 	c.App.PrimaryPurpose = sanitize(c.App.PrimaryPurpose)
 	c.App.Description = sanitize(c.App.Description)
@@ -333,7 +387,12 @@ func (c *config) validate() error {
 		return fmt.Errorf("input files are not set")
 	}
 
-	if len(c.input.files) <= 1 {
+	// For augment merge, we need at least one secondary SBOM in addition to primary
+	if c.Assemble.AugmentMerge {
+		if len(c.input.files) < 1 {
+			return fmt.Errorf("augment merge requires at least one secondary sbom file")
+		}
+	} else if len(c.input.files) <= 1 {
 		return fmt.Errorf("assembly requires more than one sbom file")
 	}
 

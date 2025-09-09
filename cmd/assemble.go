@@ -38,11 +38,29 @@ Basic Example:
 Advanced Example:
 	$ sbomasm generate > config.yaml (edit the config file to add your settings)
 	$ sbomasm assemble -c config.yaml -o final_sbom_cdx.json in-sbom1.json in-sbom2.json
+
+Augment Merge Example:
+	$ sbomasm assemble --augmentMerge --primary sbom-1.json sbom-2.json -o merged.json
+	$ sbomasm assemble --augmentMerge --merge-mode overwrite --match cpe --primary sbom-1.json sbom-2.json -o merged.json
 	`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
+		augmentMerge, _ := cmd.Flags().GetBool("augmentMerge")
+		
+		// For augment merge, args are secondary SBOMs (primary is specified via flag)
+		// For other modes, args are all input SBOMs
+		if !augmentMerge && len(args) == 0 {
 			return fmt.Errorf("please provide at least one sbom file to assemble")
+		}
+		
+		if augmentMerge {
+			primaryFile, _ := cmd.Flags().GetString("primary")
+			if primaryFile == "" {
+				return fmt.Errorf("primary SBOM file is required for augment merge (use --primary flag)")
+			}
+			if len(args) == 0 {
+				return fmt.Errorf("please provide at least one secondary sbom file for augment merge")
+			}
 		}
 
 		debug, _ := cmd.Flags().GetBool("debug")
@@ -83,7 +101,14 @@ func init() {
 	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge")
 	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge")
 	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge")
-	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge")
+	
+	// Augment merge flags
+	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
+	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge")
+	assembleCmd.Flags().StringP("match", "", "purl", "matching strategy for augment merge: purl, cpe, name-version")
+	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
+	
+	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge", "augmentMerge")
 
 	assembleCmd.Flags().BoolP("outputSpecCdx", "g", true, "output in cdx format")
 	assembleCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in spdx format")
@@ -141,10 +166,21 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 	flatMerge, _ := cmd.Flags().GetBool("flatMerge")
 	hierMerge, _ := cmd.Flags().GetBool("hierMerge")
 	assemblyMerge, _ := cmd.Flags().GetBool("assemblyMerge")
+	augmentMerge, _ := cmd.Flags().GetBool("augmentMerge")
 
 	aParams.FlatMerge = flatMerge
 	aParams.HierMerge = hierMerge
 	aParams.AssemblyMerge = assemblyMerge
+	aParams.AugmentMerge = augmentMerge
+	
+	// Get augment merge specific flags
+	primaryFile, _ := cmd.Flags().GetString("primary")
+	matchStrategy, _ := cmd.Flags().GetString("match")
+	mergeMode, _ := cmd.Flags().GetString("merge-mode")
+	
+	aParams.PrimaryFile = primaryFile
+	aParams.MatchStrategy = matchStrategy
+	aParams.MergeMode = mergeMode
 
 	xml, _ := cmd.Flags().GetBool("xml")
 	json, _ := cmd.Flags().GetBool("json")
