@@ -43,14 +43,14 @@ authenticity and integrity to the SBOM.
 
 Examples:
   # Sign an SBOM with a specific key
-  sbomasm sign --key-id my-key-123 --api-key $API_KEY sbom.json
+  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY sbom.json
 
   # Sign with environment variable for API key
   export SECURE_SBOM_API_KEY=your-api-key
-  sbomasm sign --key-id my-key-123 --output signed-sbom.json sbom.json
+  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output signed-sbom.json sbom.json
 
   # Sign with custom API endpoint
-  sbomasm sign --key-id my-key-123 --base-url https://custom.api.com sbom.json`,
+  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --base-url https://custom.api.com sbom.json`,
 	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
 	PreRunE:      validateSignFlags,

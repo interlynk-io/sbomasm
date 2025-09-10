@@ -42,17 +42,17 @@ the SBOM hasn't been tampered with since it was signed.
 
 Examples:
   # Verify a signed SBOM
-  sbomasm verify --key-id my-key-123 --api-key $API_KEY signed-sbom.json
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY signed-sbom.json
 
   # Verify with environment variable for API key
   export SECURE_SBOM_API_KEY=your-api-key
-  sbomasm verify --key-id my-key-123 signed-sbom.json
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e signed-sbom.json
 
   # Verify with custom API endpoint
-  sbomasm verify --key-id my-key-123 --base-url https://custom.api.com signed-sbom.json
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --base-url https://custom.api.com signed-sbom.json
 
   # Verify with JSON output for automation
-  sbomasm verify --key-id my-key-123 --output json signed-sbom.json`,
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output json signed-sbom.json`,
 	Args:         cobra.ExactArgs(1),
 	SilenceUsage: true,
 	PreRunE:      validateVerifyFlags,
