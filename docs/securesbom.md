@@ -364,7 +364,7 @@ sbomasm sign --timeout 60s --retry 5 --key-id my-key sbom.json
 
 * **SPDX Support**: Detached signature format for SPDX SBOMs
 * **Signature Metadata**: Additional signature attributes and custom claims
-* **Spport for Offline Verification**: Veirfy a signed sbom with only the public key
+* **Spport for Air Gapped Verification**: Veirfy a signed sbom offline with only the public key
 * **CycloneDX Multi-Signature Support**: Multiple signatures on single SBOM
 * **Signature Chain Support**: Hierarchical signature chains for supply chain trust
 * **Hardware Security Module (HSM)** integration
