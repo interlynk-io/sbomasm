@@ -98,10 +98,10 @@ SBOMs signed with the corresponding private key.
 
 Examples:
   # Get public key
-  sbomasm signingkey public my-key-123 --api-key $API_KEY
+  sbomasm signingkey public a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY
 
   # Save public key to file
-  sbomasm signingkey public my-key-123 --output public.pem`,
+  sbomasm signingkey public a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output public.pem`,
 	Args: cobra.ExactArgs(1),
 	RunE: runKeyPublicCommand,
 }
