@@ -99,7 +99,6 @@ type assemble struct {
 	AssemblyMerge              bool   `yaml:"assembly_merge"`
 	AugmentMerge               bool   `yaml:"augment_merge"`
 	PrimaryFile                string `yaml:"primary_file"`
-	MatchStrategy              string `yaml:"match_strategy"`  // purl, cpe, name-version
 	MergeMode                  string `yaml:"merge_mode"`      // if-missing-or-empty, overwrite
 }
 
@@ -224,7 +223,6 @@ func (c *config) readAndMerge(p *Params) error {
 	// Set augment merge specific fields
 	if p.AugmentMerge {
 		c.Assemble.PrimaryFile = p.PrimaryFile
-		c.Assemble.MatchStrategy = p.MatchStrategy
 		c.Assemble.MergeMode = p.MergeMode
 	}
 	if c.ctx == nil {
@@ -303,22 +301,6 @@ func (c *config) validate() error {
 			return fmt.Errorf("primary SBOM file is required for augment merge")
 		}
 		
-		// Validate match strategy
-		validStrategies := []string{"purl", "cpe", "name-version"}
-		if c.Assemble.MatchStrategy == "" {
-			c.Assemble.MatchStrategy = "purl" // Default
-		} else {
-			found := false
-			for _, s := range validStrategies {
-				if c.Assemble.MatchStrategy == s {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return fmt.Errorf("invalid match strategy '%s', must be one of: purl, cpe, name-version", c.Assemble.MatchStrategy)
-			}
-		}
 		
 		// Validate merge mode
 		validModes := []string{"if-missing-or-empty", "overwrite"}

@@ -94,7 +94,6 @@ func toCDXMergerSettings(c *config) *cdx.MergeSettings {
 	ms.Assemble.AssemblyMerge = c.Assemble.AssemblyMerge
 	ms.Assemble.AugmentMerge = c.Assemble.AugmentMerge
 	ms.Assemble.PrimaryFile = c.Assemble.PrimaryFile
-	ms.Assemble.MatchStrategy = c.Assemble.MatchStrategy
 	ms.Assemble.MergeMode = c.Assemble.MergeMode
 	ms.Assemble.IncludeComponents = c.Assemble.IncludeComponents
 	ms.Assemble.IncludeDuplicateComponents = c.Assemble.includeDuplicateComponents
@@ -157,7 +156,6 @@ func toSpdxMergerSettings(c *config) *spdx.MergeSettings {
 	ms.Assemble.AssemblyMerge = c.Assemble.AssemblyMerge
 	ms.Assemble.AugmentMerge = c.Assemble.AugmentMerge
 	ms.Assemble.PrimaryFile = c.Assemble.PrimaryFile
-	ms.Assemble.MatchStrategy = c.Assemble.MatchStrategy
 	ms.Assemble.MergeMode = c.Assemble.MergeMode
 	ms.Assemble.IncludeComponents = c.Assemble.IncludeComponents
 	ms.Assemble.IncludeDuplicateComponents = c.Assemble.includeDuplicateComponents

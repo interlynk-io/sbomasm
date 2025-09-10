@@ -50,7 +50,7 @@ Assembly Merge:
 
 Augment Merge (enrich existing SBOM):
   $ sbomasm assemble --augmentMerge --primary base.json delta.json -o enriched.json
-  $ sbomasm assemble --augmentMerge --primary base.json --match cpe --merge-mode overwrite vendor-sbom.json
+  $ sbomasm assemble --augmentMerge --primary base.json --merge-mode overwrite vendor-sbom.json
 
 Config File:
   $ sbomasm generate > config.yaml
@@ -121,7 +121,6 @@ func init() {
 	// Augment merge flags
 	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
 	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge (required for augment merge)")
-	assembleCmd.Flags().StringP("match", "", "purl", "matching strategy for augment merge: purl, cpe, name-version")
 	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
 	
 	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge", "augmentMerge")
@@ -192,11 +191,9 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 	
 	// Get augment merge specific flags
 	primaryFile, _ := cmd.Flags().GetString("primary")
-	matchStrategy, _ := cmd.Flags().GetString("match")
 	mergeMode, _ := cmd.Flags().GetString("merge-mode")
 	
 	aParams.PrimaryFile = primaryFile
-	aParams.MatchStrategy = matchStrategy
 	aParams.MergeMode = mergeMode
 
 	xml, _ := cmd.Flags().GetBool("xml")

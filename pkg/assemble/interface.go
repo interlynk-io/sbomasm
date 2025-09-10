@@ -44,9 +44,8 @@ type Params struct {
 	AugmentMerge  bool
 
 	// Augment merge specific parameters
-	PrimaryFile   string
-	MatchStrategy string // purl, cpe, name-version
-	MergeMode     string // if-missing-or-empty, overwrite
+	PrimaryFile string
+	MergeMode   string // if-missing-or-empty, overwrite
 
 	Xml  bool
 	Json bool

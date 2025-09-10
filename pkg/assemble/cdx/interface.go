@@ -122,7 +122,6 @@ type assemble struct {
 	AssemblyMerge              bool
 	AugmentMerge               bool
 	PrimaryFile                string
-	MatchStrategy              string // purl, cpe, name-version
 	MergeMode                  string // if-missing-or-empty, overwrite
 }
 

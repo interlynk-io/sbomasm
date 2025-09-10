@@ -80,4 +80,5 @@ type MatcherConfig struct {
 	StrictVersion bool
 	FuzzyMatch    bool
 	TypeMatch     bool
+	MinConfidence int
 }

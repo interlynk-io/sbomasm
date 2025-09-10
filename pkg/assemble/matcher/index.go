@@ -153,6 +153,56 @@ func (idx *ComponentIndex) FindBestMatch(component Component, matcher ComponentM
 // getCandidateIndices returns indices of components that might match
 func (idx *ComponentIndex) getCandidateIndices(component Component, strategy string) []int {
 	switch strategy {
+	case "composite":
+		// For composite matching, gather candidates from all available strategies
+		candidateSet := make(map[int]bool)
+		
+		// Try PURL first
+		if purl := component.GetPurl(); purl != "" {
+			normalizedPurl := strings.ToLower(strings.TrimSpace(purl))
+			withoutVersion := removeVersionFromPurl(normalizedPurl)
+			for _, i := range idx.purlIndex[normalizedPurl] {
+				candidateSet[i] = true
+			}
+			for p, idxs := range idx.purlIndex {
+				if removeVersionFromPurl(p) == withoutVersion {
+					for _, i := range idxs {
+						candidateSet[i] = true
+					}
+				}
+			}
+		}
+		
+		// Try CPE second
+		if cpe := component.GetCPE(); cpe != "" {
+			normalizedCPE := strings.ToLower(strings.TrimSpace(cpe))
+			for _, i := range idx.cpeIndex[normalizedCPE] {
+				candidateSet[i] = true
+			}
+		}
+		
+		// Try name-version third
+		if name := component.GetName(); name != "" {
+			normalizedName := strings.ToLower(strings.TrimSpace(name))
+			for _, i := range idx.nameIndex[normalizedName] {
+				candidateSet[i] = true
+			}
+		}
+		
+		// Convert set to slice
+		indices := make([]int, 0, len(candidateSet))
+		for i := range candidateSet {
+			indices = append(indices, i)
+		}
+		
+		// If we have specific candidates, return them
+		if len(indices) > 0 {
+			return indices
+		}
+		
+		// Otherwise fall back to checking all components
+		fallthrough
+		
 	case "purl":
 		if purl := component.GetPurl(); purl != "" {
 			normalizedPurl := strings.ToLower(strings.TrimSpace(purl))

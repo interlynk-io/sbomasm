@@ -29,10 +29,11 @@ type DefaultMatcherFactory struct {
 func NewDefaultMatcherFactory(config *MatcherConfig) MatcherFactory {
 	if config == nil {
 		config = &MatcherConfig{
-			Strategy:      "purl",
+			Strategy:      "composite",
 			StrictVersion: false,
 			FuzzyMatch:    false,
 			TypeMatch:     true,
+			MinConfidence: 50,
 		}
 	}
 	return &DefaultMatcherFactory{
@@ -43,6 +44,8 @@ func NewDefaultMatcherFactory(config *MatcherConfig) MatcherFactory {
 // GetMatcher returns a ComponentMatcher based on the strategy
 func (f *DefaultMatcherFactory) GetMatcher(strategy string) (ComponentMatcher, error) {
 	switch strategy {
+	case "composite", "":
+		return NewCompositeComponentMatcher(f.config), nil
 	case "purl":
 		return NewPurlMatcher(!f.config.StrictVersion), nil
 	case "cpe":
@@ -57,5 +60,14 @@ func (f *DefaultMatcherFactory) GetMatcher(strategy string) (ComponentMatcher, e
 // GetMatcherWithConfig returns a ComponentMatcher with specific configuration
 func GetMatcherWithConfig(config *MatcherConfig) (ComponentMatcher, error) {
 	factory := NewDefaultMatcherFactory(config)
-	return factory.GetMatcher(config.Strategy)
+	strategy := config.Strategy
+	if strategy == "" {
+		strategy = "composite"
+	}
+	return factory.GetMatcher(strategy)
+}
+
+// GetDefaultMatcher returns the default composite matcher
+func GetDefaultMatcher() ComponentMatcher {
+	return NewCompositeComponentMatcher(nil)
 }

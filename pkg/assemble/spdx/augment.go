@@ -120,16 +120,17 @@ func (a *augmentMerge) loadSecondaryBoms() error {
 	return nil
 }
 
-// setupMatcher creates the appropriate component matcher
+// setupMatcher creates the composite component matcher
 func (a *augmentMerge) setupMatcher() error {
 	factory := matcher.NewDefaultMatcherFactory(&matcher.MatcherConfig{
-		Strategy:      a.settings.Assemble.MatchStrategy,
+		Strategy:      "composite",
 		StrictVersion: false, // For augment, we typically want to match regardless of version
 		FuzzyMatch:    false,
 		TypeMatch:     true,
+		MinConfidence: 50,
 	})
 	
-	m, err := factory.GetMatcher(a.settings.Assemble.MatchStrategy)
+	m, err := factory.GetMatcher("composite")
 	if err != nil {
 		return err
 	}
