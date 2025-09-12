@@ -514,18 +514,30 @@ func (a *augmentMerge) updateMetadata() {
 	// Add tool information
 	if a.primary.Metadata.Tools == nil {
 		a.primary.Metadata.Tools = &cydx.ToolsChoice{}
-		a.primary.Metadata.Tools.Components = &[]cydx.Component{}
 	}
 	
-	// Add sbomasm as a tool
-	sbomasmTool := cydx.Component{
-		Type:    cydx.ComponentTypeApplication,
-		Name:    "sbomasm",
-		Version: version.GetVersionInfo().GitVersion,
-		Author:  "Interlynk.io",
+	// Check if we're using the old Tools array format or the new Components/Services format
+	if a.primary.Metadata.Tools.Tools != nil {
+		// Using old format - add to Tools array
+		sbomasmTool := cydx.Tool{
+			Vendor:  "Interlynk.io",
+			Name:    "sbomasm",
+			Version: version.GetVersionInfo().GitVersion,
+		}
+		*a.primary.Metadata.Tools.Tools = append(*a.primary.Metadata.Tools.Tools, sbomasmTool)
+	} else {
+		// Using new format or no tools yet - use Components
+		if a.primary.Metadata.Tools.Components == nil {
+			a.primary.Metadata.Tools.Components = &[]cydx.Component{}
+		}
+		sbomasmTool := cydx.Component{
+			Type:    cydx.ComponentTypeApplication,
+			Name:    "sbomasm",
+			Version: version.GetVersionInfo().GitVersion,
+			Author:  "Interlynk.io",
+		}
+		*a.primary.Metadata.Tools.Components = append(*a.primary.Metadata.Tools.Components, sbomasmTool)
 	}
-	
-	*a.primary.Metadata.Tools.Components = append(*a.primary.Metadata.Tools.Components, sbomasmTool)
 	
 	log.Debug("Updated metadata with timestamp and tool information")
 }
