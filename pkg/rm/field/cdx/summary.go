@@ -170,7 +170,7 @@ func RenderSummarySupplierFromComponent(entries []interface{}) {
 		fmt.Printf("  - Component: %s@%s, Supplier: %s\n",
 			entry.Component.Name,
 			entry.Component.Version,
-			entry.Value)
+			entry.Value.Name)
 
 	}
 }

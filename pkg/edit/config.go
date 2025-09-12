@@ -217,12 +217,13 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 		})
 	}
 
-	pkgPURL, err := packageurl.FromString(eParams.Purl)
-	if err != nil {
-		return nil, fmt.Errorf("provided PURL invalid")
+	if eParams.Purl != "" {
+		pkgPURL, err := packageurl.FromString(eParams.Purl)
+		if err != nil {
+			return nil, fmt.Errorf("provided PURL invalid")
+		}
+		p.purl = pkgPURL.String()
 	}
-
-	p.purl = pkgPURL.String()
 	p.cpe = eParams.Cpe
 
 	for _, license := range eParams.Licenses {

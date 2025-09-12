@@ -1,0 +1,6 @@
+{
+    "go.goroot": "/home/riteshno/.local/share/mise/installs/go/1.21.5",
+    "go.alternateTools": {
+        "go": "/home/riteshno/.local/share/mise/shims/go"
+    }
+}

@@ -23,10 +23,12 @@ Example:
   $(basename "$0") 219
   $(basename "$0") https://github.com/interlynk-io/sbomasm/issues/219
 
-This prints a detailed prompt (to stdout) for an assistant to:
- - Deep-dive on the issue
- - Explain the problem
- - Produce a comprehensive plan (NO CODE)
+This script:
+ - Prints a detailed prompt (to stdout) for an assistant to analyze the issue
+ - Saves the prompt to .agents/data/<issue-id>/prompt.txt
+ - Instructs the assistant to save the plan to .agents/data/<issue-id>/plan.md
+ - Deep-dives on the issue to explain the problem
+ - Produces a comprehensive plan (NO CODE)
 USAGE
   exit 1
 }
@@ -83,17 +85,31 @@ COMMENTS=$(jq -r '
 [[ -z "$COMMENTS" ]] && COMMENTS="(no comments)"
 ISSUE_URL="https://github.com/${REPO}/issues/${NUMBER}"
 
-# Print prompt
-printf '%s\n\n' "Deep-dive on this GitHub issue. Find the problem and generate a plan.
+# Create data directory for this issue
+DATA_DIR=".agents/data/${NUMBER}"
+mkdir -p "$DATA_DIR"
+
+# Build the prompt content
+PROMPT_CONTENT="Deep-dive on this GitHub issue. Find the problem and generate a plan.
 Do not write code. Explain the problem clearly and propose a comprehensive plan
-to solve it."
+to solve it.
 
-printf '# %s (%s)\n\n' "$TITLE" "$NUMBER"
-printf '## Description\n%s\n\n' "$BODY"
-printf '## Comments\n%s\n\n' "$COMMENTS"
+# $TITLE ($NUMBER)
 
-cat <<'TASKS'
+## Description
+$BODY
 
+## Comments
+$COMMENTS"
+
+# Write prompt to file
+echo "$PROMPT_CONTENT" > "${DATA_DIR}/prompt.txt"
+
+# Print prompt to stdout
+echo "$PROMPT_CONTENT"
+
+# Write TASKS to both stdout and prompt file
+TASKS_CONTENT="
 ## Your Tasks
 
 You are an experienced software developer tasked with diagnosing issues.
@@ -114,9 +130,18 @@ You are an experienced software developer tasked with diagnosing issues.
 5. Think deeply about all aspects of the task. Consider edge cases, potential
    challenges, and best practices for addressing the issue. Review the plan
    with the oracle and adjust it based on its feedback.
+6. **IMPORTANT**: Write your final plan to the file: ${DATA_DIR}/plan.md
 
 **ONLY CREATE A PLAN. DO NOT WRITE ANY CODE.** Your task is to create
-a thorough, comprehensive strategy for understanding and resolving the issue.
-TASKS
+a thorough, comprehensive strategy for understanding and resolving the issue."
 
-printf '\nSource: %s\n' "$ISSUE_URL"
+# Append TASKS to prompt file and print to stdout
+echo "$TASKS_CONTENT" >> "${DATA_DIR}/prompt.txt"
+echo "$TASKS_CONTENT"
+
+SOURCE_LINE="
+Source: $ISSUE_URL"
+
+# Append source to prompt file and print to stdout
+echo "$SOURCE_LINE" >> "${DATA_DIR}/prompt.txt"
+echo "$SOURCE_LINE"
