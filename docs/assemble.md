@@ -106,6 +106,102 @@ Enriches an existing primary SBOM with additional information from secondary SBO
   - `if-missing-or-empty` (default): Only fill empty fields in primary components
   - `overwrite`: Replace primary component fields with secondary values
 
+#### Fields Merged by Specification
+
+##### SPDX Package Fields
+
+When components match, the following SPDX package fields are merged:
+
+**Basic Information Fields:**
+- `PackageDescription`: Package description text
+- `PackageDownloadLocation`: Where the package can be downloaded
+- `PackageHomePage`: Package home page URL
+- `PackageSourceInfo`: Information about package source
+- `PackageCopyrightText`: Copyright text
+- `PackageLicenseConcluded`: License concluded by the reviewer
+- `PackageLicenseDeclared`: License declared by the package author
+- `PackageLicenseComments`: Additional license comments
+- `PrimaryPackagePurpose`: Primary purpose of the package
+
+**Entity Fields:**
+- `PackageSupplier`: Supplier information (Person/Organization)
+- `PackageOriginator`: Originator information (Person/Organization)
+
+**Technical Fields:**
+- `PackageChecksums`: List of checksums (SHA1, SHA256, etc.)
+- `PackageExternalReferences`: External references including:
+  - Package URLs (purl)
+  - CPE identifiers
+  - Security references
+  - Other external identifiers
+
+**Merge Behavior:**
+- `if-missing-or-empty` mode: Only fills fields that are empty or missing in the primary
+- `overwrite` mode: Replaces primary fields with secondary values if secondary has data
+- External references are merged to avoid duplicates when in `if-missing-or-empty` mode
+
+##### CycloneDX Component Fields
+
+When components match, the following CycloneDX component fields are merged:
+
+**Basic Information Fields:**
+- `Description`: Component description
+- `Author`: Component author
+- `Publisher`: Component publisher  
+- `Group`: Component group/namespace
+- `Scope`: Component scope (required, optional, excluded)
+- `Copyright`: Copyright information
+
+**Identifiers:**
+- `PackageURL`: Package URL (purl)
+- `CPE`: CPE identifier
+- `SWID`: Software identification tag
+
+**Entity Fields:**
+- `Supplier`: Supplier organization details
+
+**Lists (merged or replaced based on mode):**
+- `Licenses`: License information list
+- `Hashes`: Cryptographic hashes
+- `ExternalReferences`: External reference links
+- `Properties`: Custom properties
+
+**Merge Behavior:**
+- `if-missing-or-empty` mode: Only fills empty fields or empty lists
+- `overwrite` mode: Replaces all fields with secondary values if present
+- Lists are replaced entirely, not merged item-by-item
+
+#### Fields NOT Merged
+
+The following fields are **never** modified in the primary SBOM:
+
+**SPDX:**
+- `PackageSPDXIdentifier`: Package SPDX ID
+- `PackageName`: Package name  
+- `PackageVersion`: Package version
+- `FilesAnalyzed`: Files analyzed flag
+- `PackageVerificationCode`: Verification code
+
+**CycloneDX:**
+- `BOMRef`: Component BOM reference
+- `Name`: Component name
+- `Version`: Component version
+- `Type`: Component type
+
+#### Relationship and Dependency Handling
+
+**SPDX Relationships:**
+- Only relationships involving added or merged packages are included
+- Both sides of a relationship must exist in the primary SBOM
+- Invalid relationships (referencing non-existent packages) are filtered out
+- Files are NOT merged (removed from secondary SBOMs)
+
+**CycloneDX Dependencies:**
+- Only dependencies involving added or merged components are included
+- All dependency references are validated against the primary SBOM
+- Invalid dependency references are automatically filtered out
+- Services and their dependencies follow the same rules as components
+
 #### Examples
 
 ```bash
@@ -136,12 +232,63 @@ sbomasm assemble --augmentMerge \
 3. **Progressive Enhancement**: Build comprehensive SBOMs by incrementally adding data from different sources
 4. **Supply Chain Updates**: Update component information as new data becomes available
 
+#### Merge Behavior Example
+
+Given a primary SBOM with:
+```json
+{
+  "name": "log4j",
+  "version": "2.17.1",
+  "description": "",
+  "licenses": []
+}
+```
+
+And a secondary SBOM with:
+```json
+{
+  "name": "log4j",
+  "version": "2.17.1",
+  "description": "Apache Log4j 2 logging library",
+  "licenses": ["Apache-2.0"],
+  "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1"
+}
+```
+
+**Result with `if-missing-or-empty` mode:**
+```json
+{
+  "name": "log4j",
+  "version": "2.17.1",
+  "description": "Apache Log4j 2 logging library",
+  "licenses": ["Apache-2.0"],
+  "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1"
+}
+```
+
+**Result with `overwrite` mode:**
+Same as above (since primary had empty fields)
+
+If the primary had existing data:
+```json
+{
+  "name": "log4j",
+  "version": "2.17.1",
+  "description": "Internal logging lib",
+  "licenses": ["MIT"]
+}
+```
+
+- `if-missing-or-empty` mode would keep the existing description and licenses
+- `overwrite` mode would replace them with the secondary values
+
 #### Important Notes
 
 - The augment merge validates all component references to ensure consistency
 - Only relationships/dependencies involving processed components are included
 - Invalid references are automatically filtered out to maintain SBOM integrity
 - The primary SBOM's metadata is preserved and updated with tool information
+- Component matching is based on name, version, and other identifying attributes
 
 ## Configuration Files
 
