@@ -16,6 +16,9 @@ go install github.com/interlynk-io/sbomasm@latest
 # Assemble multiple SBOMs into one
 sbomasm assemble -n "my-app" -v "1.0.0" -o final.json service1.json service2.json service3.json
 
+# Augment existing SBOM with additional data
+sbomasm assemble --augmentMerge --primary base.json scan-results.json -o enhanced.json
+
 # Edit SBOM metadata for compliance
 sbomasm edit --subject document --supplier "ACME Corp (acme.com)" --timestamp sbom.json
 
@@ -144,6 +147,25 @@ sbomasm assemble \
   --type "container" \
   -o final-container.spdx.json \
   alpine-base.spdx.json app-deps.spdx.json
+```
+
+#### Augment Merge (Enrich Existing SBOM)
+
+Enhance an existing primary SBOM with additional component information from secondary SBOMs without creating a new root component:
+
+```bash
+# Enrich base SBOM with additional scan results
+sbomasm assemble --augmentMerge \
+  --primary base-sbom.json \
+  vulnerability-scan.json license-scan.json \
+  -o enriched-sbom.json
+
+# Overwrite existing component data with vendor-provided information
+sbomasm assemble --augmentMerge \
+  --primary internal-sbom.json \
+  --merge-mode overwrite \
+  vendor-sbom.json \
+  -o updated-sbom.json
 ```
 
 ### Editing SBOMs

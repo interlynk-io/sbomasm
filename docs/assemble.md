@@ -37,6 +37,7 @@ sbomasm assemble -n <name> -v <version> -t <type> -o <output> <input-files...>
 - `--flat-merge`: Create a flat list of all components (removes duplicates in CycloneDX)
 - `--hierarchical-merge`: Maintain component relationships (default)
 - `--assembly-merge`: Similar to hierarchical but treats each SBOM independently
+- `--augmentMerge`: Enrich a primary SBOM with additional data from secondary SBOMs
 
 ### Debug Options
 
@@ -85,6 +86,63 @@ sbomasm assemble --assembly-merge \
   product1.json product2.json
 ```
 
+### Augment Merge
+
+Enriches an existing primary SBOM with additional information from secondary SBOMs:
+- Does not create a new root component
+- Merges matching components based on name, version, and other attributes
+- Adds new components that don't exist in the primary SBOM
+- Only includes relationships/dependencies for added or merged components
+- Validates all references to ensure data integrity
+
+#### Required Options for Augment Merge
+
+- `--augmentMerge`: Enable augment merge mode
+- `--primary <path>`: Path to the primary SBOM to be enriched
+
+#### Optional Options
+
+- `--merge-mode <mode>`: How to merge matching components
+  - `if-missing-or-empty` (default): Only fill empty fields in primary components
+  - `overwrite`: Replace primary component fields with secondary values
+
+#### Examples
+
+```bash
+# Basic augment merge - enrich with additional scan results
+sbomasm assemble --augmentMerge \
+  --primary base-sbom.json \
+  scan-results.json \
+  -o enriched-sbom.json
+
+# Merge multiple enhancement SBOMs
+sbomasm assemble --augmentMerge \
+  --primary application.json \
+  vulnerability-scan.json license-scan.json quality-scan.json \
+  -o complete-sbom.json
+
+# Overwrite mode - update with vendor-provided data
+sbomasm assemble --augmentMerge \
+  --primary internal-sbom.json \
+  --merge-mode overwrite \
+  vendor-sbom.json \
+  -o updated-sbom.json
+```
+
+#### Use Cases
+
+1. **Enriching CI/CD Generated SBOMs**: Add vulnerability, license, or quality data from various scanning tools
+2. **Vendor SBOM Integration**: Merge vendor-provided SBOMs with internally generated ones
+3. **Progressive Enhancement**: Build comprehensive SBOMs by incrementally adding data from different sources
+4. **Supply Chain Updates**: Update component information as new data becomes available
+
+#### Important Notes
+
+- The augment merge validates all component references to ensure consistency
+- Only relationships/dependencies involving processed components are included
+- Invalid references are automatically filtered out to maintain SBOM integrity
+- The primary SBOM's metadata is preserved and updated with tool information
+
 ## Configuration Files
 
 For complex assemblies, use a configuration file:
@@ -119,10 +177,29 @@ assemble:
   include_dependency_graph: true
 ```
 
+#### Configuration for Augment Merge
+
+```yaml
+# augment-config.yml
+assemble:
+  augment_merge: true
+  primary_file: 'base-sbom.json'
+  merge_mode: 'if-missing-or-empty'  # or 'overwrite'
+
+output:
+  spec: spdx  # or cyclonedx
+  file_format: json
+  file: 'enriched-sbom.json'
+```
+
 Use the configuration:
 
 ```bash
+# For standard merge strategies
 sbomasm assemble -c config.yml input1.json input2.json input3.json
+
+# For augment merge
+sbomasm assemble -c augment-config.yml enhancement1.json enhancement2.json
 ```
 
 ## Format Compatibility
