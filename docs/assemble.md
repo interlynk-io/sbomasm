@@ -90,7 +90,7 @@ sbomasm assemble --assembly-merge \
 
 Enriches an existing primary SBOM with additional information from secondary SBOMs:
 - Does not create a new root component
-- Merges matching components based on name, version, and other attributes
+- Merges matching components based on name, version, purl and CPE
 - Adds new components that don't exist in the primary SBOM
 - Only includes relationships/dependencies for added or merged components
 - Validates all references to ensure data integrity
@@ -122,18 +122,10 @@ When components match, the following SPDX package fields are merged:
 - `PackageLicenseDeclared`: License declared by the package author
 - `PackageLicenseComments`: Additional license comments
 - `PrimaryPackagePurpose`: Primary purpose of the package
-
-**Entity Fields:**
 - `PackageSupplier`: Supplier information (Person/Organization)
 - `PackageOriginator`: Originator information (Person/Organization)
-
-**Technical Fields:**
 - `PackageChecksums`: List of checksums (SHA1, SHA256, etc.)
-- `PackageExternalReferences`: External references including:
-  - Package URLs (purl)
-  - CPE identifiers
-  - Security references
-  - Other external identifiers
+- `PackageExternalReferences`: External references
 
 **Merge Behavior:**
 - `if-missing-or-empty` mode: Only fills fields that are empty or missing in the primary
@@ -151,16 +143,10 @@ When components match, the following CycloneDX component fields are merged:
 - `Group`: Component group/namespace
 - `Scope`: Component scope (required, optional, excluded)
 - `Copyright`: Copyright information
-
-**Identifiers:**
 - `PackageURL`: Package URL (purl)
 - `CPE`: CPE identifier
 - `SWID`: Software identification tag
-
-**Entity Fields:**
 - `Supplier`: Supplier organization details
-
-**Lists (merged or replaced based on mode):**
 - `Licenses`: License information list
 - `Hashes`: Cryptographic hashes
 - `ExternalReferences`: External reference links
@@ -170,23 +156,6 @@ When components match, the following CycloneDX component fields are merged:
 - `if-missing-or-empty` mode: Only fills empty fields or empty lists
 - `overwrite` mode: Replaces all fields with secondary values if present
 - Lists are replaced entirely, not merged item-by-item
-
-#### Fields NOT Merged
-
-The following fields are **never** modified in the primary SBOM:
-
-**SPDX:**
-- `PackageSPDXIdentifier`: Package SPDX ID
-- `PackageName`: Package name  
-- `PackageVersion`: Package version
-- `FilesAnalyzed`: Files analyzed flag
-- `PackageVerificationCode`: Verification code
-
-**CycloneDX:**
-- `BOMRef`: Component BOM reference
-- `Name`: Component name
-- `Version`: Component version
-- `Type`: Component type
 
 #### Relationship and Dependency Handling
 
