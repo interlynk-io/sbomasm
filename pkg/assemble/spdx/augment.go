@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/interlynk-io/sbomasm/pkg/assemble/matcher"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
@@ -31,17 +32,21 @@ import (
 )
 
 type augmentMerge struct {
-	settings  *MergeSettings
-	primary   *spdx.Document
-	secondary []*spdx.Document
-	matcher   matcher.ComponentMatcher
-	index     *matcher.ComponentIndex
+	settings       *MergeSettings
+	primary        *spdx.Document
+	secondary      []*spdx.Document
+	matcher        matcher.ComponentMatcher
+	index          *matcher.ComponentIndex
+	processedPkgs  map[string]string // Maps secondary pkg IDs to primary pkg IDs (using string representation)
+	addedPkgIDs    map[string]bool   // Tracks newly added package IDs (using string representation)
 }
 
 func newAugmentMerge(ms *MergeSettings) *augmentMerge {
 	return &augmentMerge{
-		settings:  ms,
-		secondary: []*spdx.Document{},
+		settings:      ms,
+		secondary:     []*spdx.Document{},
+		processedPkgs: make(map[string]string),
+		addedPkgIDs:   make(map[string]bool),
 	}
 }
 
@@ -76,6 +81,9 @@ func (a *augmentMerge) merge() error {
 	// Process each secondary SBOM
 	for i, sbom := range a.secondary {
 		log.Debugf("Processing secondary SBOM %d", i+1)
+		// Reset ID tracking for each secondary SBOM
+		a.processedPkgs = make(map[string]string)
+		a.addedPkgIDs = make(map[string]bool)
 		if err := a.processSecondaryBom(sbom); err != nil {
 			return fmt.Errorf("failed to process secondary SBOM %d: %w", i+1, err)
 		}
@@ -180,11 +188,16 @@ func (a *augmentMerge) processSecondaryBom(sbom *spdx.Document) error {
 			log.Debugf("Found match for package %s with confidence %d", pkg.PackageName, matchResult.Confidence)
 			primaryPkg := matchResult.Primary.GetOriginal().(*spdx.Package)
 			a.mergePackage(primaryPkg, pkg)
+			// Track the mapping from secondary to primary package ID
+			a.processedPkgs[string(pkg.PackageSPDXIdentifier)] = string(primaryPkg.PackageSPDXIdentifier)
 			matchedCount++
 		} else {
 			// Package doesn't exist, add it
 			log.Debugf("No match found for package %s, adding as new", pkg.PackageName)
 			newPackages = append(newPackages, pkg)
+			// Track as newly added package
+			a.addedPkgIDs[string(pkg.PackageSPDXIdentifier)] = true
+			a.processedPkgs[string(pkg.PackageSPDXIdentifier)] = string(pkg.PackageSPDXIdentifier)
 			addedCount++
 		}
 	}
@@ -199,14 +212,11 @@ func (a *augmentMerge) processSecondaryBom(sbom *spdx.Document) error {
 		}
 	}
 	
-	// Merge relationships
-	a.mergeRelationships(sbom)
+	// Merge relationships for processed packages only
+	a.mergeSelectiveRelationships(sbom)
 	
-	// Merge files if present
-	a.mergeFiles(sbom)
-	
-	// Merge other licenses
-	a.mergeOtherLicenses(sbom)
+	// Merge other licenses for processed packages only
+	a.mergeSelectiveOtherLicenses(sbom)
 	
 	log.Debugf("Processed secondary SBOM: %d matched, %d added", matchedCount, addedCount)
 	
@@ -359,13 +369,16 @@ func (a *augmentMerge) overwritePackageFields(primary, secondary *spdx.Package) 
 	}
 }
 
-// mergeRelationships merges relationships from secondary SBOM
-func (a *augmentMerge) mergeRelationships(sbom *spdx.Document) {
+// mergeSelectiveRelationships merges only relationships involving processed packages
+func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 	if len(sbom.Relationships) == 0 {
 		return
 	}
 	
 	log := logger.FromContext(*a.settings.Ctx)
+	
+	// Build set of all valid IDs in primary SBOM
+	validIDs := a.buildValidIDSet()
 	
 	// Create relationship map for efficient lookup
 	relMap := make(map[string]bool)
@@ -374,52 +387,63 @@ func (a *augmentMerge) mergeRelationships(sbom *spdx.Document) {
 		relMap[key] = true
 	}
 	
-	// Add unique relationships from secondary
+	// Process relationships from secondary SBOM
 	addedCount := 0
+	skippedCount := 0
 	for _, rel := range sbom.Relationships {
-		key := fmt.Sprintf("%s:%s:%s", rel.RefA, rel.Relationship, rel.RefB)
+		// Check if relationship involves a processed package
+		if !a.isRelationshipRelevant(rel) {
+			skippedCount++
+			continue
+		}
+		
+		// Resolve IDs to their primary SBOM equivalents
+		resolvedRefA := a.resolveDocElementID(rel.RefA)
+		resolvedRefB := a.resolveDocElementID(rel.RefB)
+		
+		// Convert to strings for validation
+		resolvedRefAStr := a.docElementIDToString(resolvedRefA)
+		resolvedRefBStr := a.docElementIDToString(resolvedRefB)
+		
+		// Validate both IDs exist in primary SBOM
+		if !validIDs[resolvedRefAStr] || !validIDs[resolvedRefBStr] {
+			log.Debugf("Skipping relationship %s->%s: one or both IDs not valid in primary SBOM", 
+				resolvedRefAStr, resolvedRefBStr)
+			skippedCount++
+			continue
+		}
+		
+		// Create new relationship with resolved IDs
+		newRel := &spdx.Relationship{
+			RefA:                resolvedRefA,
+			RefB:                resolvedRefB,
+			Relationship:        rel.Relationship,
+			RelationshipComment: rel.RelationshipComment,
+		}
+		
+		// Check for duplicates
+		key := fmt.Sprintf("%s:%s:%s", newRel.RefA, newRel.Relationship, newRel.RefB)
 		if !relMap[key] {
-			a.primary.Relationships = append(a.primary.Relationships, rel)
+			a.primary.Relationships = append(a.primary.Relationships, newRel)
 			relMap[key] = true
 			addedCount++
 		}
 	}
 	
-	log.Debugf("Merged relationships, added %d new, total: %d", addedCount, len(a.primary.Relationships))
+	log.Debugf("Merged relationships: added %d, skipped %d, total: %d", 
+		addedCount, skippedCount, len(a.primary.Relationships))
 }
 
-// mergeFiles merges files from secondary SBOM
-func (a *augmentMerge) mergeFiles(sbom *spdx.Document) {
-	if len(sbom.Files) == 0 {
+// mergeSelectiveOtherLicenses merges only licenses referenced by processed packages
+func (a *augmentMerge) mergeSelectiveOtherLicenses(sbom *spdx.Document) {
+	if len(sbom.OtherLicenses) == 0 {
 		return
 	}
 	
 	log := logger.FromContext(*a.settings.Ctx)
 	
-	// Create file map for efficient lookup
-	fileMap := make(map[common.ElementID]bool)
-	for _, file := range a.primary.Files {
-		fileMap[file.FileSPDXIdentifier] = true
-	}
-	
-	// Add unique files from secondary
-	addedCount := 0
-	for _, file := range sbom.Files {
-		if !fileMap[file.FileSPDXIdentifier] {
-			a.primary.Files = append(a.primary.Files, file)
-			fileMap[file.FileSPDXIdentifier] = true
-			addedCount++
-		}
-	}
-	
-	log.Debugf("Merged files, added %d new, total: %d", addedCount, len(a.primary.Files))
-}
-
-// mergeOtherLicenses merges other licenses from secondary SBOM
-func (a *augmentMerge) mergeOtherLicenses(sbom *spdx.Document) {
-	if len(sbom.OtherLicenses) == 0 {
-		return
-	}
+	// Collect license IDs referenced by processed packages
+	referencedLicenses := a.collectReferencedLicenses(sbom)
 	
 	// Create license map for efficient lookup
 	licenseMap := make(map[string]bool)
@@ -427,12 +451,129 @@ func (a *augmentMerge) mergeOtherLicenses(sbom *spdx.Document) {
 		licenseMap[lic.LicenseIdentifier] = true
 	}
 	
-	// Add unique licenses from secondary
+	// Add only referenced licenses from secondary
+	addedCount := 0
 	for _, lic := range sbom.OtherLicenses {
-		if !licenseMap[lic.LicenseIdentifier] {
+		if referencedLicenses[lic.LicenseIdentifier] && !licenseMap[lic.LicenseIdentifier] {
 			a.primary.OtherLicenses = append(a.primary.OtherLicenses, lic)
 			licenseMap[lic.LicenseIdentifier] = true
+			addedCount++
 		}
+	}
+	
+	log.Debugf("Merged other licenses: added %d, total: %d", addedCount, len(a.primary.OtherLicenses))
+}
+
+// buildValidIDSet builds a set of all valid SPDX IDs in the primary SBOM
+func (a *augmentMerge) buildValidIDSet() map[string]bool {
+	validIDs := make(map[string]bool)
+	
+	// Add document ID
+	validIDs[string(a.primary.SPDXIdentifier)] = true
+	
+	// Add all package IDs
+	for _, pkg := range a.primary.Packages {
+		validIDs[string(pkg.PackageSPDXIdentifier)] = true
+	}
+	
+	// Add all file IDs
+	for _, file := range a.primary.Files {
+		validIDs[string(file.FileSPDXIdentifier)] = true
+	}
+	
+	// Add all snippet IDs if present
+	for _, snippet := range a.primary.Snippets {
+		validIDs[string(snippet.SnippetSPDXIdentifier)] = true
+	}
+	
+	return validIDs
+}
+
+// isRelationshipRelevant checks if a relationship involves a processed package
+func (a *augmentMerge) isRelationshipRelevant(rel *spdx.Relationship) bool {
+	// Convert DocElementID to string for lookup
+	refAStr := a.docElementIDToString(rel.RefA)
+	refBStr := a.docElementIDToString(rel.RefB)
+	
+	// Check if either end of the relationship is a processed package
+	_, refAProcessed := a.processedPkgs[refAStr]
+	_, refBProcessed := a.processedPkgs[refBStr]
+	
+	return refAProcessed || refBProcessed
+}
+
+// resolveDocElementID resolves a secondary SBOM DocElementID to its primary SBOM equivalent
+func (a *augmentMerge) resolveDocElementID(id common.DocElementID) common.DocElementID {
+	// Convert to string for lookup
+	idStr := a.docElementIDToString(id)
+	
+	// If this ID was mapped during package processing, use the mapped ID
+	if mappedIDStr, exists := a.processedPkgs[idStr]; exists {
+		// Convert back to DocElementID
+		return a.stringToDocElementID(mappedIDStr)
+	}
+	// Otherwise, return the ID as-is (for document IDs, etc.)
+	return id
+}
+
+// docElementIDToString converts a DocElementID to a string representation
+func (a *augmentMerge) docElementIDToString(id common.DocElementID) string {
+	if id.SpecialID != "" {
+		return id.SpecialID
+	}
+	if id.DocumentRefID != "" {
+		return fmt.Sprintf("%s:%s", id.DocumentRefID, id.ElementRefID)
+	}
+	return string(id.ElementRefID)
+}
+
+// stringToDocElementID converts a string back to DocElementID
+func (a *augmentMerge) stringToDocElementID(s string) common.DocElementID {
+	// Check for special IDs
+	if s == "NONE" || s == "NOASSERTION" {
+		return common.DocElementID{SpecialID: s}
+	}
+	
+	// Check for document reference
+	if idx := strings.Index(s, ":"); idx > 0 {
+		return common.DocElementID{
+			DocumentRefID: s[:idx],
+			ElementRefID:  common.ElementID(s[idx+1:]),
+		}
+	}
+	
+	// Simple element ID
+	return common.DocElementID{ElementRefID: common.ElementID(s)}
+}
+
+// collectReferencedLicenses collects license IDs referenced by processed packages
+func (a *augmentMerge) collectReferencedLicenses(sbom *spdx.Document) map[string]bool {
+	licenses := make(map[string]bool)
+	
+	for _, pkg := range sbom.Packages {
+		// Only process packages that were added or merged
+		if _, processed := a.processedPkgs[string(pkg.PackageSPDXIdentifier)]; !processed {
+			continue
+		}
+		
+		// Extract license identifiers from concluded and declared licenses
+		a.extractLicenseIDs(pkg.PackageLicenseConcluded, licenses)
+		a.extractLicenseIDs(pkg.PackageLicenseDeclared, licenses)
+	}
+	
+	return licenses
+}
+
+// extractLicenseIDs extracts license identifiers from a license expression
+func (a *augmentMerge) extractLicenseIDs(licenseExpr string, licenses map[string]bool) {
+	if licenseExpr == "" || licenseExpr == "NOASSERTION" || licenseExpr == "NONE" {
+		return
+	}
+	
+	// Simple extraction - this could be enhanced to properly parse SPDX license expressions
+	// For now, we'll look for LicenseRef- prefixed identifiers
+	if len(licenseExpr) > 11 && licenseExpr[:11] == "LicenseRef-" {
+		licenses[licenseExpr] = true
 	}
 }
 

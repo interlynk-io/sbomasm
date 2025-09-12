@@ -29,17 +29,21 @@ import (
 )
 
 type augmentMerge struct {
-	settings  *MergeSettings
-	primary   *cydx.BOM
-	secondary []*cydx.BOM
-	matcher   matcher.ComponentMatcher
-	index     *matcher.ComponentIndex
+	settings       *MergeSettings
+	primary        *cydx.BOM
+	secondary      []*cydx.BOM
+	matcher        matcher.ComponentMatcher
+	index          *matcher.ComponentIndex
+	processedComps map[string]string // Maps secondary component BOM-refs to primary BOM-refs
+	addedCompRefs  map[string]bool   // Tracks newly added component BOM-refs
 }
 
 func newAugmentMerge(ms *MergeSettings) *augmentMerge {
 	return &augmentMerge{
-		settings:  ms,
-		secondary: []*cydx.BOM{},
+		settings:       ms,
+		secondary:      []*cydx.BOM{},
+		processedComps: make(map[string]string),
+		addedCompRefs:  make(map[string]bool),
 	}
 }
 
@@ -74,6 +78,9 @@ func (a *augmentMerge) merge() error {
 	// Process each secondary SBOM
 	for i, sbom := range a.secondary {
 		log.Debugf("Processing secondary SBOM %d", i+1)
+		// Reset tracking for each secondary SBOM
+		a.processedComps = make(map[string]string)
+		a.addedCompRefs = make(map[string]bool)
 		if err := a.processSecondaryBom(sbom); err != nil {
 			return fmt.Errorf("failed to process secondary SBOM %d: %w", i+1, err)
 		}
@@ -185,11 +192,16 @@ func (a *augmentMerge) processSecondaryBom(sbom *cydx.BOM) error {
 			log.Debugf("Found match for component %s with confidence %d", comp.Name, matchResult.Confidence)
 			primaryComp := matchResult.Primary.GetOriginal().(*cydx.Component)
 			a.mergeComponent(primaryComp, &comp)
+			// Track the mapping from secondary to primary component ref
+			a.processedComps[comp.BOMRef] = primaryComp.BOMRef
 			matchedCount++
 		} else {
 			// Component doesn't exist, add it
 			log.Debugf("No match found for component %s, adding as new", comp.Name)
 			newComponents = append(newComponents, comp)
+			// Track as newly added component
+			a.addedCompRefs[comp.BOMRef] = true
+			a.processedComps[comp.BOMRef] = comp.BOMRef
 			addedCount++
 		}
 	}
@@ -207,8 +219,8 @@ func (a *augmentMerge) processSecondaryBom(sbom *cydx.BOM) error {
 		}
 	}
 	
-	// Merge dependencies
-	a.mergeDependencies(sbom)
+	// Merge dependencies for processed components only
+	a.mergeSelectiveDependencies(sbom)
 	
 	log.Debugf("Processed secondary SBOM: %d matched, %d added", matchedCount, addedCount)
 	
@@ -351,13 +363,16 @@ func (a *augmentMerge) overwriteComponentFields(primary, secondary *cydx.Compone
 	}
 }
 
-// mergeDependencies merges dependency relationships from secondary SBOM
-func (a *augmentMerge) mergeDependencies(sbom *cydx.BOM) {
+// mergeSelectiveDependencies merges only dependencies involving processed components
+func (a *augmentMerge) mergeSelectiveDependencies(sbom *cydx.BOM) {
 	if sbom.Dependencies == nil || len(*sbom.Dependencies) == 0 {
 		return
 	}
 	
 	log := logger.FromContext(*a.settings.Ctx)
+	
+	// Build set of all valid BOM refs in primary SBOM
+	validRefs := a.buildValidRefSet()
 	
 	// Create dependency map for efficient lookup
 	depMap := make(map[string]*cydx.Dependency)
@@ -370,24 +385,119 @@ func (a *augmentMerge) mergeDependencies(sbom *cydx.BOM) {
 		a.primary.Dependencies = &[]cydx.Dependency{}
 	}
 	
-	// Merge dependencies from secondary
+	// Process dependencies from secondary SBOM
+	addedCount := 0
+	skippedCount := 0
 	for _, secDep := range *sbom.Dependencies {
-		if existingDep, exists := depMap[secDep.Ref]; exists {
+		// Check if dependency involves a processed component
+		if !a.isDependencyRelevant(&secDep) {
+			skippedCount++
+			continue
+		}
+		
+		// Resolve refs to their primary SBOM equivalents
+		resolvedRef := a.resolveRef(secDep.Ref)
+		
+		// Validate the ref exists in primary SBOM
+		if !validRefs[resolvedRef] {
+			log.Debugf("Skipping dependency for %s: ref not valid in primary SBOM", resolvedRef)
+			skippedCount++
+			continue
+		}
+		
+		// Process dependencies list
+		resolvedDeps := []string{}
+		if secDep.Dependencies != nil {
+			for _, depRef := range *secDep.Dependencies {
+				resolvedDepRef := a.resolveRef(depRef)
+				// Only include dependencies that exist in primary SBOM
+				if validRefs[resolvedDepRef] {
+					resolvedDeps = append(resolvedDeps, resolvedDepRef)
+				} else {
+					log.Debugf("Skipping dependency reference %s: not valid in primary SBOM", depRef)
+				}
+			}
+		}
+		
+		if existingDep, exists := depMap[resolvedRef]; exists {
 			// Merge dependency lists
-			if secDep.Dependencies != nil && len(*secDep.Dependencies) > 0 {
+			if len(resolvedDeps) > 0 {
 				existingDeps := lo.FromPtr(existingDep.Dependencies)
-				newDeps := lo.FromPtr(secDep.Dependencies)
-				merged := lo.Uniq(append(existingDeps, newDeps...))
+				merged := lo.Uniq(append(existingDeps, resolvedDeps...))
 				existingDep.Dependencies = &merged
 			}
 		} else {
-			// Add new dependency
-			*a.primary.Dependencies = append(*a.primary.Dependencies, secDep)
-			depMap[secDep.Ref] = &secDep
+			// Add new dependency with resolved refs
+			newDep := cydx.Dependency{
+				Ref: resolvedRef,
+			}
+			if len(resolvedDeps) > 0 {
+				newDep.Dependencies = &resolvedDeps
+			}
+			*a.primary.Dependencies = append(*a.primary.Dependencies, newDep)
+			depMap[resolvedRef] = &newDep
+			addedCount++
 		}
 	}
 	
-	log.Debugf("Merged dependencies, total: %d", len(*a.primary.Dependencies))
+	log.Debugf("Merged dependencies: added %d, skipped %d, total: %d", 
+		addedCount, skippedCount, len(*a.primary.Dependencies))
+}
+
+// buildValidRefSet builds a set of all valid BOM refs in the primary SBOM
+func (a *augmentMerge) buildValidRefSet() map[string]bool {
+	validRefs := make(map[string]bool)
+	
+	// Add metadata component if it exists
+	if a.primary.Metadata != nil && a.primary.Metadata.Component != nil {
+		validRefs[a.primary.Metadata.Component.BOMRef] = true
+	}
+	
+	// Add all component refs
+	if a.primary.Components != nil {
+		for _, comp := range *a.primary.Components {
+			validRefs[comp.BOMRef] = true
+		}
+	}
+	
+	// Add all service refs if present
+	if a.primary.Services != nil {
+		for _, svc := range *a.primary.Services {
+			validRefs[svc.BOMRef] = true
+		}
+	}
+	
+	return validRefs
+}
+
+// isDependencyRelevant checks if a dependency involves a processed component
+func (a *augmentMerge) isDependencyRelevant(dep *cydx.Dependency) bool {
+	// Check if the dependency ref is a processed component
+	_, isProcessed := a.processedComps[dep.Ref]
+	if isProcessed {
+		return true
+	}
+	
+	// Also check if any of its dependencies are processed components
+	if dep.Dependencies != nil {
+		for _, depRef := range *dep.Dependencies {
+			if _, isProcessed := a.processedComps[depRef]; isProcessed {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+// resolveRef resolves a secondary SBOM ref to its primary SBOM equivalent
+func (a *augmentMerge) resolveRef(ref string) string {
+	// If this ref was mapped during component processing, use the mapped ref
+	if mappedRef, exists := a.processedComps[ref]; exists {
+		return mappedRef
+	}
+	// Otherwise, return the ref as-is (for metadata component, etc.)
+	return ref
 }
 
 // updateMetadata updates the primary SBOM metadata
