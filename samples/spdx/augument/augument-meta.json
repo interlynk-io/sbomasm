@@ -1,0 +1,63 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "name": "",
+  "creationInfo": {
+    "creators": [
+      "Organization: manual example"    ],
+    "created": "2025-05-26T07:00:47Z"
+  },
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://example.com",
+  "packages": [
+    {
+      "name": "C1",
+      "SPDXID": "SPDXRef-C1",
+      "versionInfo": "1.0.0",
+      "comment": "vendor package",
+      "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.",
+      "description": "tablesorter javascript library",
+      "downloadLocation": "https://github.com/Mottie/tablesorter",
+      "externalRefs": [
+        {
+          "comment": "tablesorter javascript library",
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:github/mottie/tablesorter@2.32",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": true,
+      "homepage": "https://github.com/Mottie/tablesorter",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause OR GPL-2.0-only",
+      "packageVerificationCode": { "packageVerificationCodeValue": "17b5b7877549d83504b4ee266871d7a5235de54d" },
+      "supplier": "Person: Christian Bach"
+    },
+    {
+      "name": "C2",
+      "SPDXID": "SPDXRef-C2",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    },
+    {
+      "name": "C4",
+      "SPDXID": "SPDXRef-C4",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-C1",
+      "relatedSpdxElement": "SPDXRef-C4",
+      "relationshipType": "CONTAINS"
+    },
+    {
+      "spdxElementId": "SPDXRef-C4",
+      "relatedSpdxElement": "SPDXRef-C3",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}

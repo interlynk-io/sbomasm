@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-01-12T00:00:00Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "main-app",
+      "name": "main-application",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "comp-1",
+      "name": "component-1",
+      "version": "1.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "comp-2", 
+      "name": "component-2",
+      "version": "2.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "comp-3",
+      "name": "component-3",
+      "version": "3.0.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "main-app",
+      "dependsOn": ["comp-1", "comp-2"]
+    },
+    {
+      "ref": "comp-1",
+      "dependsOn": ["comp-3"]
+    }
+  ]
+}

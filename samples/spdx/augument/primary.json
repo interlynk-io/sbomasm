@@ -1,0 +1,64 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "name": "example",
+  "creationInfo": {
+    "creators": [
+      "Organization: example"    ],
+    "created": "2025-03-26T07:00:47Z"
+  },
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "documentNamespace": "https://example.com",
+  "packages": [
+    {
+      "name": "P1",
+      "SPDXID": "SPDXRef-P1",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    },
+    {
+      "name": "C1",
+      "SPDXID": "SPDXRef-C1",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    },
+    {
+      "name": "C2",
+      "SPDXID": "SPDXRef-C2",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    },
+    {
+      "name": "C3",
+      "SPDXID": "SPDXRef-C3",
+      "versionInfo": "1.0.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseDeclared": "GPL-2.0-only"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-P1"
+    },
+    {
+      "spdxElementId": "SPDXRef-P1",
+      "relatedSpdxElement": "SPDXRef-C1",
+      "relationshipType": "CONTAINS"
+    },
+    {
+      "spdxElementId": "SPDXRef-P1",
+      "relatedSpdxElement": "SPDXRef-C2",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-P1",
+      "relatedSpdxElement": "SPDXRef-C3",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}

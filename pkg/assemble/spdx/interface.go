@@ -106,6 +106,9 @@ type assemble struct {
 	FlatMerge                  bool
 	HierarchicalMerge          bool
 	AssemblyMerge              bool
+	AugmentMerge               bool
+	PrimaryFile                string
+	MergeMode                  string // if-missing-or-empty, overwrite
 }
 
 type MergeSettings struct {
@@ -123,7 +126,13 @@ func Merge(ms *MergeSettings) error {
 	}
 
 	if len(ms.Output.SpecVersion) > 0 && !validSpecVersion(ms.Output.SpecVersion) {
-		return errors.New("invalid CycloneDX spec version")
+		return errors.New("invalid SPDX spec version")
+	}
+
+	// Handle augment merge separately
+	if ms.Assemble.AugmentMerge {
+		augmentMerger := newAugmentMerge(ms)
+		return augmentMerger.merge()
 	}
 
 	merger := newMerge(ms)
