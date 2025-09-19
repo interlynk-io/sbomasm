@@ -24,7 +24,7 @@ import (
 
 	"github.com/interlynk-io/sbomasm/pkg/assemble/matcher"
 	"github.com/interlynk-io/sbomasm/pkg/logger"
-	spdx_json "github.com/spdx/tools-golang/json"
+	"github.com/interlynk-io/sbomasm/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"
@@ -32,13 +32,13 @@ import (
 )
 
 type augmentMerge struct {
-	settings       *MergeSettings
-	primary        *spdx.Document
-	secondary      []*spdx.Document
-	matcher        matcher.ComponentMatcher
-	index          *matcher.ComponentIndex
-	processedPkgs  map[string]string // Maps secondary pkg IDs to primary pkg IDs (using string representation)
-	addedPkgIDs    map[string]bool   // Tracks newly added package IDs (using string representation)
+	settings      *MergeSettings
+	primary       *spdx.Document
+	secondary     []*spdx.Document
+	matcher       matcher.ComponentMatcher
+	index         *matcher.ComponentIndex
+	processedPkgs map[string]string // Maps secondary pkg IDs to primary pkg IDs (using string representation)
+	addedPkgIDs   map[string]bool   // Tracks newly added package IDs (using string representation)
 }
 
 func newAugmentMerge(ms *MergeSettings) *augmentMerge {
@@ -53,31 +53,31 @@ func newAugmentMerge(ms *MergeSettings) *augmentMerge {
 // merge performs the augment merge operation
 func (a *augmentMerge) merge() error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	log.Debug("Starting SPDX augment merge")
-	
+
 	// Load primary SBOM
 	if err := a.loadPrimaryBom(); err != nil {
 		return fmt.Errorf("failed to load primary SBOM: %w", err)
 	}
-	
+
 	// Load secondary SBOMs
 	if err := a.loadSecondaryBoms(); err != nil {
 		return fmt.Errorf("failed to load secondary SBOMs: %w", err)
 	}
-	
+
 	// Setup matcher
 	if err := a.setupMatcher(); err != nil {
 		return fmt.Errorf("failed to setup matcher: %w", err)
 	}
-	
+
 	// Build index from primary SBOM packages
 	if err := a.buildPrimaryIndex(); err != nil {
 		return fmt.Errorf("failed to build package index: %w", err)
 	}
-	
+
 	log.Debugf("Processing %d secondary SBOMs", len(a.secondary))
-	
+
 	// Process each secondary SBOM
 	for i, sbom := range a.secondary {
 		log.Debugf("Processing secondary SBOM %d", i+1)
@@ -88,10 +88,10 @@ func (a *augmentMerge) merge() error {
 			return fmt.Errorf("failed to process secondary SBOM %d: %w", i+1, err)
 		}
 	}
-	
+
 	// Update creation info
 	a.updateCreationInfo()
-	
+
 	// Write the merged SBOM
 	return a.writeSBOM()
 }
@@ -99,15 +99,15 @@ func (a *augmentMerge) merge() error {
 // loadPrimaryBom loads the primary SBOM from file
 func (a *augmentMerge) loadPrimaryBom() error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	primaryPath := a.settings.Assemble.PrimaryFile
 	log.Debugf("Loading primary SBOM from %s", primaryPath)
-	
+
 	doc, err := loadBom(*a.settings.Ctx, primaryPath)
 	if err != nil {
 		return err
 	}
-	
+
 	a.primary = doc
 	return nil
 }
@@ -115,7 +115,7 @@ func (a *augmentMerge) loadPrimaryBom() error {
 // loadSecondaryBoms loads all secondary SBOMs
 func (a *augmentMerge) loadSecondaryBoms() error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	for _, path := range a.settings.Input.Files {
 		log.Debugf("Loading secondary SBOM from %s", path)
 		doc, err := loadBom(*a.settings.Ctx, path)
@@ -124,7 +124,7 @@ func (a *augmentMerge) loadSecondaryBoms() error {
 		}
 		a.secondary = append(a.secondary, doc)
 	}
-	
+
 	return nil
 }
 
@@ -137,12 +137,12 @@ func (a *augmentMerge) setupMatcher() error {
 		TypeMatch:     true,
 		MinConfidence: 50,
 	})
-	
+
 	m, err := factory.GetMatcher("composite")
 	if err != nil {
 		return err
 	}
-	
+
 	a.matcher = m
 	return nil
 }
@@ -150,39 +150,39 @@ func (a *augmentMerge) setupMatcher() error {
 // buildPrimaryIndex builds an index of primary SBOM packages
 func (a *augmentMerge) buildPrimaryIndex() error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	components := []matcher.Component{}
-	
+
 	// Add all packages
 	for i := range a.primary.Packages {
 		pkg := a.primary.Packages[i]
 		components = append(components, matcher.NewSPDXComponent(pkg))
 	}
-	
+
 	log.Debugf("Building index with %d packages from primary SBOM", len(components))
 	a.index = matcher.BuildIndex(components)
-	
+
 	return nil
 }
 
 // processSecondaryBom processes a single secondary SBOM
 func (a *augmentMerge) processSecondaryBom(sbom *spdx.Document) error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	if len(sbom.Packages) == 0 {
 		return nil
 	}
-	
+
 	newPackages := []*spdx.Package{}
 	matchedCount := 0
 	addedCount := 0
-	
+
 	for _, pkg := range sbom.Packages {
 		unifiedPkg := matcher.NewSPDXComponent(pkg)
-		
+
 		// Find matching package in primary
 		matchResult := a.index.FindBestMatch(unifiedPkg, a.matcher)
-		
+
 		if matchResult != nil {
 			// Package exists in primary, merge it
 			log.Debugf("Found match for package %s with confidence %d", pkg.PackageName, matchResult.Confidence)
@@ -201,32 +201,32 @@ func (a *augmentMerge) processSecondaryBom(sbom *spdx.Document) error {
 			addedCount++
 		}
 	}
-	
+
 	// Add new packages to primary SBOM
 	if len(newPackages) > 0 {
 		a.primary.Packages = append(a.primary.Packages, newPackages...)
-		
+
 		// Update index with new packages
 		for _, pkg := range newPackages {
 			a.index.AddComponent(matcher.NewSPDXComponent(pkg))
 		}
 	}
-	
+
 	// Merge relationships for processed packages only
 	a.mergeSelectiveRelationships(sbom)
-	
+
 	// Merge other licenses for processed packages only
 	a.mergeSelectiveOtherLicenses(sbom)
-	
+
 	log.Debugf("Processed secondary SBOM: %d matched, %d added", matchedCount, addedCount)
-	
+
 	return nil
 }
 
 // mergePackage merges fields from secondary package into primary
 func (a *augmentMerge) mergePackage(primary, secondary *spdx.Package) {
 	mergeMode := a.settings.Assemble.MergeMode
-	
+
 	if mergeMode == "overwrite" {
 		a.overwritePackageFields(primary, secondary)
 	} else {
@@ -241,49 +241,49 @@ func (a *augmentMerge) fillMissingPackageFields(primary, secondary *spdx.Package
 	if primary.PackageDescription == "" && secondary.PackageDescription != "" {
 		primary.PackageDescription = secondary.PackageDescription
 	}
-	
+
 	if primary.PackageDownloadLocation == "" && secondary.PackageDownloadLocation != "" {
 		primary.PackageDownloadLocation = secondary.PackageDownloadLocation
 	}
-	
+
 	if primary.PackageHomePage == "" && secondary.PackageHomePage != "" {
 		primary.PackageHomePage = secondary.PackageHomePage
 	}
-	
+
 	if primary.PackageSourceInfo == "" && secondary.PackageSourceInfo != "" {
 		primary.PackageSourceInfo = secondary.PackageSourceInfo
 	}
-	
+
 	if primary.PackageCopyrightText == "" && secondary.PackageCopyrightText != "" {
 		primary.PackageCopyrightText = secondary.PackageCopyrightText
 	}
-	
+
 	if primary.PackageLicenseConcluded == "" && secondary.PackageLicenseConcluded != "" {
 		primary.PackageLicenseConcluded = secondary.PackageLicenseConcluded
 	}
-	
+
 	if primary.PackageLicenseDeclared == "" && secondary.PackageLicenseDeclared != "" {
 		primary.PackageLicenseDeclared = secondary.PackageLicenseDeclared
 	}
-	
+
 	if primary.PackageLicenseComments == "" && secondary.PackageLicenseComments != "" {
 		primary.PackageLicenseComments = secondary.PackageLicenseComments
 	}
-	
+
 	// Supplier/Originator
 	if primary.PackageSupplier == nil && secondary.PackageSupplier != nil {
 		primary.PackageSupplier = secondary.PackageSupplier
 	}
-	
+
 	if primary.PackageOriginator == nil && secondary.PackageOriginator != nil {
 		primary.PackageOriginator = secondary.PackageOriginator
 	}
-	
+
 	// Checksums
 	if len(primary.PackageChecksums) == 0 && len(secondary.PackageChecksums) > 0 {
 		primary.PackageChecksums = secondary.PackageChecksums
 	}
-	
+
 	// External references (including purl and CPE)
 	if len(primary.PackageExternalReferences) == 0 && len(secondary.PackageExternalReferences) > 0 {
 		primary.PackageExternalReferences = secondary.PackageExternalReferences
@@ -294,7 +294,7 @@ func (a *augmentMerge) fillMissingPackageFields(primary, secondary *spdx.Package
 			key := fmt.Sprintf("%s:%s:%s", ref.Category, ref.RefType, ref.Locator)
 			existingRefs[key] = true
 		}
-		
+
 		for _, ref := range secondary.PackageExternalReferences {
 			key := fmt.Sprintf("%s:%s:%s", ref.Category, ref.RefType, ref.Locator)
 			if !existingRefs[key] {
@@ -302,7 +302,7 @@ func (a *augmentMerge) fillMissingPackageFields(primary, secondary *spdx.Package
 			}
 		}
 	}
-	
+
 	// Primary package purpose
 	if primary.PrimaryPackagePurpose == "" && secondary.PrimaryPackagePurpose != "" {
 		primary.PrimaryPackagePurpose = secondary.PrimaryPackagePurpose
@@ -315,54 +315,54 @@ func (a *augmentMerge) overwritePackageFields(primary, secondary *spdx.Package) 
 	if secondary.PackageDescription != "" {
 		primary.PackageDescription = secondary.PackageDescription
 	}
-	
+
 	if secondary.PackageDownloadLocation != "" {
 		primary.PackageDownloadLocation = secondary.PackageDownloadLocation
 	}
-	
+
 	if secondary.PackageHomePage != "" {
 		primary.PackageHomePage = secondary.PackageHomePage
 	}
-	
+
 	if secondary.PackageSourceInfo != "" {
 		primary.PackageSourceInfo = secondary.PackageSourceInfo
 	}
-	
+
 	if secondary.PackageCopyrightText != "" {
 		primary.PackageCopyrightText = secondary.PackageCopyrightText
 	}
-	
+
 	if secondary.PackageLicenseConcluded != "" {
 		primary.PackageLicenseConcluded = secondary.PackageLicenseConcluded
 	}
-	
+
 	if secondary.PackageLicenseDeclared != "" {
 		primary.PackageLicenseDeclared = secondary.PackageLicenseDeclared
 	}
-	
+
 	if secondary.PackageLicenseComments != "" {
 		primary.PackageLicenseComments = secondary.PackageLicenseComments
 	}
-	
+
 	// Supplier/Originator
 	if secondary.PackageSupplier != nil {
 		primary.PackageSupplier = secondary.PackageSupplier
 	}
-	
+
 	if secondary.PackageOriginator != nil {
 		primary.PackageOriginator = secondary.PackageOriginator
 	}
-	
+
 	// Checksums
 	if len(secondary.PackageChecksums) > 0 {
 		primary.PackageChecksums = secondary.PackageChecksums
 	}
-	
+
 	// External references
 	if len(secondary.PackageExternalReferences) > 0 {
 		primary.PackageExternalReferences = secondary.PackageExternalReferences
 	}
-	
+
 	// Primary package purpose
 	if secondary.PrimaryPackagePurpose != "" {
 		primary.PrimaryPackagePurpose = secondary.PrimaryPackagePurpose
@@ -374,19 +374,19 @@ func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 	if len(sbom.Relationships) == 0 {
 		return
 	}
-	
+
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	// Build set of all valid IDs in primary SBOM
 	validIDs := a.buildValidIDSet()
-	
+
 	// Create relationship map for efficient lookup
 	relMap := make(map[string]bool)
 	for _, rel := range a.primary.Relationships {
 		key := fmt.Sprintf("%s:%s:%s", rel.RefA, rel.Relationship, rel.RefB)
 		relMap[key] = true
 	}
-	
+
 	// Process relationships from secondary SBOM
 	addedCount := 0
 	skippedCount := 0
@@ -396,23 +396,23 @@ func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 			skippedCount++
 			continue
 		}
-		
+
 		// Resolve IDs to their primary SBOM equivalents
 		resolvedRefA := a.resolveDocElementID(rel.RefA)
 		resolvedRefB := a.resolveDocElementID(rel.RefB)
-		
+
 		// Convert to strings for validation
 		resolvedRefAStr := a.docElementIDToString(resolvedRefA)
 		resolvedRefBStr := a.docElementIDToString(resolvedRefB)
-		
+
 		// Validate both IDs exist in primary SBOM
 		if !validIDs[resolvedRefAStr] || !validIDs[resolvedRefBStr] {
-			log.Debugf("Skipping relationship %s->%s: one or both IDs not valid in primary SBOM", 
+			log.Debugf("Skipping relationship %s->%s: one or both IDs not valid in primary SBOM",
 				resolvedRefAStr, resolvedRefBStr)
 			skippedCount++
 			continue
 		}
-		
+
 		// Create new relationship with resolved IDs
 		newRel := &spdx.Relationship{
 			RefA:                resolvedRefA,
@@ -420,7 +420,7 @@ func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 			Relationship:        rel.Relationship,
 			RelationshipComment: rel.RelationshipComment,
 		}
-		
+
 		// Check for duplicates
 		key := fmt.Sprintf("%s:%s:%s", newRel.RefA, newRel.Relationship, newRel.RefB)
 		if !relMap[key] {
@@ -429,8 +429,8 @@ func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 			addedCount++
 		}
 	}
-	
-	log.Debugf("Merged relationships: added %d, skipped %d, total: %d", 
+
+	log.Debugf("Merged relationships: added %d, skipped %d, total: %d",
 		addedCount, skippedCount, len(a.primary.Relationships))
 }
 
@@ -439,18 +439,18 @@ func (a *augmentMerge) mergeSelectiveOtherLicenses(sbom *spdx.Document) {
 	if len(sbom.OtherLicenses) == 0 {
 		return
 	}
-	
+
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	// Collect license IDs referenced by processed packages
 	referencedLicenses := a.collectReferencedLicenses(sbom)
-	
+
 	// Create license map for efficient lookup
 	licenseMap := make(map[string]bool)
 	for _, lic := range a.primary.OtherLicenses {
 		licenseMap[lic.LicenseIdentifier] = true
 	}
-	
+
 	// Add only referenced licenses from secondary
 	addedCount := 0
 	for _, lic := range sbom.OtherLicenses {
@@ -460,32 +460,32 @@ func (a *augmentMerge) mergeSelectiveOtherLicenses(sbom *spdx.Document) {
 			addedCount++
 		}
 	}
-	
+
 	log.Debugf("Merged other licenses: added %d, total: %d", addedCount, len(a.primary.OtherLicenses))
 }
 
 // buildValidIDSet builds a set of all valid SPDX IDs in the primary SBOM
 func (a *augmentMerge) buildValidIDSet() map[string]bool {
 	validIDs := make(map[string]bool)
-	
+
 	// Add document ID
 	validIDs[string(a.primary.SPDXIdentifier)] = true
-	
+
 	// Add all package IDs
 	for _, pkg := range a.primary.Packages {
 		validIDs[string(pkg.PackageSPDXIdentifier)] = true
 	}
-	
+
 	// Add all file IDs
 	for _, file := range a.primary.Files {
 		validIDs[string(file.FileSPDXIdentifier)] = true
 	}
-	
+
 	// Add all snippet IDs if present
 	for _, snippet := range a.primary.Snippets {
 		validIDs[string(snippet.SnippetSPDXIdentifier)] = true
 	}
-	
+
 	return validIDs
 }
 
@@ -494,11 +494,11 @@ func (a *augmentMerge) isRelationshipRelevant(rel *spdx.Relationship) bool {
 	// Convert DocElementID to string for lookup
 	refAStr := a.docElementIDToString(rel.RefA)
 	refBStr := a.docElementIDToString(rel.RefB)
-	
+
 	// Check if either end of the relationship is a processed package
 	_, refAProcessed := a.processedPkgs[refAStr]
 	_, refBProcessed := a.processedPkgs[refBStr]
-	
+
 	return refAProcessed || refBProcessed
 }
 
@@ -506,7 +506,7 @@ func (a *augmentMerge) isRelationshipRelevant(rel *spdx.Relationship) bool {
 func (a *augmentMerge) resolveDocElementID(id common.DocElementID) common.DocElementID {
 	// Convert to string for lookup
 	idStr := a.docElementIDToString(id)
-	
+
 	// If this ID was mapped during package processing, use the mapped ID
 	if mappedIDStr, exists := a.processedPkgs[idStr]; exists {
 		// Convert back to DocElementID
@@ -533,7 +533,7 @@ func (a *augmentMerge) stringToDocElementID(s string) common.DocElementID {
 	if s == "NONE" || s == "NOASSERTION" {
 		return common.DocElementID{SpecialID: s}
 	}
-	
+
 	// Check for document reference
 	if idx := strings.Index(s, ":"); idx > 0 {
 		return common.DocElementID{
@@ -541,7 +541,7 @@ func (a *augmentMerge) stringToDocElementID(s string) common.DocElementID {
 			ElementRefID:  common.ElementID(s[idx+1:]),
 		}
 	}
-	
+
 	// Simple element ID
 	return common.DocElementID{ElementRefID: common.ElementID(s)}
 }
@@ -549,18 +549,18 @@ func (a *augmentMerge) stringToDocElementID(s string) common.DocElementID {
 // collectReferencedLicenses collects license IDs referenced by processed packages
 func (a *augmentMerge) collectReferencedLicenses(sbom *spdx.Document) map[string]bool {
 	licenses := make(map[string]bool)
-	
+
 	for _, pkg := range sbom.Packages {
 		// Only process packages that were added or merged
 		if _, processed := a.processedPkgs[string(pkg.PackageSPDXIdentifier)]; !processed {
 			continue
 		}
-		
+
 		// Extract license identifiers from concluded and declared licenses
 		a.extractLicenseIDs(pkg.PackageLicenseConcluded, licenses)
 		a.extractLicenseIDs(pkg.PackageLicenseDeclared, licenses)
 	}
-	
+
 	return licenses
 }
 
@@ -569,7 +569,7 @@ func (a *augmentMerge) extractLicenseIDs(licenseExpr string, licenses map[string
 	if licenseExpr == "" || licenseExpr == "NOASSERTION" || licenseExpr == "NONE" {
 		return
 	}
-	
+
 	// Simple extraction - this could be enhanced to properly parse SPDX license expressions
 	// For now, we'll look for LicenseRef- prefixed identifiers
 	if len(licenseExpr) > 11 && licenseExpr[:11] == "LicenseRef-" {
@@ -580,16 +580,16 @@ func (a *augmentMerge) extractLicenseIDs(licenseExpr string, licenses map[string
 // updateCreationInfo updates the primary SBOM creation info
 func (a *augmentMerge) updateCreationInfo() {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	// Update creation timestamp
 	a.primary.CreationInfo.Created = utcNowTime()
-	
+
 	// Add sbomasm as a creator tool
 	sbomasmCreator := common.Creator{
 		CreatorType: "Tool",
 		Creator:     fmt.Sprintf("sbomasm-%s", version.GetVersionInfo().GitVersion),
 	}
-	
+
 	// Check if sbomasm is already in creators
 	found := false
 	for _, creator := range a.primary.CreationInfo.Creators {
@@ -598,23 +598,23 @@ func (a *augmentMerge) updateCreationInfo() {
 			break
 		}
 	}
-	
+
 	if !found {
 		a.primary.CreationInfo.Creators = append(a.primary.CreationInfo.Creators, sbomasmCreator)
 	}
-	
+
 	log.Debug("Updated creation info with timestamp and tool information")
 }
 
 // writeSBOM writes the augmented SBOM to output
 func (a *augmentMerge) writeSBOM() error {
 	log := logger.FromContext(*a.settings.Ctx)
-	
+
 	outputPath := a.settings.Output.File
 	format := a.settings.Output.FileFormat
-	
+
 	log.Debugf("Writing augmented SBOM to %s in %s format", outputPath, format)
-	
+
 	// Determine output writer
 	var writer io.Writer
 	if outputPath == "" {
@@ -627,12 +627,11 @@ func (a *augmentMerge) writeSBOM() error {
 		defer file.Close()
 		writer = file
 	}
-	
+
 	// Write based on format
 	if format == "tag-value" || format == "tv" {
 		return spdx_tv.Write(a.primary, writer)
 	} else {
-		// Default to JSON
-		return spdx_json.Write(a.primary, writer)
+		return sbom.WriteSBOM(writer, &sbom.SPDXDocument{Doc: a.primary})
 	}
 }
