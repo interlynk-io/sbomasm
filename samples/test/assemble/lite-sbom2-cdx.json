@@ -1,0 +1,86 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuid:4d2edcda-fcc4-42fe-8e9d-87cf33e47b94",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-04-25T00:42:27Z",
+    "component": {
+        "bom-ref": "pkg:golang/github.com/sigstore/cosign@v1.21.0",
+        "type": "application",
+        "name": "github.com/sigstore/cosign",
+        "version": "v1.21.0",
+        "purl": "pkg:golang/github.com/sigstore/cosign@v1.21.0",
+        "cpe": "cpe:/golang/github.com/sigstore/cosign:v1.21.0",
+        "hashes": [
+          {
+            "alg": "SHA-256",
+            "content": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+          }
+        ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4.0?type=module",
+      "type": "library",
+      "name": "github.com/felixge/httpsnoop",
+      "version": "v1.0.4",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3454d5d998f56cbe2673db2a5800976d01550418365b718fbeaa7cfc4492d968"
+        }
+      ],
+      "purl": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
+      "cpe": "cpe:2.3:a:felixge:httpsnoop:v1.0.4:*:*:*:*:*:*:*"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/sigstore/fulcio@v1.7.1?type=module",
+      "type": "library",
+      "name": "github.com/sigstore/fulcio",
+      "version": "v1.7.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "45ca16db4373e3d206799caedf2f50621cb257764a43ce53f855cf2a4bc4f9a4"
+        }
+      ],
+      "purl": "pkg:golang/github.com/sigstore/fulcio@v1.7.1",
+      "cpe": "cpe:2.3:a:sigstore:fulcio:v1.7.1:*:*:*:*:*:*:*"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module",
+      "type": "library",
+      "name": "github.com/sigstore/rekor",
+      "version": "v1.3.9",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335"
+        }
+      ],
+      "purl": "pkg:golang/github.com/sigstore/rekor@v1.3.9",
+      "cpe": "cpe:/golang/github.com/sigstore/rekor:v1.3.9"
+    }
+],
+"dependencies": [
+    {
+      "ref": "pkg:golang/github.com/sigstore/cosign@v1.21.0",
+      "dependsOn": [
+        "pkg:golang/github.com/sigstore/fulcio@v1.7.1?type=module",
+        "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module"
+        ]
+    },
+    {
+      "ref": "pkg:golang/github.com/sigstore/fulcio@v1.7.1?type=module",
+      "dependsOn": [
+        "pkg:golang/github.com/felixge/httpsnoop@v1.0.4.0?type=module"
+      ]
+    }
+  ]
+}
