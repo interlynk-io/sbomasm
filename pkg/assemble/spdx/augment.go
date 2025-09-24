@@ -92,6 +92,9 @@ func (a *augmentMerge) merge() error {
 	// Update creation info
 	a.updateCreationInfo()
 
+	// Ensure proper DESCRIBES relationships according to SPDX spec
+	a.ensurePrimaryDescribes()
+
 	// Write the merged SBOM
 	return a.writeSBOM()
 }
@@ -391,6 +394,13 @@ func (a *augmentMerge) mergeSelectiveRelationships(sbom *spdx.Document) {
 	addedCount := 0
 	skippedCount := 0
 	for _, rel := range sbom.Relationships {
+		// Skip DESCRIBES relationships from secondary SBOMs
+		// These should not be copied as per SPDX specification
+		if rel.Relationship == common.TypeRelationshipDescribe {
+			skippedCount++
+			continue
+		}
+
 		// Check if relationship involves a processed package
 		if !a.isRelationshipRelevant(rel) {
 			skippedCount++
@@ -604,6 +614,109 @@ func (a *augmentMerge) updateCreationInfo() {
 	}
 
 	log.Debug("Updated creation info with timestamp and tool information")
+}
+
+// findPrimaryPackage finds the primary package in the primary SBOM
+// It looks for a package that has a DESCRIBES relationship from the document
+// If no DESCRIBES exists and there's only one package, that's considered the primary
+func (a *augmentMerge) findPrimaryPackage() *spdx.Package {
+	// Look for existing DESCRIBES relationship
+	for _, rel := range a.primary.Relationships {
+		if rel.Relationship == common.TypeRelationshipDescribe {
+			refAStr := a.docElementIDToString(rel.RefA)
+			refBStr := a.docElementIDToString(rel.RefB)
+
+			// Check if it's a document -> package DESCRIBES relationship
+			if refAStr == string(a.primary.SPDXIdentifier) || refAStr == "DOCUMENT" {
+				// Find the package being described
+				for _, pkg := range a.primary.Packages {
+					if string(pkg.PackageSPDXIdentifier) == refBStr {
+						return pkg
+					}
+				}
+			}
+		}
+	}
+
+	// If no DESCRIBES found and there's only one package in original primary SBOM
+	// (before augmentation), that's the primary package
+	if len(a.primary.Packages) == 1 {
+		return a.primary.Packages[0]
+	}
+
+	// If we have multiple packages but no DESCRIBES, use the first package
+	// This is a fallback - ideally the primary SBOM should have proper DESCRIBES
+	// if len(a.primary.Packages) > 0 {
+	// 	return a.primary.Packages[0]
+	// }
+
+
+	return nil
+}
+
+// ensurePrimaryDescribes ensures there's a DESCRIBES relationship from document to primary package
+// This is required by SPDX spec when there are multiple packages
+func (a *augmentMerge) ensurePrimaryDescribes() {
+	log := logger.FromContext(*a.settings.Ctx)
+
+	// Find the primary package
+	primaryPkg := a.findPrimaryPackage()
+	if primaryPkg == nil {
+		log.Warn("No primary package found in augmented SBOM")
+		return
+	}
+
+	// Check if we already have a DESCRIBES to the primary package
+	hasDescribes := false
+	for _, rel := range a.primary.Relationships {
+		if rel.Relationship == common.TypeRelationshipDescribe {
+			refAStr := a.docElementIDToString(rel.RefA)
+			refBStr := a.docElementIDToString(rel.RefB)
+
+			if (refAStr == string(a.primary.SPDXIdentifier) || refAStr == "DOCUMENT") &&
+				refBStr == string(primaryPkg.PackageSPDXIdentifier) {
+				hasDescribes = true
+				break
+			}
+		}
+	}
+
+	// If we have multiple packages but no DESCRIBES to primary, add it
+	if !hasDescribes && len(a.primary.Packages) > 1 {
+		describedRel := &spdx.Relationship{
+			RefA:                common.MakeDocElementID("", string(a.primary.SPDXIdentifier)),
+			RefB:                common.MakeDocElementID("", string(primaryPkg.PackageSPDXIdentifier)),
+			Relationship:        common.TypeRelationshipDescribe,
+			RelationshipComment: "Primary package DESCRIBES relationship added by sbomasm augment merge",
+		}
+		a.primary.Relationships = append(a.primary.Relationships, describedRel)
+		log.Debugf("Added DESCRIBES relationship from document to primary package %s", primaryPkg.PackageName)
+	}
+
+	// Remove any DESCRIBES relationships to non-primary packages
+	// This ensures compliance with SPDX spec
+	filteredRels := []*spdx.Relationship{}
+	removedCount := 0
+	for _, rel := range a.primary.Relationships {
+		if rel.Relationship == common.TypeRelationshipDescribe {
+			refAStr := a.docElementIDToString(rel.RefA)
+			refBStr := a.docElementIDToString(rel.RefB)
+
+			// Keep only DESCRIBES from document to primary package
+			if (refAStr == string(a.primary.SPDXIdentifier) || refAStr == "DOCUMENT") &&
+				refBStr != string(primaryPkg.PackageSPDXIdentifier) {
+				// This is a DESCRIBES to a non-primary package, skip it
+				removedCount++
+				continue
+			}
+		}
+		filteredRels = append(filteredRels, rel)
+	}
+
+	if removedCount > 0 {
+		a.primary.Relationships = filteredRels
+		log.Debugf("Removed %d DESCRIBES relationships to non-primary packages", removedCount)
+	}
 }
 
 // writeSBOM writes the augmented SBOM to output
