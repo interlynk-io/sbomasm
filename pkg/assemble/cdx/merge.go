@@ -196,6 +196,10 @@ func (m *merge) initOutBom() {
 	if len(m.settings.App.Authors) > 0 {
 		m.out.Metadata.Authors = &[]cydx.OrganizationalContact{}
 		for _, author := range m.settings.App.Authors {
+			// Skip authors with empty names (e.g., sanitized [OPTIONAL] values)
+			if author.Name == "" {
+				continue
+			}
 			*m.out.Metadata.Authors = append(*m.out.Metadata.Authors, cydx.OrganizationalContact{
 				Name:  author.Name,
 				Email: author.Email,
