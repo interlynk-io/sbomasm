@@ -59,7 +59,7 @@ generate:
 
 .PHONY: test
 test: generate
-	go test -v -cover -race -failfast ./... 
+	go test -v -cover -race -failfast -p 1 ./... 
 
 .PHONY: build
 build:

@@ -638,18 +638,19 @@ func (a *augmentMerge) findPrimaryPackage() *spdx.Package {
 		}
 	}
 
-	// If no DESCRIBES found and there's only one package in original primary SBOM
-	// (before augmentation), that's the primary package
-	if len(a.primary.Packages) == 1 {
-		return a.primary.Packages[0]
+	// If no DESCRIBES found, find original packages (not added during augmentation)
+	originalPackages := []*spdx.Package{}
+	for _, pkg := range a.primary.Packages {
+		// Skip packages that were added during augmentation
+		if !a.addedPkgIDs[string(pkg.PackageSPDXIdentifier)] {
+			originalPackages = append(originalPackages, pkg)
+		}
 	}
 
-	// If we have multiple packages but no DESCRIBES, use the first package
-	// This is a fallback - ideally the primary SBOM should have proper DESCRIBES
-	// if len(a.primary.Packages) > 0 {
-	// 	return a.primary.Packages[0]
-	// }
-
+	// If there's exactly one original package, that's the primary
+	if len(originalPackages) == 1 {
+		return originalPackages[0]
+	}
 
 	return nil
 }

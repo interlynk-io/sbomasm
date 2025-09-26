@@ -28,12 +28,12 @@ func TestAugmentMerge_DESCRIBES_Handling(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name                    string
-		primary                 *spdx.Document
-		secondary               *spdx.Document
-		expectedDescribesCount  int
-		expectedDescribedPkgID  string
-		shouldHaveDescribes     bool
+		name                   string
+		primary                *spdx.Document
+		secondary              *spdx.Document
+		expectedDescribesCount int
+		expectedDescribedPkgID string
+		shouldHaveDescribes    bool
 	}{
 		{
 			name: "Primary without DESCRIBES, single package - should add DESCRIBES when augmented",
@@ -135,7 +135,7 @@ func TestAugmentMerge_DESCRIBES_Handling(t *testing.T) {
 			shouldHaveDescribes:    true,
 		},
 		{
-			name: "Multiple packages in primary without DESCRIBES - should add DESCRIBES to first",
+			name: "Multiple packages in primary without DESCRIBES - should not add DESCRIBES to first",
 			primary: &spdx.Document{
 				SPDXVersion:       "SPDX-2.3",
 				DataLicense:       "CC0-1.0",
@@ -173,9 +173,9 @@ func TestAugmentMerge_DESCRIBES_Handling(t *testing.T) {
 				},
 				Relationships: []*spdx.Relationship{},
 			},
-			expectedDescribesCount: 1,
-			expectedDescribedPkgID: "SPDXRef-Pkg1",
-			shouldHaveDescribes:    true,
+			expectedDescribesCount: 0,
+			expectedDescribedPkgID: "",
+			shouldHaveDescribes:    false,
 		},
 	}
 
@@ -250,10 +250,10 @@ func TestAugmentMerge_DESCRIBES_Handling(t *testing.T) {
 
 func TestFindPrimaryPackage(t *testing.T) {
 	tests := []struct {
-		name           string
-		doc            *spdx.Document
-		expectedPkgID  string
-		expectedFound  bool
+		name          string
+		doc           *spdx.Document
+		expectedPkgID string
+		expectedFound bool
 	}{
 		{
 			name: "Find package with DESCRIBES relationship",
@@ -311,8 +311,8 @@ func TestFindPrimaryPackage(t *testing.T) {
 				},
 				Relationships: []*spdx.Relationship{},
 			},
-			expectedPkgID: "SPDXRef-FirstPkg",
-			expectedFound: true,
+			expectedPkgID: "",
+			expectedFound: false,
 		},
 		{
 			name: "No packages",
