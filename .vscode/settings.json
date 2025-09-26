@@ -1,6 +1,8 @@
 {
-    "go.goroot": "/home/riteshno/.local/share/mise/installs/go/1.21.5",
+    "go.goroot": "/home/riteshno/.local/share/mise/installs/go/1.25.1",
     "go.alternateTools": {
-        "go": "/home/riteshno/.local/share/mise/shims/go"
-    }
+        "go": "/home/riteshno/.local/share/mise/shims/go",
+        "gopls": "/home/riteshno/.local/share/mise/shims/gopls"
+    },
+    "python.defaultInterpreterPath": "/home/riteshno/.local/share/mise/installs/python/3.11.13/bin/python"
 }
