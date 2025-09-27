@@ -59,15 +59,7 @@ generate:
 
 .PHONY: test
 test: generate
-	@echo "Running tests..."
-	@go test -v -cover -race ./... 2>&1 | grep -E "^(=== RUN|--- PASS|--- FAIL|ok |FAIL )" | grep -v "\[no test files\]" | grep -v "coverage: 0.0%" | grep -v "\[no statements\]" || true
-	@echo "Tests completed."
-
-.PHONY: test-short
-test-short: generate
-	@echo "Running tests (summary)..."
-	@go test -cover -race ./... 2>&1 | grep -E "^(ok |FAIL )" | grep -v "\[no test files\]" | grep -v "coverage: 0.0%" | grep -v "\[no statements\]" || true
-	@echo "Tests completed."
+	go test -v -cover -race -failfast -p 1 ./... 
 
 .PHONY: build
 build:
