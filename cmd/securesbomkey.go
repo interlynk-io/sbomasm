@@ -24,7 +24,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/interlynk-io/sbomasm/pkg/securesbom"
+	"github.com/shiftleftcyber/securesbom-sdk-golang/pkg/securesbom"
 	"github.com/spf13/cobra"
 )
 
