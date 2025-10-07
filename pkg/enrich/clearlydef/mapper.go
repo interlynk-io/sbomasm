@@ -18,6 +18,7 @@ package clearlydef
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -25,6 +26,15 @@ import (
 	"github.com/interlynk-io/sbomasm/pkg/logger"
 	"github.com/package-url/packageurl-go"
 	"github.com/spdx/tools-golang/spdx"
+)
+
+var (
+	// ErrInvalidPURL marks PURLs that fail to parse.
+	ErrInvalidPURL = errors.New("invalid purl")
+
+	// ErrNoClearlyDefinedData marks PURLs that parse fine but cannot be
+	// mapped to a ClearlyDefined coordinate coz not supported or no data.
+	ErrNoClearlyDefinedData = errors.New("no clearlydefined data for purl")
 )
 
 type Coordinate struct {
@@ -44,6 +54,7 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 	missingPurl := 0
 	invalidPurl := 0
 	validPurl := 0
+	validPurlWithNoData := 0
 
 	for _, comp := range components {
 		var coord *coordinates.Coordinate
@@ -72,8 +83,20 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 
 		coord, err = mapPURLToCoordinate(ctx, purls[0])
 		if err != nil {
-			invalidPurl++
-			log.Debugf("%w", err)
+			switch {
+			case errors.Is(err, ErrInvalidPURL):
+				invalidPurl++
+				log.Debugf("invalid PURL %q: %v", purls[0], err)
+
+			case errors.Is(err, ErrNoClearlyDefinedData):
+				validPurlWithNoData++
+				log.Debugf("no ClearlyDefined data for %q: %v", purls[0], err)
+
+			default:
+				validPurlWithNoData++
+				log.Debugf("failed to map %q: %v", purls[0], err)
+			}
+
 			continue
 		}
 
@@ -81,7 +104,7 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 		componentsToCoordinateMappings[comp] = *coord
 
 	}
-	log.Debugf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\n", missingPurl, invalidPurl, validPurl)
+	log.Debugf("Missing PURLs: %d\t Invalid PURLs: %d\t Valid PURLs: %d\t Valid PURLs with no CD Data: %d\n", missingPurl, invalidPurl, validPurl, validPurlWithNoData)
 	log.Debugf("mapped %d components to coordinates", len(componentsToCoordinateMappings))
 
 	return componentsToCoordinateMappings
@@ -93,12 +116,12 @@ func mapPURLToCoordinate(ctx context.Context, purl string) (*coordinates.Coordin
 
 	pkgPURL, err := packageurl.FromString(purl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse PURL: %w", err)
+		return nil, fmt.Errorf("%w: %q: %v", ErrInvalidPURL, purl, err)
 	}
 
 	coordinate, err := coordinates.ConvertPurlToCoordinate(pkgPURL.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %q: %v", ErrNoClearlyDefinedData, purl, err)
 	}
 
 	log.Debugf("successfully mapped PURL %s to coordinate: %+v", purl, constructPathFromCoordinate(*coordinate))
