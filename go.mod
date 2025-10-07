@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.6
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.9.2
+	github.com/CycloneDX/cyclonedx-go v0.9.3
 	github.com/github/go-spdx/v2 v2.3.3
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
