@@ -24,12 +24,13 @@
   },
   "components" : [
     {
-      "group" : "io.dropwizard",
-      "name" : "dropwizard-json-logging",
-      "version" : "2.0.31",
-      "purl" : "pkg:maven/io.dropwizard/dropwizard-json-logging@2.0.31?type=jar",
+      "group" : "apple",
+      "name" : "swift-protobuf",
+      "version" : "1.31.1",
+      "purl" : "pkg:swift/github.com/apple/swift-protobuf@1.31.1",
       "type" : "library",
-      "bom-ref" : "pkg:maven/io.dropwizard/dropwizard-json-logging@2.0.31?type=jar"
+      "description": "valid purl with no data present in clearlydefined as swift package not supported",
+      "bom-ref" : "pkg:swift/github.com/apple/swift-protobuf@1.31.1"
     },
     {
       "group" : "io.dropwizard.archetypes",
