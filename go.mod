@@ -15,7 +15,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.51.0
-	github.com/shiftleftcyber/securesbom-sdk-golang v1.0.0
+	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.0.5
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.10.1
 	go.uber.org/zap v1.27.0
