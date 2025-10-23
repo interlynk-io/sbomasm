@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/shiftleftcyber/securesbom-sdk-golang/pkg/securesbom"
+	"github.com/shiftleftcyber/securesbom-sdk-golang/v2/pkg/securesbom"
 	"github.com/spf13/cobra"
 )
 

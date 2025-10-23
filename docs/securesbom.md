@@ -137,7 +137,7 @@ sbomasm verify --key-id <key-id> <signed-sbom>
 
 The SecureSBOM API manages your cryptographic keys securely:
 - **Key Generation**: Creates an ECDSA key pair
-- **Secure Storage**: Private keys are encrypted and stored securely
+- **Secure Storage**: Private keys are securely stored in Hardware Security Modules (HSM), with Google Cloud KMS as the default backend
 - **Access Control**: Keys are tied to your API account and access permissions
 - **Public Key Sharing**: Public keys can be shared for verification purposes
 
@@ -367,7 +367,6 @@ sbomasm sign --timeout 60s --retry 5 --key-id my-key sbom.json
 * **Spport for Air Gapped Verification**: Veirfy a signed sbom offline with only the public key
 * **CycloneDX Multi-Signature Support**: Multiple signatures on single SBOM
 * **Signature Chain Support**: Hierarchical signature chains for supply chain trust
-* **Hardware Security Module (HSM)** integration
 * **Certificate Authority (CA)** integration for key management
 
 ## Support
