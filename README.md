@@ -28,6 +28,9 @@ sbomasm rm --subject component-data --search "internal-tool" sbom.json
 # Enrich SBOM with missing license information
 sbomasm enrich --fields license -o enriched.json sbom.json
 
+# View SBOM in human-readable format
+sbomasm view sbom.cdx.json
+
 # Generate assembly configuration
 sbomasm generate > config.yml
 
@@ -45,6 +48,8 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
   - [Assembling SBOMs](#assembling-sboms)
   - [Editing SBOMs](#editing-sboms)
   - [Removing Components](#removing-components)
+  - [Enriching SBOMs](#enriching-sboms)
+  - [Viewing SBOMs](#viewing-sboms)
   - [Signing and Verifying](#signing-and-veirfying)
 - [Industry Use Cases](#industry-use-cases)
   - [Microservices & Kubernetes](#microservices--kubernetes)
@@ -110,6 +115,7 @@ Modern software development involves complex supply chains with multiple compone
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
 - 🗑️ **Remove**: Strip sensitive components or fields
 - 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
+- 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
 - 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
@@ -246,6 +252,48 @@ This command is particularly useful for:
 - Ensuring compliance with procurement and legal requirements
 - Standardizing license expressions across components
 - Meeting regulatory requirements that mandate complete license documentation
+
+### Viewing SBOMs
+
+Visualize CycloneDX SBOMs in a human-readable hierarchical format with comprehensive component information:
+
+#### Basic SBOM Visualization
+
+```bash
+# View SBOM with default settings
+sbomasm view sbom.cdx.json
+
+# Detailed view with all information
+sbomasm view sbom.cdx.json --verbose
+
+# Save output to file
+sbomasm view sbom.cdx.json -o sbom-report.txt
+
+# License-only view (minimal component details)
+sbomasm view sbom.cdx.json --only-licenses
+
+# View containers and operating systems
+sbomasm view sbom.cdx.json --filter-type "container,operating-system"
+
+# Focus on high-severity vulnerabilities
+sbomasm view sbom.cdx.json --min-severity high --only-unresolved
+
+# Limit tree depth for large SBOMs
+sbomasm view sbom.cdx.json --max-depth 3
+
+# Flat list format
+sbomasm view sbom.cdx.json --format flat
+
+# JSON export for processing
+sbomasm view sbom.cdx.json --format json -o analysis.json
+```
+
+The view command is particularly useful for:
+- **Security Audits**: Identify and filter vulnerabilities by severity
+- **Dependency Analysis**: Understand component relationships and dependencies
+- **License Compliance**: Extract license information for compliance review
+- **SBOM Validation**: Verify SBOM completeness and structure
+- **Documentation**: Generate human-readable reports for stakeholders
 
 ### Signing and Veirfying
 
@@ -401,6 +449,13 @@ sbomasm edit \
   --author "Security Team (security@bank.com)" \
   --lifecycle "operations" \
   quarterly-sbom.cdx.json
+
+# Generate security audit report
+sbomasm view quarterly-sbom.cdx.json \
+  --min-severity high \
+  --only-unresolved \
+  --vulnerabilities \
+  -o quarterly-security-report.txt
 ```
 
 ## Advanced Features
@@ -478,6 +533,7 @@ Detailed documentation for each command:
 - [edit](docs/edit.md) - Modify SBOM metadata
 - [rm](docs/remove.md) - Remove components or fields
 - [enrich](docs/enrich.md) - Enrich SBOMs with missing license information
+- [view](docs/view.md) - Visualize SBOMs in human-readable format
 - [generate](docs/generate.md) - Create configuration templates
 - [sign/verify](docs/securesbom.md) - Cryptographically Sign & Verify SBOMs
 

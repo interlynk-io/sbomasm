@@ -43,35 +43,35 @@ func NewComponentIndex() *ComponentIndex {
 // BuildIndex creates indices for fast lookup from a list of components
 func BuildIndex(components []Component) *ComponentIndex {
 	idx := NewComponentIndex()
-	
+
 	for i, comp := range components {
 		idx.components = append(idx.components, comp)
-		
+
 		// Index by purl
 		if purl := comp.GetPurl(); purl != "" {
 			normalizedPurl := strings.ToLower(strings.TrimSpace(purl))
 			idx.purlIndex[normalizedPurl] = append(idx.purlIndex[normalizedPurl], i)
 		}
-		
+
 		// Index by CPE
 		if cpe := comp.GetCPE(); cpe != "" {
 			normalizedCPE := strings.ToLower(strings.TrimSpace(cpe))
 			idx.cpeIndex[normalizedCPE] = append(idx.cpeIndex[normalizedCPE], i)
 		}
-		
+
 		// Index by name
 		if name := comp.GetName(); name != "" {
 			normalizedName := strings.ToLower(strings.TrimSpace(name))
 			idx.nameIndex[normalizedName] = append(idx.nameIndex[normalizedName], i)
 		}
-		
+
 		// Index by version
 		if version := comp.GetVersion(); version != "" {
 			normalizedVersion := strings.ToLower(strings.TrimSpace(version))
 			idx.versionIndex[normalizedVersion] = append(idx.versionIndex[normalizedVersion], i)
 		}
 	}
-	
+
 	return idx
 }
 
@@ -79,23 +79,23 @@ func BuildIndex(components []Component) *ComponentIndex {
 func (idx *ComponentIndex) AddComponent(comp Component) {
 	i := len(idx.components)
 	idx.components = append(idx.components, comp)
-	
+
 	// Update indices
 	if purl := comp.GetPurl(); purl != "" {
 		normalizedPurl := strings.ToLower(strings.TrimSpace(purl))
 		idx.purlIndex[normalizedPurl] = append(idx.purlIndex[normalizedPurl], i)
 	}
-	
+
 	if cpe := comp.GetCPE(); cpe != "" {
 		normalizedCPE := strings.ToLower(strings.TrimSpace(cpe))
 		idx.cpeIndex[normalizedCPE] = append(idx.cpeIndex[normalizedCPE], i)
 	}
-	
+
 	if name := comp.GetName(); name != "" {
 		normalizedName := strings.ToLower(strings.TrimSpace(name))
 		idx.nameIndex[normalizedName] = append(idx.nameIndex[normalizedName], i)
 	}
-	
+
 	if version := comp.GetVersion(); version != "" {
 		normalizedVersion := strings.ToLower(strings.TrimSpace(version))
 		idx.versionIndex[normalizedVersion] = append(idx.versionIndex[normalizedVersion], i)
@@ -105,10 +105,10 @@ func (idx *ComponentIndex) AddComponent(comp Component) {
 // FindMatches returns all matching components using the given matcher
 func (idx *ComponentIndex) FindMatches(component Component, matcher ComponentMatcher) []MatchResult {
 	results := []MatchResult{}
-	
+
 	// Get candidate indices based on matcher strategy
 	candidateIndices := idx.getCandidateIndices(component, matcher.Strategy())
-	
+
 	// Check each candidate for actual match
 	seen := make(map[int]bool)
 	for _, i := range candidateIndices {
@@ -116,7 +116,7 @@ func (idx *ComponentIndex) FindMatches(component Component, matcher ComponentMat
 			continue
 		}
 		seen[i] = true
-		
+
 		candidate := idx.components[i]
 		if matcher.Match(candidate, component) {
 			results = append(results, MatchResult{
@@ -128,7 +128,7 @@ func (idx *ComponentIndex) FindMatches(component Component, matcher ComponentMat
 			})
 		}
 	}
-	
+
 	return results
 }
 
@@ -138,7 +138,7 @@ func (idx *ComponentIndex) FindBestMatch(component Component, matcher ComponentM
 	if len(matches) == 0 {
 		return nil
 	}
-	
+
 	// Find match with highest confidence
 	best := &matches[0]
 	for i := 1; i < len(matches); i++ {
@@ -146,7 +146,7 @@ func (idx *ComponentIndex) FindBestMatch(component Component, matcher ComponentM
 			best = &matches[i]
 		}
 	}
-	
+
 	return best
 }
 
@@ -156,7 +156,7 @@ func (idx *ComponentIndex) getCandidateIndices(component Component, strategy str
 	case "composite":
 		// For composite matching, gather candidates from all available strategies
 		candidateSet := make(map[int]bool)
-		
+
 		// Try PURL first
 		if purl := component.GetPurl(); purl != "" {
 			normalizedPurl := strings.ToLower(strings.TrimSpace(purl))
@@ -172,7 +172,7 @@ func (idx *ComponentIndex) getCandidateIndices(component Component, strategy str
 				}
 			}
 		}
-		
+
 		// Try CPE second
 		if cpe := component.GetCPE(); cpe != "" {
 			normalizedCPE := strings.ToLower(strings.TrimSpace(cpe))
@@ -180,7 +180,7 @@ func (idx *ComponentIndex) getCandidateIndices(component Component, strategy str
 				candidateSet[i] = true
 			}
 		}
-		
+
 		// Try name-version third
 		if name := component.GetName(); name != "" {
 			normalizedName := strings.ToLower(strings.TrimSpace(name))
@@ -188,21 +188,21 @@ func (idx *ComponentIndex) getCandidateIndices(component Component, strategy str
 				candidateSet[i] = true
 			}
 		}
-		
+
 		// Convert set to slice
 		indices := make([]int, 0, len(candidateSet))
 		for i := range candidateSet {
 			indices = append(indices, i)
 		}
-		
+
 		// If we have specific candidates, return them
 		if len(indices) > 0 {
 			return indices
 		}
-		
+
 		// Otherwise fall back to checking all components
 		fallthrough
-		
+
 	case "purl":
 		if purl := component.GetPurl(); purl != "" {
 			normalizedPurl := strings.ToLower(strings.TrimSpace(purl))
@@ -217,20 +217,20 @@ func (idx *ComponentIndex) getCandidateIndices(component Component, strategy str
 			}
 			return indices
 		}
-		
+
 	case "cpe":
 		if cpe := component.GetCPE(); cpe != "" {
 			normalizedCPE := strings.ToLower(strings.TrimSpace(cpe))
 			return idx.cpeIndex[normalizedCPE]
 		}
-		
+
 	case "name-version":
 		if name := component.GetName(); name != "" {
 			normalizedName := strings.ToLower(strings.TrimSpace(name))
 			return idx.nameIndex[normalizedName]
 		}
 	}
-	
+
 	// If no specific index available, return all components
 	indices := make([]int, len(idx.components))
 	for i := range indices {
@@ -255,17 +255,17 @@ func removeVersionFromPurl(purl string) string {
 	if atIndex == -1 {
 		return purl
 	}
-	
+
 	afterVersion := purl[atIndex:]
 	qualifierIndex := strings.Index(afterVersion, "?")
 	subpathIndex := strings.Index(afterVersion, "#")
-	
+
 	endIndex := len(afterVersion)
 	if qualifierIndex != -1 && (subpathIndex == -1 || qualifierIndex < subpathIndex) {
 		endIndex = qualifierIndex
 	} else if subpathIndex != -1 {
 		endIndex = subpathIndex
 	}
-	
+
 	return purl[:atIndex] + afterVersion[endIndex:]
 }

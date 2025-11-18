@@ -91,15 +91,15 @@ type input struct {
 }
 
 type assemble struct {
-	IncludeDependencyGraph     bool   `yaml:"include_dependency_graph"`
-	IncludeComponents          bool   `yaml:"include_components"`
+	IncludeDependencyGraph     bool `yaml:"include_dependency_graph"`
+	IncludeComponents          bool `yaml:"include_components"`
 	includeDuplicateComponents bool
 	FlatMerge                  bool   `yaml:"flat_merge"`
 	HierarchicalMerge          bool   `yaml:"hierarchical_merge"`
 	AssemblyMerge              bool   `yaml:"assembly_merge"`
 	AugmentMerge               bool   `yaml:"augment_merge"`
 	PrimaryFile                string `yaml:"primary_file"`
-	MergeMode                  string `yaml:"merge_mode"`      // if-missing-or-empty, overwrite
+	MergeMode                  string `yaml:"merge_mode"` // if-missing-or-empty, overwrite
 }
 
 type config struct {
@@ -219,7 +219,7 @@ func (c *config) readAndMerge(p *Params) error {
 	c.Output.Url = p.Url
 	c.Output.ApiKey = p.ApiKey
 	c.ctx = p.Ctx
-	
+
 	// Set augment merge specific fields
 	if p.AugmentMerge {
 		c.Assemble.PrimaryFile = p.PrimaryFile
@@ -300,8 +300,7 @@ func (c *config) validate() error {
 		if c.Assemble.PrimaryFile == "" {
 			return fmt.Errorf("primary SBOM file is required for augment merge")
 		}
-		
-		
+
 		// Validate merge mode
 		validModes := []string{"if-missing-or-empty", "overwrite"}
 		if c.Assemble.MergeMode == "" {

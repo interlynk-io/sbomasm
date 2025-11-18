@@ -43,7 +43,7 @@ func NewCompositeComponentMatcher(config *MatcherConfig) *CompositeComponentMatc
 
 	return &CompositeComponentMatcher{
 		purlMatcher:        NewPurlMatcher(strictVersion),
-		cpeMatcher:         NewCPEMatcher(!strictVersion), 
+		cpeMatcher:         NewCPEMatcher(!strictVersion),
 		nameVersionMatcher: NewNameVersionMatcher(fuzzyMatch, typeMatch),
 		minConfidence:      minConfidence,
 	}

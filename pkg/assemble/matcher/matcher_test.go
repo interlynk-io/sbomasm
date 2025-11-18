@@ -32,13 +32,13 @@ type mockComponent struct {
 	typ     string
 }
 
-func (m *mockComponent) GetPurl() string    { return m.purl }
-func (m *mockComponent) GetCPE() string     { return m.cpe }
-func (m *mockComponent) GetName() string    { return m.name }
-func (m *mockComponent) GetVersion() string { return m.version }
-func (m *mockComponent) GetType() string    { return m.typ }
-func (m *mockComponent) IsCDX() bool        { return false }
-func (m *mockComponent) IsSPDX() bool       { return false }
+func (m *mockComponent) GetPurl() string          { return m.purl }
+func (m *mockComponent) GetCPE() string           { return m.cpe }
+func (m *mockComponent) GetName() string          { return m.name }
+func (m *mockComponent) GetVersion() string       { return m.version }
+func (m *mockComponent) GetType() string          { return m.typ }
+func (m *mockComponent) IsCDX() bool              { return false }
+func (m *mockComponent) IsSPDX() bool             { return false }
 func (m *mockComponent) GetOriginal() interface{} { return nil }
 
 func TestPurlMatcher(t *testing.T) {
@@ -115,12 +115,12 @@ func TestPurlMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			matcher := NewPurlMatcher(tt.strictVersion)
-			
+
 			matched := matcher.Match(tt.primary, tt.secondary)
 			if matched != tt.expectMatch {
 				t.Errorf("expected match=%v, got %v", tt.expectMatch, matched)
 			}
-			
+
 			confidence := matcher.MatchConfidence(tt.primary, tt.secondary)
 			if confidence != tt.confidence {
 				t.Errorf("expected confidence=%d, got %d", tt.confidence, confidence)
@@ -191,12 +191,12 @@ func TestCPEMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			matcher := NewCPEMatcher(tt.ignoreVersion)
-			
+
 			matched := matcher.Match(tt.primary, tt.secondary)
 			if matched != tt.expectMatch {
 				t.Errorf("expected match=%v, got %v", tt.expectMatch, matched)
 			}
-			
+
 			confidence := matcher.MatchConfidence(tt.primary, tt.secondary)
 			if confidence != tt.confidence {
 				t.Errorf("expected confidence=%d, got %d", tt.confidence, confidence)
@@ -207,12 +207,12 @@ func TestCPEMatcher(t *testing.T) {
 
 func TestNameVersionMatcher(t *testing.T) {
 	tests := []struct {
-		name        string
-		primary     Component
-		secondary   Component
-		fuzzyMatch  bool
-		typeMatch   bool
-		expectMatch bool
+		name          string
+		primary       Component
+		secondary     Component
+		fuzzyMatch    bool
+		typeMatch     bool
+		expectMatch   bool
 		minConfidence int
 	}{
 		{
@@ -227,9 +227,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				version: "3.12.0",
 				typ:     "library",
 			},
-			fuzzyMatch:  false,
-			typeMatch:   true,
-			expectMatch: true,
+			fuzzyMatch:    false,
+			typeMatch:     true,
+			expectMatch:   true,
 			minConfidence: 80,
 		},
 		{
@@ -242,9 +242,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				name:    "commons-lang3",
 				version: "3.12.0",
 			},
-			fuzzyMatch:  false,
-			typeMatch:   false,
-			expectMatch: true,
+			fuzzyMatch:    false,
+			typeMatch:     false,
+			expectMatch:   true,
 			minConfidence: 70,
 		},
 		{
@@ -257,9 +257,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				name:    "commons-lang3",
 				version: "3.12.0",
 			},
-			fuzzyMatch:  false,
-			typeMatch:   false,
-			expectMatch: true,
+			fuzzyMatch:    false,
+			typeMatch:     false,
+			expectMatch:   true,
 			minConfidence: 70,
 		},
 		{
@@ -272,9 +272,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				name:    "commons-lang3",
 				version: "3.12.0",
 			},
-			fuzzyMatch:  true,
-			typeMatch:   false,
-			expectMatch: true,
+			fuzzyMatch:    true,
+			typeMatch:     false,
+			expectMatch:   true,
 			minConfidence: 60,
 		},
 		{
@@ -289,9 +289,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				version: "3.12.0",
 				typ:     "application",
 			},
-			fuzzyMatch:  false,
-			typeMatch:   true,
-			expectMatch: false,
+			fuzzyMatch:    false,
+			typeMatch:     true,
+			expectMatch:   false,
 			minConfidence: 0,
 		},
 		{
@@ -304,9 +304,9 @@ func TestNameVersionMatcher(t *testing.T) {
 				name:    "commons-lang3",
 				version: "3.13.0",
 			},
-			fuzzyMatch:  false,
-			typeMatch:   false,
-			expectMatch: false,
+			fuzzyMatch:    false,
+			typeMatch:     false,
+			expectMatch:   false,
 			minConfidence: 0,
 		},
 	}
@@ -314,12 +314,12 @@ func TestNameVersionMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			matcher := NewNameVersionMatcher(tt.fuzzyMatch, tt.typeMatch)
-			
+
 			matched := matcher.Match(tt.primary, tt.secondary)
 			if matched != tt.expectMatch {
 				t.Errorf("expected match=%v, got %v", tt.expectMatch, matched)
 			}
-			
+
 			confidence := matcher.MatchConfidence(tt.primary, tt.secondary)
 			if tt.expectMatch && confidence < tt.minConfidence {
 				t.Errorf("expected confidence>=%d, got %d", tt.minConfidence, confidence)
@@ -340,9 +340,9 @@ func TestUnifiedComponent(t *testing.T) {
 			PackageURL: "pkg:maven/test/test-component@1.0.0",
 			CPE:        "cpe:2.3:a:test:test-component:1.0.0:*:*:*:*:*:*:*",
 		}
-		
+
 		unified := NewCDXComponent(cdxComp)
-		
+
 		if !unified.IsCDX() {
 			t.Error("expected IsCDX() to be true")
 		}
@@ -365,8 +365,8 @@ func TestUnifiedComponent(t *testing.T) {
 
 	t.Run("SPDX package", func(t *testing.T) {
 		spdxPkg := &spdx.Package{
-			PackageName:    "test-package",
-			PackageVersion: "2.0.0",
+			PackageName:           "test-package",
+			PackageVersion:        "2.0.0",
 			PrimaryPackagePurpose: "APPLICATION",
 			PackageExternalReferences: []*spdx.PackageExternalReference{
 				{
@@ -380,9 +380,9 @@ func TestUnifiedComponent(t *testing.T) {
 				},
 			},
 		}
-		
+
 		unified := NewSPDXComponent(spdxPkg)
-		
+
 		if unified.IsCDX() {
 			t.Error("expected IsCDX() to be false")
 		}
@@ -426,15 +426,15 @@ func TestComponentIndex(t *testing.T) {
 			cpe:     "cpe:2.3:a:test:component3:1.0.0:*:*:*:*:*:*:*",
 		},
 	}
-	
+
 	index := BuildIndex(components)
-	
+
 	t.Run("find by purl", func(t *testing.T) {
 		matcher := NewPurlMatcher(true)
 		searchComp := &mockComponent{
 			purl: "pkg:maven/test/component1@1.0.0",
 		}
-		
+
 		matches := index.FindMatches(searchComp, matcher)
 		if len(matches) != 1 {
 			t.Errorf("expected 1 match, got %d", len(matches))
@@ -443,26 +443,26 @@ func TestComponentIndex(t *testing.T) {
 			t.Errorf("expected to match component1, got %s", matches[0].Primary.GetName())
 		}
 	})
-	
+
 	t.Run("find by name-version", func(t *testing.T) {
 		matcher := NewNameVersionMatcher(false, false)
 		searchComp := &mockComponent{
 			name:    "component2",
 			version: "2.0.0",
 		}
-		
+
 		matches := index.FindMatches(searchComp, matcher)
 		if len(matches) != 1 {
 			t.Errorf("expected 1 match, got %d", len(matches))
 		}
 	})
-	
+
 	t.Run("find best match", func(t *testing.T) {
 		matcher := NewCPEMatcher(false)
 		searchComp := &mockComponent{
 			cpe: "cpe:2.3:a:test:component3:1.0.0:*:*:*:*:*:*:*",
 		}
-		
+
 		best := index.FindBestMatch(searchComp, matcher)
 		if best == nil {
 			t.Error("expected to find a match")
@@ -471,13 +471,13 @@ func TestComponentIndex(t *testing.T) {
 			t.Errorf("expected to match component3, got %s", best.Primary.GetName())
 		}
 	})
-	
+
 	t.Run("no match", func(t *testing.T) {
 		matcher := NewPurlMatcher(true)
 		searchComp := &mockComponent{
 			purl: "pkg:maven/nonexistent/component@1.0.0",
 		}
-		
+
 		matches := index.FindMatches(searchComp, matcher)
 		if len(matches) != 0 {
 			t.Errorf("expected no matches, got %d", len(matches))
@@ -487,7 +487,7 @@ func TestComponentIndex(t *testing.T) {
 
 func TestMatcherFactory(t *testing.T) {
 	factory := NewDefaultMatcherFactory(nil)
-	
+
 	t.Run("create purl matcher", func(t *testing.T) {
 		matcher, err := factory.GetMatcher("purl")
 		if err != nil {
@@ -497,7 +497,7 @@ func TestMatcherFactory(t *testing.T) {
 			t.Errorf("expected purl strategy, got %s", matcher.Strategy())
 		}
 	})
-	
+
 	t.Run("create cpe matcher", func(t *testing.T) {
 		matcher, err := factory.GetMatcher("cpe")
 		if err != nil {
@@ -507,7 +507,7 @@ func TestMatcherFactory(t *testing.T) {
 			t.Errorf("expected cpe strategy, got %s", matcher.Strategy())
 		}
 	})
-	
+
 	t.Run("create name-version matcher", func(t *testing.T) {
 		matcher, err := factory.GetMatcher("name-version")
 		if err != nil {
@@ -517,7 +517,7 @@ func TestMatcherFactory(t *testing.T) {
 			t.Errorf("expected name-version strategy, got %s", matcher.Strategy())
 		}
 	})
-	
+
 	t.Run("unknown strategy error", func(t *testing.T) {
 		_, err := factory.GetMatcher("unknown")
 		if err == nil {

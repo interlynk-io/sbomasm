@@ -73,15 +73,15 @@ func (m *PurlMatcher) Strategy() string {
 func (m *PurlMatcher) normalizePurl(purl string) string {
 	// Convert to lowercase for case-insensitive comparison
 	purl = strings.ToLower(strings.TrimSpace(purl))
-	
+
 	// Remove any trailing slashes
 	purl = strings.TrimRight(purl, "/")
-	
+
 	// Handle pkg: prefix
 	if !strings.HasPrefix(purl, "pkg:") {
 		return purl
 	}
-	
+
 	return purl
 }
 
@@ -89,24 +89,24 @@ func (m *PurlMatcher) normalizePurl(purl string) string {
 func (m *PurlMatcher) removeVersion(purl string) string {
 	// Purl format: pkg:type/namespace/name@version?qualifiers#subpath
 	// We want to remove @version part
-	
+
 	atIndex := strings.Index(purl, "@")
 	if atIndex == -1 {
 		return purl
 	}
-	
+
 	// Find the end of version (could be followed by ? or #)
 	afterVersion := purl[atIndex:]
 	qualifierIndex := strings.Index(afterVersion, "?")
 	subpathIndex := strings.Index(afterVersion, "#")
-	
+
 	endIndex := len(afterVersion)
 	if qualifierIndex != -1 && (subpathIndex == -1 || qualifierIndex < subpathIndex) {
 		endIndex = qualifierIndex
 	} else if subpathIndex != -1 {
 		endIndex = subpathIndex
 	}
-	
+
 	// Reconstruct without version
 	return purl[:atIndex] + afterVersion[endIndex:]
 }
