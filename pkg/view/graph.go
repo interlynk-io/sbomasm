@@ -326,17 +326,16 @@ func CalculateStatistics(graph *ComponentGraph) Statistics {
 	}
 
 	// Count dependencies, vulnerabilities, annotations, and compositions from components
-	maxDepth := 0
 	annotationsSeen := make(map[string]bool) // Track unique annotations
 	compositionsSeen := make(map[string]bool) // Track unique compositions
-	
+
 	for _, comp := range graph.AllNodes {
 		// Count by type
 		stats.ComponentsByType[comp.Type]++
 
 		// Count dependencies
 		stats.TotalDependencies += comp.DependencyCount
-		
+
 		// Count annotations (avoid duplicates)
 		for _, ann := range comp.Annotations {
 			// Create a unique key for the annotation
@@ -346,7 +345,7 @@ func CalculateStatistics(graph *ComponentGraph) Statistics {
 				stats.TotalAnnotations++
 			}
 		}
-		
+
 		// Count compositions (avoid duplicates)
 		for _, comp := range comp.Compositions {
 			// Create a unique key for the composition
@@ -365,12 +364,15 @@ func CalculateStatistics(graph *ComponentGraph) Statistics {
 		stats.TotalVulnerabilities.Low += comp.VulnCount.Low
 		stats.TotalVulnerabilities.None += comp.VulnCount.None
 		stats.TotalVulnerabilities.Unknown += comp.VulnCount.Unknown
+	}
 
-		// Calculate max depth
-		depth := calculateDepth(comp)
-		if depth > maxDepth {
-			maxDepth = depth
-		}
+	// Calculate max depth from primary component only (not islands)
+	// This represents the depth of the main component tree
+	maxDepth := 0
+	if graph.Primary != nil {
+		visited := make(map[string]bool)    // Track visited components in current path
+		depthCache := make(map[string]int)  // Cache computed depths for memoization
+		maxDepth = calculateTreeDepth(graph.Primary, graph, 0, visited, depthCache)
 	}
 
 	stats.MaxDepth = maxDepth
@@ -378,7 +380,7 @@ func CalculateStatistics(graph *ComponentGraph) Statistics {
 	return stats
 }
 
-// calculateDepth calculates the depth of a component in the tree
+// calculateDepth calculates the depth of a component in the tree by counting parents (legacy method)
 func calculateDepth(comp *EnrichedComponent) int {
 	depth := 0
 	current := comp
@@ -387,6 +389,66 @@ func calculateDepth(comp *EnrichedComponent) int {
 		current = current.Parent
 	}
 	return depth
+}
+
+// calculateTreeDepth calculates the maximum depth from a component downward through the tree
+// This includes both assembly children and expanded dependencies
+// Uses a visited map to prevent infinite recursion and a cache for memoization
+func calculateTreeDepth(comp *EnrichedComponent, graph *ComponentGraph, currentDepth int, visited map[string]bool, depthCache map[string]int) int {
+	// Get component identifier
+	compID := comp.BOMRef
+	if compID == "" {
+		compID = comp.Name
+	}
+
+	// Check if already visited in current path (cycle detection)
+	if visited[compID] {
+		return currentDepth
+	}
+
+	// Check cache for previously computed depth from this component
+	if cachedDepth, found := depthCache[compID]; found {
+		return currentDepth + cachedDepth
+	}
+
+	// Mark as visited in current path
+	visited[compID] = true
+	defer func() {
+		// Unmark when done with this branch
+		delete(visited, compID)
+	}()
+
+	maxDepthFromHere := 0
+
+	// Check children (assemblies)
+	for _, child := range comp.Children {
+		childDepth := calculateTreeDepth(child, graph, 1, visited, depthCache)
+		if childDepth > maxDepthFromHere {
+			maxDepthFromHere = childDepth
+		}
+	}
+
+	// Check dependencies - only count those that would be expanded in the tree view
+	// (those with assemblies or other dependencies of their own)
+	if comp.Dependencies != nil {
+		for _, dep := range comp.Dependencies {
+			if depComp, found := graph.AllNodes[dep.BOMRef]; found {
+				// Only count dependencies that would be expanded in the tree view
+				// This matches the renderer logic which only expands non-leaf dependencies
+				if len(depComp.Children) > 0 || len(depComp.Dependencies) > 0 {
+					depDepth := calculateTreeDepth(depComp, graph, 1, visited, depthCache)
+					if depDepth > maxDepthFromHere {
+						maxDepthFromHere = depDepth
+					}
+				}
+			}
+		}
+	}
+
+	// Cache the computed depth from this component
+	depthCache[compID] = maxDepthFromHere
+
+	return currentDepth + maxDepthFromHere
 }
 
 // ValidateGraph performs validation checks on the graph

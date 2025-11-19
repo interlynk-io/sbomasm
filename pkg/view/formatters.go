@@ -387,6 +387,8 @@ func FormatStatistics(stats Statistics, scheme *ColorScheme) string {
 		scheme.Info.Sprint(stats.TotalComponents)))
 	lines = append(lines, fmt.Sprintf("  Total Dependencies: %s",
 		scheme.Info.Sprint(stats.TotalDependencies)))
+	lines = append(lines, fmt.Sprintf("  Max Depth: %s",
+		scheme.Info.Sprint(stats.MaxDepth)))
 
 	// Annotations and Compositions
 	if stats.TotalAnnotations > 0 {

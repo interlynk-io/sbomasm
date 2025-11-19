@@ -101,7 +101,7 @@ func init() {
 	viewCmd.Flags().BoolVar(&viewOnlyLicenses, "only-licenses", false, "Show only license information (minimal component details)")
 
 	// Filtering flags
-	viewCmd.Flags().IntVar(&viewMaxDepth, "max-depth", 0, "Maximum tree depth to display (0 = unlimited)")
+	viewCmd.Flags().IntVar(&viewMaxDepth, "max-depth", 3, "Maximum tree depth to display (0 = unlimited)")
 	viewCmd.Flags().StringVar(&viewFilterType, "filter-type", "", "Filter by component type (comma-separated)")
 	viewCmd.Flags().BoolVar(&viewHideIslands, "hide-islands", false, "Don't show disconnected components")
 	viewCmd.Flags().BoolVar(&viewOnlyPrimary, "only-primary", false, "Only show primary component tree")
