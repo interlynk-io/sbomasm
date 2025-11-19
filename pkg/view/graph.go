@@ -366,26 +366,13 @@ func CalculateStatistics(graph *ComponentGraph) Statistics {
 		stats.TotalVulnerabilities.Unknown += comp.VulnCount.Unknown
 	}
 
-	// Calculate max depth by traversing from root nodes
+	// Calculate max depth from primary component only (not islands)
+	// This represents the depth of the main component tree
 	maxDepth := 0
-	visited := make(map[string]bool)    // Track visited components in current path
-	depthCache := make(map[string]int)  // Cache computed depths for memoization
 	if graph.Primary != nil {
-		depth := calculateTreeDepth(graph.Primary, graph, 0, visited, depthCache)
-		if depth > maxDepth {
-			maxDepth = depth
-		}
-	}
-	// Also check islands
-	for _, island := range graph.Islands {
-		for _, root := range island {
-			if root.Parent == nil { // Only start from island roots
-				depth := calculateTreeDepth(root, graph, 0, visited, depthCache)
-				if depth > maxDepth {
-					maxDepth = depth
-				}
-			}
-		}
+		visited := make(map[string]bool)    // Track visited components in current path
+		depthCache := make(map[string]int)  // Cache computed depths for memoization
+		maxDepth = calculateTreeDepth(graph.Primary, graph, 0, visited, depthCache)
 	}
 
 	stats.MaxDepth = maxDepth
@@ -441,14 +428,18 @@ func calculateTreeDepth(comp *EnrichedComponent, graph *ComponentGraph, currentD
 		}
 	}
 
-	// Check dependencies - count all valid dependencies in the graph
-	if comp.Dependencies != nil && len(comp.Dependencies) > 0 {
+	// Check dependencies - only count those that would be expanded in the tree view
+	// (those with assemblies or other dependencies of their own)
+	if comp.Dependencies != nil {
 		for _, dep := range comp.Dependencies {
 			if depComp, found := graph.AllNodes[dep.BOMRef]; found {
-				// Calculate depth for this dependency
-				depDepth := calculateTreeDepth(depComp, graph, 1, visited, depthCache)
-				if depDepth > maxDepthFromHere {
-					maxDepthFromHere = depDepth
+				// Only count dependencies that would be expanded in the tree view
+				// This matches the renderer logic which only expands non-leaf dependencies
+				if len(depComp.Children) > 0 || len(depComp.Dependencies) > 0 {
+					depDepth := calculateTreeDepth(depComp, graph, 1, visited, depthCache)
+					if depDepth > maxDepthFromHere {
+						maxDepthFromHere = depDepth
+					}
 				}
 			}
 		}
