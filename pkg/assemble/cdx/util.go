@@ -301,3 +301,117 @@ func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Depe
 		return newDeps
 	}))
 }
+
+// cloneVulnerability creates a deep copy of a vulnerability
+func cloneVulnerability(v *cydx.Vulnerability) (*cydx.Vulnerability, error) {
+	var newVuln cydx.Vulnerability
+
+	// Marshal the original vulnerability to JSON
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal into a map[string]interface{} to perform cleanup
+	var tempMap map[string]interface{}
+	if err := json.Unmarshal(b, &tempMap); err != nil {
+		return nil, err
+	}
+
+	// Remove empty fields recursively
+	cleanedUpMap := removeEmptyFields(tempMap)
+
+	// Marshal the cleaned-up map back to JSON
+	cleanedUpBytes, err := json.Marshal(cleanedUpMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the cleaned-up JSON back into a cydx.Vulnerability struct
+	if err := json.Unmarshal(cleanedUpBytes, &newVuln); err != nil {
+		return nil, err
+	}
+
+	return &newVuln, nil
+}
+
+// vulnerabilityKey generates a unique key for vulnerability deduplication
+// based on vulnerability ID and source name
+func vulnerabilityKey(v *cydx.Vulnerability) string {
+	sourceName := ""
+	if v.Source != nil && v.Source.Name != "" {
+		sourceName = v.Source.Name
+	}
+	return fmt.Sprintf("%s:%s", v.ID, sourceName)
+}
+
+// updateVulnerabilityRefs updates all component references in a vulnerability's affects array
+// to use the new component BOM-refs from the component service
+func updateVulnerabilityRefs(v *cydx.Vulnerability, cs *uniqueComponentService) {
+	if v.Affects == nil {
+		return
+	}
+
+	affects := *v.Affects
+	for i := range affects {
+		if newRef, found := cs.ResolveDepID(affects[i].Ref); found {
+			affects[i].Ref = newRef
+		}
+	}
+}
+
+// isVulnerabilityRelevant checks if a vulnerability affects any of the processed components
+// processedComps is a map of old component BOM-ref to new component BOM-ref
+func isVulnerabilityRelevant(v *cydx.Vulnerability, processedComps map[string]string) bool {
+	if v.Affects == nil {
+		return false
+	}
+
+	for _, affect := range *v.Affects {
+		if _, found := processedComps[affect.Ref]; found {
+			return true
+		}
+	}
+	return false
+}
+
+// buildVulnerabilityList builds a deduplicated list of vulnerabilities from all input BOMs
+// It clones vulnerabilities, updates component references, and generates new BOM-refs
+func buildVulnerabilityList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Vulnerability {
+	finalList := []cydx.Vulnerability{}
+	seenVulns := make(map[string]bool)
+
+	for _, bom := range in {
+		if bom.Vulnerabilities == nil {
+			continue
+		}
+
+		for _, vuln := range *bom.Vulnerabilities {
+			// Generate unique key for deduplication (ID + Source)
+			key := vulnerabilityKey(&vuln)
+
+			// Skip if we've already seen this vulnerability (keep first occurrence)
+			if seenVulns[key] {
+				continue
+			}
+			seenVulns[key] = true
+
+			// Clone the vulnerability
+			newVuln, err := cloneVulnerability(&vuln)
+			if err != nil {
+				// Log error but continue processing
+				continue
+			}
+
+			// Update component references in affects array
+			updateVulnerabilityRefs(newVuln, cs)
+
+			// Generate new unique BOM-ref
+			newVuln.BOMRef = newBomRef()
+
+			finalList = append(finalList, *newVuln)
+		}
+	}
+
+	return finalList
+}

@@ -78,6 +78,10 @@ func (m *merge) combinedMerge() error {
 	toolsList := buildToolList(m.in)
 	log.Debugf("build a list of tools from each sbom found comps: %d, service: %d", len(*toolsList.Components), len(*toolsList.Services))
 
+	// build a list of vulnerabilities from each sbom
+	vulnList := buildVulnerabilityList(m.in, cs)
+	log.Debugf("build a list of vulnerabilities from each sbom found %d", len(vulnList))
+
 	//Build the final sbom
 	log.Debugf("generating output sbom")
 	m.initOutBom()
@@ -162,6 +166,12 @@ func (m *merge) combinedMerge() error {
 		})
 		m.out.Dependencies = &depList
 		log.Debugf("hierarchical merge: final dependency list: %d", len(depList))
+	}
+
+	// Assign vulnerabilities to output BOM
+	if len(vulnList) > 0 {
+		m.out.Vulnerabilities = &vulnList
+		log.Debugf("assigned %d vulnerabilities to output sbom", len(vulnList))
 	}
 
 	// Writes sbom to file or uploads
