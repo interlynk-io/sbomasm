@@ -11,27 +11,45 @@ before:
     - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
 
 gomod:
-  proxy: true 
+  proxy: true
 
 builds:
-  - id: binaries 
-    binary: sbomasm-{{ .Os }}-{{ .Arch }}
-    no_unique_dist_dir: true 
+  - id: sbomasm
+    binary: sbomasm
     main: .
     flags:
-      - -trimpath 
+      - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
     goos:
       - linux
       - darwin
-      - windows 
+      - windows
     goarch:
       - amd64
       - arm64
     ldflags:
-      - "{{ .Env.LDFLAGS }}"
-    env: 
+      - -buildid=
+      - -X sigs.k8s.io/release-utils/version.gitVersion={{ .Version }}
+      - -X sigs.k8s.io/release-utils/version.gitCommit={{ .FullCommit }}
+      - -X sigs.k8s.io/release-utils/version.gitTreeState={{ if .IsGitDirty }}dirty{{ else }}clean{{ end }}
+      - -X sigs.k8s.io/release-utils/version.buildDate={{ .CommitDate }}
+    env:
       - CGO_ENABLED=0
+
+archives:
+  - id: sbomasm
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
 
 nfpms:
   - id: sbomasm
@@ -39,29 +57,48 @@ nfpms:
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Interlynk
     homepage: https://interlynk.io
-    maintainer: Interlynk Authors hello@interlynk.io
-    builds:
-      - binaries
+    maintainer: Interlynk Authors <hello@interlynk.io>
     description: SBOM Assembler - A tool to edit SBOM or assemble multiple sboms into a single sbom.
-    license: "Apache License 2.0"
+    license: Apache-2.0
     formats:
       - apk
       - deb
       - rpm
+    bindir: /usr/bin
     contents:
-      - src: /usr/bin/sbomasm-{{ .Os }}-{{ .Arch }}
-        dst: /usr/bin/sbomasm
-        type: "symlink"
+      - src: LICENSE
+        dst: /usr/share/doc/sbomasm/LICENSE
+        file_info:
+          mode: 0644
 
-archives:
-- format: binary
-  name_template: "{{ .Binary }}"
-  allow_different_binary_count: true 
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
 
-snapshot: 
-  name_template: SNAPSHOT-{{ .ShortCommit }}
+snapshot:
+  version_template: "SNAPSHOT-{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
 
 release:
-  prerelease: allow 
-  draft: true 
+  prerelease: auto
+  draft: true
+  make_latest: true 
 

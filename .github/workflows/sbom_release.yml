@@ -10,12 +10,10 @@ env:
   SUPPLIER_NAME: Interlynk
   SUPPLIER_URL: https://interlynk.io
   DEFAULT_TAG: v0.0.1
-  PYLYNK_TEMP_DIR: $RUNNER_TEMP/pylynk
-  SBOM_TEMP_DIR: $RUNNER_TEMP/sbom
   SBOM_ENV: default
-  SBOM_FILE_PATH: $RUNNER_TEMP/sbom/_manifest/spdx_2.2/manifest.spdx.json
-  MS_SBOM_TOOL_URL: https://github.com/microsoft/sbom-tool/releases/latest/download/sbom-tool-linux-x64
+  MS_SBOM_TOOL_VERSION: "4.1.3"
   MS_SBOM_TOOL_EXCLUDE_DIRS: "**/samples/**"
+  PYLYNK_VERSION: "v1.0.8"
 
 jobs:
   build-sbom:
@@ -37,31 +35,54 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x" # Specify the Python version needed
+          python-version: "3.12"
 
       - name: Checkout Python SBOM tool
-        run: |
-          git clone https://github.com/interlynk-io/pylynk.git ${{ env.PYLYNK_TEMP_DIR }}
-          cd ${{ env.PYLYNK_TEMP_DIR }}
-          git fetch --tags
-          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          git checkout $latest_tag
-          echo "Checked out pylynk at tag: $latest_tag"
+        uses: actions/checkout@v4
+        with:
+          repository: interlynk-io/pylynk
+          ref: ${{ env.PYLYNK_VERSION }}
+          path: pylynk
 
       - name: Install Python dependencies
         run: |
-          cd ${{ env.PYLYNK_TEMP_DIR }}
+          cd pylynk
           pip install -r requirements.txt
+
+      - name: Download and verify sbom-tool
+        run: |
+          curl -Lo sbom-tool "https://github.com/microsoft/sbom-tool/releases/download/v${{ env.MS_SBOM_TOOL_VERSION }}/sbom-tool-linux-x64"
+          echo "Verifying sbom-tool download..."
+          if [ ! -f sbom-tool ]; then
+            echo "Error: sbom-tool download failed"
+            exit 1
+          fi
+          chmod +x sbom-tool
 
       - name: Generate SBOM
         shell: bash
         run: |
-          cd ${{ github.workspace }}
-          mkdir -p ${{ env.SBOM_TEMP_DIR}}
-          curl -Lo $RUNNER_TEMP/sbom-tool ${{ env.MS_SBOM_TOOL_URL }}
-          chmod +x $RUNNER_TEMP/sbom-tool
-          $RUNNER_TEMP/sbom-tool generate -b ${{ env.SBOM_TEMP_DIR }} -bc . -pn ${{ env.TOOL_NAME }} -pv ${{ env.LATEST_TAG }} -ps ${{ env.SUPPLIER_NAME}} -nsb ${{ env.SUPPLIER_URL }} -cd "--DirectoryExclusionList ${{ env.MS_SBOM_TOOL_EXCLUDE_DIRS }}"
+          mkdir -p sbom-output
+          ./sbom-tool generate \
+            -b sbom-output \
+            -bc . \
+            -pn "${{ env.TOOL_NAME }}" \
+            -pv "${{ env.LATEST_TAG }}" \
+            -ps "${{ env.SUPPLIER_NAME }}" \
+            -nsb "${{ env.SUPPLIER_URL }}" \
+            -cd "--DirectoryExclusionList ${{ env.MS_SBOM_TOOL_EXCLUDE_DIRS }}"
+
+      - name: Print environment variables
+        run: |
+          echo "=== Environment Variables ==="
+          env | sort
+          echo "==========================="
 
       - name: Upload SBOM
         run: |
-          python3 ${{ env.PYLYNK_TEMP_DIR }}/pylynk.py --verbose upload --prod ${{env.TOOL_NAME}} --env ${{ env.SBOM_ENV }} --sbom ${{ env.SBOM_FILE_PATH }} --token ${{ secrets.INTERLYNK_SECURITY_TOKEN }}
+          python3 pylynk/pylynk.py \
+            --verbose upload \
+            --prod "${{ env.TOOL_NAME }}" \
+            --env "${{ env.SBOM_ENV }}" \
+            --sbom "sbom-output/_manifest/spdx_2.2/manifest.spdx.json" \
+            --token "${{ secrets.INTERLYNK_SECURITY_TOKEN }}"

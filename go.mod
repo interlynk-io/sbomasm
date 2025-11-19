@@ -19,7 +19,7 @@ require (
 	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.0.5
 	github.com/spdx/tools-golang v0.5.5
 	github.com/spf13/cobra v1.10.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/release-utils v0.12.2
