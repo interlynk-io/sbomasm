@@ -59,13 +59,13 @@ Config File:
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		augmentMerge, _ := cmd.Flags().GetBool("augmentMerge")
-		
+
 		// For augment merge, args are secondary SBOMs (primary is specified via flag)
 		// For other modes, args are all input SBOMs
 		if !augmentMerge && len(args) == 0 {
 			return fmt.Errorf("please provide at least one sbom file to assemble")
 		}
-		
+
 		if augmentMerge {
 			primaryFile, _ := cmd.Flags().GetString("primary")
 			if primaryFile == "" {
@@ -117,12 +117,12 @@ func init() {
 	assembleCmd.Flags().BoolP("flatMerge", "f", false, "flat merge - combine all components at same level under new root")
 	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge - preserve original SBOM structures under new root")
 	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge - combine as assembly with shared dependencies")
-	
+
 	// Augment merge flags
 	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
 	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge (required for augment merge)")
 	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
-	
+
 	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge", "augmentMerge")
 
 	// Output format flags
@@ -188,11 +188,11 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 	aParams.HierMerge = hierMerge
 	aParams.AssemblyMerge = assemblyMerge
 	aParams.AugmentMerge = augmentMerge
-	
+
 	// Get augment merge specific flags
 	primaryFile, _ := cmd.Flags().GetString("primary")
 	mergeMode, _ := cmd.Flags().GetString("merge-mode")
-	
+
 	aParams.PrimaryFile = primaryFile
 	aParams.MergeMode = mergeMode
 

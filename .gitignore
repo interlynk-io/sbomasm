@@ -4,22 +4,55 @@
 *.dll
 *.so
 *.dylib
-.DS_Store
 
-# Test binary, built with `go test -c`
+# Test binaries and coverage
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+coverage.txt
+coverage.html
+*.prof
 
-# Dependency directories (remove the comment below to include it)
-vendor/
+# Build output
 build/
-
-version.txt
-
 dist/
+bin/
 _manifest/
 
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Version and release files
+version.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+tmp/
+temp/
+
+# AI assistant directories
 .claude/
 .agents/data/
+
+# Test fixtures and samples (if generated)
+testdata/output/
+samples/generated/
+
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
+credentials.json

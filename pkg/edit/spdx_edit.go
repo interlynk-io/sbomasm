@@ -414,7 +414,7 @@ func (d *spdxEditDoc) tools() error {
 	if !d.c.shouldTools() {
 		return errNoConfiguration
 	}
-	
+
 	// default sbomasm tool
 	sbomasmTool := spdx.Creator{
 		Creator:     fmt.Sprintf("%s-%s", SBOMASM, SBOMASM_VERSION),

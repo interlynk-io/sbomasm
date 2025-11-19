@@ -1,0 +1,306 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:test-75e19ea1-cb02-40f0-bc3a-390ab80a2b89",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-11-19T00:00:00Z",
+    "tools": [
+      {
+        "vendor": "OWASP",
+        "name": "Dependency-Track",
+        "version": "4.13.5"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "test-app@1.2.3",
+      "name": "test-app",
+      "version": "1.2.3"
+    }
+  },
+  "components": [
+    {
+      "type": "container",
+      "bom-ref": "container-foo@1.0.0",
+      "name": "container-foo",
+      "version": "1.0.0",
+      "description": "Docker image for foo with compositions and annotations",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "lib-gnutls@3.8.8",
+          "name": "gnutls",
+          "version": "3.8.8-r0",
+          "description": "GNU TLS library",
+          "hashes": [
+            {
+              "alg": "SHA-1",
+              "content": "730ae0e4abacd127c131d9b5aeccaeaa8178512a"
+            }
+          ],
+          "licenses": [
+            {
+              "license": {
+                "id": "LGPL-2.1-or-later"
+              }
+            }
+          ],
+          "purl": "pkg:apk/alpine/gnutls@3.8.8-r0?arch=x86_64&distro=3.22.1",
+          "properties": [
+            {
+              "name": "aquasecurity:trivy:PkgType",
+              "value": "alpine"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "lib-openssl@3.5.1",
+          "name": "libcrypto3",
+          "version": "3.5.1-r0",
+          "description": "OpenSSL cryptographic library",
+          "hashes": [
+            {
+              "alg": "SHA-1",
+              "content": "cdc005cdb0f91d9f652d17b337b5b9ad0ffa2012"
+            }
+          ],
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "purl": "pkg:apk/alpine/libcrypto3@3.5.1-r0?arch=x86_64&distro=3.22.1"
+        },
+        {
+          "type": "library",
+          "bom-ref": "lib-curl@8.2.1",
+          "name": "curl",
+          "version": "8.2.1",
+          "description": "Command line tool for transferring data"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "app-backend@2.0.0",
+      "name": "backend-service",
+      "version": "2.0.0",
+      "description": "Backend application service",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "lib-express@4.18.2",
+          "name": "express",
+          "version": "4.18.2",
+          "description": "Fast, unopinionated, minimalist web framework",
+          "purl": "pkg:npm/express@4.18.2"
+        },
+        {
+          "type": "library",
+          "bom-ref": "lib-lodash@4.17.21",
+          "name": "lodash",
+          "version": "4.17.21",
+          "description": "Lodash modular utilities",
+          "purl": "pkg:npm/lodash@4.17.21"
+        }
+      ]
+    }
+  ],
+  "compositions": [
+    {
+      "bom-ref": "composition-1",
+      "aggregate": "complete",
+      "assemblies": [
+        "container-foo@1.0.0"
+      ],
+      "dependencies": [
+        "lib-gnutls@3.8.8",
+        "lib-openssl@3.5.1",
+        "lib-curl@8.2.1"
+      ]
+    },
+    {
+      "bom-ref": "composition-2",
+      "aggregate": "incomplete",
+      "assemblies": [
+        "app-backend@2.0.0"
+      ],
+      "dependencies": [
+        "lib-express@4.18.2",
+        "lib-lodash@4.17.21"
+      ]
+    },
+    {
+      "bom-ref": "composition-3",
+      "aggregate": "complete",
+      "assemblies": [
+        "test-app@1.2.3"
+      ],
+      "dependencies": [
+        "container-foo@1.0.0",
+        "app-backend@2.0.0"
+      ]
+    }
+  ],
+  "annotations": [
+    {
+      "bom-ref": "annotation-1",
+      "subjects": ["lib-gnutls@3.8.8"],
+      "annotator": {
+        "organization": {
+          "name": "Security Team"
+        },
+        "individual": {
+          "name": "John Doe",
+          "email": "john.doe@example.com"
+        }
+      },
+      "timestamp": "2025-11-19T10:00:00Z",
+      "text": "This version of GNUTLS has been verified and approved for production use"
+    },
+    {
+      "bom-ref": "annotation-2",
+      "subjects": ["lib-openssl@3.5.1"],
+      "annotator": {
+        "organization": {
+          "name": "Security Team",
+          "url": ["https://security.example.com"]
+        },
+        "individual": {
+          "email": "security@example.com"
+        }
+      },
+      "timestamp": "2025-11-19T10:15:00Z",
+      "text": "Critical security library - monitor for vulnerabilities"
+    },
+    {
+      "bom-ref": "annotation-3",
+      "subjects": ["lib-curl@8.2.1"],
+      "annotator": {
+        "organization": {
+          "name": "DevOps Team"
+        }
+      },
+      "timestamp": "2025-11-19T10:30:00Z",
+      "text": "Used for external API communications - requires proxy configuration in production"
+    },
+    {
+      "bom-ref": "annotation-4",
+      "subjects": ["lib-express@4.18.2"],
+      "annotator": {
+        "organization": {
+          "name": "Application Team"
+        },
+        "individual": {
+          "name": "Jane Smith",
+          "email": "jane.smith@example.com"
+        }
+      },
+      "timestamp": "2025-11-19T11:00:00Z",
+      "text": "Core framework for REST API implementation"
+    },
+    {
+      "bom-ref": "annotation-5",
+      "subjects": ["lib-lodash@4.17.21"],
+      "annotator": {
+        "organization": {
+          "name": "Application Team"
+        }
+      },
+      "timestamp": "2025-11-19T11:15:00Z",
+      "text": "Utility library - consider migrating to native JS alternatives where possible"
+    },
+    {
+      "bom-ref": "annotation-6",
+      "subjects": ["container-foo@1.0.0"],
+      "annotator": {
+        "organization": {
+          "name": "DevOps Team",
+          "url": ["https://devops.example.com"]
+        },
+        "individual": {
+          "email": "devops@example.com"
+        }
+      },
+      "timestamp": "2025-11-19T12:00:00Z",
+      "text": "Base container image - scan completed on 2025-11-19, no critical vulnerabilities found"
+    },
+    {
+      "bom-ref": "annotation-7",
+      "subjects": ["app-backend@2.0.0"],
+      "annotator": {
+        "organization": {
+          "name": "Release Management"
+        },
+        "component": {
+          "type": "machine",
+          "name": "Release Bot",
+          "version": "1.0.0"
+        }
+      },
+      "timestamp": "2025-11-19T13:00:00Z",
+      "text": "Version 2.0.0 released to production on 2025-11-19"
+    },
+    {
+      "bom-ref": "annotation-8",
+      "subjects": ["test-app@1.2.3"],
+      "annotator": {
+        "organization": {
+          "name": "Compliance Team"
+        }
+      },
+      "timestamp": "2025-11-19T14:00:00Z",
+      "text": "Application meets SOC2 compliance requirements as of Q4 2025"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "test-app@1.2.3",
+      "dependsOn": [
+        "container-foo@1.0.0",
+        "app-backend@2.0.0"
+      ]
+    },
+    {
+      "ref": "container-foo@1.0.0",
+      "dependsOn": [
+        "lib-gnutls@3.8.8",
+        "lib-openssl@3.5.1",
+        "lib-curl@8.2.1"
+      ]
+    },
+    {
+      "ref": "app-backend@2.0.0",
+      "dependsOn": [
+        "lib-express@4.18.2",
+        "lib-lodash@4.17.21"
+      ]
+    },
+    {
+      "ref": "lib-express@4.18.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "lib-lodash@4.17.21",
+      "dependsOn": []
+    },
+    {
+      "ref": "lib-gnutls@3.8.8",
+      "dependsOn": []
+    },
+    {
+      "ref": "lib-openssl@3.5.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "lib-curl@8.2.1",
+      "dependsOn": [
+        "lib-openssl@3.5.1"
+      ]
+    }
+  ]
+}

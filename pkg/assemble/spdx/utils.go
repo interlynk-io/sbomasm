@@ -181,7 +181,7 @@ func getAllCreators(docs []*v2_3.Document, authors []Author) []common.Creator {
 		if author.Name == "" {
 			continue
 		}
-		
+
 		authorCreator := ""
 		if author.Email == "" {
 			authorCreator = author.Name

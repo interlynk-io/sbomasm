@@ -87,14 +87,14 @@ func (m *CPEMatcher) normalizeCPE(cpe string) string {
 func (m *CPEMatcher) convertCPE22to23(cpe22 string) string {
 	// CPE 2.2: cpe:/part:vendor:product:version:update:edition:language
 	// CPE 2.3: cpe:2.3:part:vendor:product:version:update:edition:language:*:*:*:*
-	
+
 	if !strings.HasPrefix(cpe22, "cpe:/") {
 		return cpe22
 	}
 
 	// Remove "cpe:/" prefix and split
 	parts := strings.Split(strings.TrimPrefix(cpe22, "cpe:/"), ":")
-	
+
 	// Pad with wildcards to make 11 parts (part + 10 attributes)
 	for len(parts) < 11 {
 		parts = append(parts, "*")
@@ -107,12 +107,12 @@ func (m *CPEMatcher) convertCPE22to23(cpe22 string) string {
 // removeVersion removes the version part from a CPE
 func (m *CPEMatcher) removeVersion(cpe string) string {
 	parts := strings.Split(cpe, ":")
-	
+
 	// CPE 2.3 format has version at index 5 (0-based)
 	// cpe:2.3:part:vendor:product:version:...
 	if len(parts) > 5 {
 		parts[5] = "*" // Replace version with wildcard
 	}
-	
+
 	return strings.Join(parts, ":")
 }

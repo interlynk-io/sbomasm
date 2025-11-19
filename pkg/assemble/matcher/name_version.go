@@ -47,7 +47,7 @@ func (m *NameVersionMatcher) Match(primary, secondary Component) bool {
 	// Versions must match
 	primaryVersion := m.normalizeVersion(primary.GetVersion())
 	secondaryVersion := m.normalizeVersion(secondary.GetVersion())
-	
+
 	if primaryVersion != secondaryVersion {
 		return false
 	}
@@ -69,14 +69,14 @@ func (m *NameVersionMatcher) MatchConfidence(primary, secondary Component) int {
 	if !m.Match(primary, secondary) {
 		return 0
 	}
-	
+
 	confidence := 70 // Base confidence for name-version match
-	
+
 	// Higher confidence if types also match
 	if m.typeMatch && primary.GetType() == secondary.GetType() {
 		confidence += 10
 	}
-	
+
 	// Lower confidence if fuzzy matching was used
 	if m.fuzzyMatch {
 		primaryName := m.normalizeName(primary.GetName())
@@ -85,7 +85,7 @@ func (m *NameVersionMatcher) MatchConfidence(primary, secondary Component) int {
 			confidence -= 10
 		}
 	}
-	
+
 	return confidence
 }
 
@@ -98,11 +98,11 @@ func (m *NameVersionMatcher) Strategy() string {
 func (m *NameVersionMatcher) normalizeName(name string) string {
 	// Convert to lowercase and trim spaces
 	name = strings.ToLower(strings.TrimSpace(name))
-	
+
 	// Remove common separators and replace with consistent ones
 	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ReplaceAll(name, ".", "-")
-	
+
 	return name
 }
 
@@ -110,13 +110,13 @@ func (m *NameVersionMatcher) normalizeName(name string) string {
 func (m *NameVersionMatcher) normalizeVersion(version string) string {
 	// Trim spaces and convert to lowercase
 	version = strings.ToLower(strings.TrimSpace(version))
-	
+
 	// Remove common version prefixes
 	version = strings.TrimPrefix(version, "v")
 	version = strings.TrimPrefix(version, "version")
 	version = strings.TrimPrefix(version, "ver")
 	version = strings.TrimSpace(version)
-	
+
 	return version
 }
 
@@ -125,11 +125,11 @@ func (m *NameVersionMatcher) namesMatch(name1, name2 string) bool {
 	if name1 == name2 {
 		return true
 	}
-	
+
 	if !m.fuzzyMatch {
 		return false
 	}
-	
+
 	// Fuzzy matching: check if one name contains the other
 	// This helps with cases like "apache-commons-lang3" vs "commons-lang3"
 	if len(name1) > len(name2) {
