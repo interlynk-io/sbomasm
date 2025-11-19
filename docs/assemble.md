@@ -157,6 +157,52 @@ When components match, the following CycloneDX component fields are merged:
 - `overwrite` mode: Replaces all fields with secondary values if present
 - Lists are replaced entirely, not merged item-by-item
 
+##### CycloneDX Sections Merged
+
+When performing augment merge with CycloneDX SBOMs, the following sections are processed and merged:
+
+**1. Components**
+- All components from secondary SBOMs are evaluated against primary SBOM components
+- Matching components have their fields merged based on merge mode
+- New components (not in primary) are added to the primary SBOM
+- Component matching uses name, version, purl, and CPE
+- All components receive validated BOM-refs
+
+**2. Dependencies**
+- Only dependencies involving processed (added or merged) components are included
+- Dependency references are resolved and validated against primary SBOM
+- Invalid dependencies (referencing non-existent components) are filtered out
+- Dependencies are deduplicated to avoid redundant relationships
+- All dependency refs are updated to use primary SBOM component refs
+
+**3. Vulnerabilities**
+- Only vulnerabilities affecting processed components are included
+- Vulnerabilities are deduplicated based on ID and source name
+- Affects arrays are merged to consolidate all affected components
+- Merge mode behavior:
+  - `if-missing-or-empty`: Keeps primary's analysis, merges affects only
+  - `overwrite`: Updates description, detail, recommendation, workaround, analysis, and ratings from secondary
+- All vulnerability refs are validated and updated to primary SBOM component refs
+
+**4. Metadata**
+- Primary SBOM's metadata is preserved and updated with:
+  - New timestamp (current UTC time)
+  - Tool information (includes sbomasm and original tools)
+  - Serial number (regenerated for the new SBOM)
+  - Supplier, author, and license information from primary
+- Tools from all SBOMs are collected and deduplicated
+
+**5. Services**
+- Similar handling to components (if present)
+- Service dependencies follow the same validation rules
+
+**Sections NOT Merged:**
+- Compositions
+- Annotations
+- Formulation
+- Declarations
+- Definitions
+
 #### Relationship and Dependency Handling
 
 **SPDX Relationships:**

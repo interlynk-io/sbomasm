@@ -222,6 +222,9 @@ func (a *augmentMerge) processSecondaryBom(sbom *cydx.BOM) error {
 	// Merge dependencies for processed components only
 	a.mergeSelectiveDependencies(sbom)
 
+	// Merge vulnerabilities for processed components only
+	a.mergeVulnerabilities(sbom)
+
 	log.Debugf("Processed secondary SBOM: %d matched, %d added", matchedCount, addedCount)
 
 	return nil
@@ -498,6 +501,141 @@ func (a *augmentMerge) resolveRef(ref string) string {
 	}
 	// Otherwise, return the ref as-is (for metadata component, etc.)
 	return ref
+}
+
+// mergeVulnerabilities merges vulnerabilities from secondary SBOM for processed components
+func (a *augmentMerge) mergeVulnerabilities(sbom *cydx.BOM) {
+	if sbom.Vulnerabilities == nil || len(*sbom.Vulnerabilities) == 0 {
+		return
+	}
+
+	log := logger.FromContext(*a.settings.Ctx)
+
+	// Build vulnerability map for quick lookup in primary SBOM
+	primaryVulnMap := make(map[string]*cydx.Vulnerability)
+	if a.primary.Vulnerabilities != nil {
+		for i := range *a.primary.Vulnerabilities {
+			vuln := &(*a.primary.Vulnerabilities)[i]
+			key := vulnerabilityKey(vuln)
+			primaryVulnMap[key] = vuln
+		}
+	} else {
+		a.primary.Vulnerabilities = &[]cydx.Vulnerability{}
+	}
+
+	addedCount := 0
+	skippedCount := 0
+	mergedCount := 0
+
+	// Process vulnerabilities from secondary SBOM
+	for _, secVuln := range *sbom.Vulnerabilities {
+		// Check if vulnerability affects any processed components
+		if !isVulnerabilityRelevant(&secVuln, a.processedComps) {
+			skippedCount++
+			continue
+		}
+
+		// Clone the vulnerability
+		newVuln, err := cloneVulnerability(&secVuln)
+		if err != nil {
+			log.Debugf("Failed to clone vulnerability %s: %v", secVuln.ID, err)
+			skippedCount++
+			continue
+		}
+
+		// Update affects refs to use primary SBOM component refs
+		if newVuln.Affects != nil {
+			affects := *newVuln.Affects
+			for i := range affects {
+				affects[i].Ref = a.resolveRef(affects[i].Ref)
+			}
+		}
+
+		// Check if this vulnerability already exists in primary
+		key := vulnerabilityKey(newVuln)
+		if existingVuln, exists := primaryVulnMap[key]; exists {
+			// Vulnerability already exists
+			// Merge behavior depends on merge mode
+			mergeMode := a.settings.Assemble.MergeMode
+			if mergeMode == "overwrite" {
+				// Overwrite: update fields from secondary
+				a.overwriteVulnerabilityFields(existingVuln, newVuln)
+			} else {
+				// Default (if-missing-or-empty): keep primary's analysis
+				// But we might want to merge affects if there are new ones
+				a.mergeVulnerabilityAffects(existingVuln, newVuln)
+			}
+			mergedCount++
+		} else {
+			// New vulnerability, add to primary
+			newVuln.BOMRef = newBomRef()
+			*a.primary.Vulnerabilities = append(*a.primary.Vulnerabilities, *newVuln)
+			primaryVulnMap[key] = newVuln
+			addedCount++
+		}
+	}
+
+	log.Debugf("Merged vulnerabilities: added %d, merged %d, skipped %d, total: %d",
+		addedCount, mergedCount, skippedCount, len(*a.primary.Vulnerabilities))
+}
+
+// overwriteVulnerabilityFields overwrites primary vulnerability fields with secondary values
+func (a *augmentMerge) overwriteVulnerabilityFields(primary, secondary *cydx.Vulnerability) {
+	// In overwrite mode, update key fields from secondary
+	if secondary.Description != "" {
+		primary.Description = secondary.Description
+	}
+	if secondary.Detail != "" {
+		primary.Detail = secondary.Detail
+	}
+	if secondary.Recommendation != "" {
+		primary.Recommendation = secondary.Recommendation
+	}
+	if secondary.Workaround != "" {
+		primary.Workaround = secondary.Workaround
+	}
+
+	// Overwrite analysis
+	if secondary.Analysis != nil {
+		primary.Analysis = secondary.Analysis
+	}
+
+	// Merge ratings (keep all)
+	if secondary.Ratings != nil && len(*secondary.Ratings) > 0 {
+		if primary.Ratings == nil {
+			primary.Ratings = secondary.Ratings
+		} else {
+			*primary.Ratings = append(*primary.Ratings, *secondary.Ratings...)
+		}
+	}
+
+	// Merge affects
+	a.mergeVulnerabilityAffects(primary, secondary)
+}
+
+// mergeVulnerabilityAffects merges affects arrays, avoiding duplicates
+func (a *augmentMerge) mergeVulnerabilityAffects(primary, secondary *cydx.Vulnerability) {
+	if secondary.Affects == nil {
+		return
+	}
+
+	if primary.Affects == nil {
+		primary.Affects = secondary.Affects
+		return
+	}
+
+	// Build map of existing affects by ref
+	existingRefs := make(map[string]bool)
+	for _, affect := range *primary.Affects {
+		existingRefs[affect.Ref] = true
+	}
+
+	// Add new affects that don't exist
+	for _, affect := range *secondary.Affects {
+		if !existingRefs[affect.Ref] {
+			*primary.Affects = append(*primary.Affects, affect)
+		}
+	}
 }
 
 // updateMetadata updates the primary SBOM metadata
