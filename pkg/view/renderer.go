@@ -24,11 +24,14 @@ import (
 
 // TreeRenderer renders component graphs in tree format
 type TreeRenderer struct {
-	config  DisplayConfig
-	scheme  *ColorScheme
-	symbols TreeSymbols
-	graph   *ComponentGraph // Store graph for looking up dependency components
-	visited map[string]int  // Track components being rendered to detect cycles (BOMRef -> depth)
+	config          DisplayConfig
+	scheme          *ColorScheme
+	symbols         TreeSymbols
+	graph           *ComponentGraph // Store graph for looking up dependency components
+	visited         map[string]int  // Track components being rendered to detect cycles (BOMRef -> depth)
+	maxDepth        int             // Maximum depth calculated in the tree
+	maxRenderedDepth int             // Maximum depth actually rendered
+	depthCache      map[string]int  // Cache for subtree depth calculations
 }
 
 // NewTreeRenderer creates a new tree renderer
@@ -41,10 +44,11 @@ func NewTreeRenderer(config DisplayConfig) *TreeRenderer {
 	}
 
 	return &TreeRenderer{
-		config:  config,
-		scheme:  scheme,
-		symbols: DefaultTreeSymbols(),
-		visited: make(map[string]int),
+		config:     config,
+		scheme:     scheme,
+		symbols:    DefaultTreeSymbols(),
+		visited:    make(map[string]int),
+		depthCache: make(map[string]int),
 	}
 }
 
@@ -61,6 +65,20 @@ func (r *TreeRenderer) Render(graph *ComponentGraph, output io.Writer) error {
 		header = FormatSBOMHeader(graph.Metadata, r.scheme)
 	}
 	fmt.Fprintln(output, header)
+
+	// Calculate statistics to get total depth
+	stats := CalculateStatistics(graph)
+	r.maxDepth = stats.MaxDepth // Store for marking deepest components
+
+	// Pre-calculate all component subtree depths for efficient lookups during rendering
+	r.preCalculateSubtreeDepths(graph)
+
+	// Display depth information
+	if r.config.MaxDepth > 0 {
+		fmt.Fprintf(output, "%s\n", r.scheme.FieldLabel.Sprintf("Showing up to depth %d, total depth is %d", r.config.MaxDepth, stats.MaxDepth))
+	} else {
+		fmt.Fprintf(output, "%s\n", r.scheme.FieldLabel.Sprintf("Total depth is %d", stats.MaxDepth))
+	}
 	fmt.Fprintln(output)
 
 	// Render primary component tree
@@ -79,10 +97,118 @@ func (r *TreeRenderer) Render(graph *ComponentGraph, output io.Writer) error {
 
 	// Render statistics
 	fmt.Fprintln(output)
-	stats := CalculateStatistics(graph)
 	fmt.Fprintln(output, FormatStatistics(stats, r.scheme))
 
 	return nil
+}
+
+// preCalculateSubtreeDepths pre-calculates subtree depths for all components
+// This is done once before rendering to avoid repeated calculations
+func (r *TreeRenderer) preCalculateSubtreeDepths(graph *ComponentGraph) {
+	visited := make(map[string]bool)
+
+	// Calculate for all nodes in the graph
+	for _, comp := range graph.AllNodes {
+		compID := comp.BOMRef
+		if compID == "" {
+			compID = comp.Name
+		}
+		// Only calculate if not already in cache
+		if _, found := r.depthCache[compID]; !found {
+			calculateTreeDepth(comp, graph, 0, visited, r.depthCache)
+		}
+	}
+}
+
+// getSubtreeDepth retrieves the pre-calculated subtree depth for a component
+func (r *TreeRenderer) getSubtreeDepth(comp *EnrichedComponent) int {
+	compID := comp.BOMRef
+	if compID == "" {
+		compID = comp.Name
+	}
+	if depth, found := r.depthCache[compID]; found {
+		return depth
+	}
+	return 0 // Default to 0 if not found (shouldn't happen with pre-calculation)
+}
+
+// showMaxDepthComponents displays a summary of components at maximum rendered depth
+func (r *TreeRenderer) showMaxDepthComponents(graph *ComponentGraph, output io.Writer) {
+	// Find all components at max rendered depth
+	maxDepthComps := r.findComponentsAtDepth(graph.Primary, r.maxRenderedDepth, 0)
+
+	// Also check islands
+	for _, island := range graph.Islands {
+		for _, root := range island {
+			if root.Parent == nil {
+				maxDepthComps = append(maxDepthComps, r.findComponentsAtDepth(root, r.maxRenderedDepth, 0)...)
+			}
+		}
+	}
+
+	if len(maxDepthComps) > 0 {
+		// Deduplicate components by BOMRef
+		seen := make(map[string]bool)
+		uniqueComps := make([]*EnrichedComponent, 0)
+		for _, comp := range maxDepthComps {
+			compID := comp.BOMRef
+			if compID == "" {
+				compID = comp.Name
+			}
+			if !seen[compID] {
+				seen[compID] = true
+				uniqueComps = append(uniqueComps, comp)
+			}
+		}
+
+		fmt.Fprintf(output, "%s\n", r.scheme.Critical.Sprint("━━━ Components at Maximum Depth ━━━"))
+		fmt.Fprintf(output, "%s at depth %d:\n", r.scheme.FieldLabel.Sprint("The following components"), r.maxRenderedDepth)
+
+		// Show up to 10 components
+		maxShow := 10
+		for i, comp := range uniqueComps {
+			if i >= maxShow {
+				remaining := len(uniqueComps) - maxShow
+				fmt.Fprintf(output, "  %s\n", r.scheme.FieldLabel.Sprintf("... and %d more", remaining))
+				break
+			}
+			nameVersion := comp.Name
+			if comp.Version != "" {
+				nameVersion += "@" + comp.Version
+			}
+			fmt.Fprintf(output, "  • %s %s\n", r.scheme.ComponentName.Sprint(nameVersion),
+				r.scheme.FieldLabel.Sprintf("(%s)", comp.Type))
+		}
+	}
+}
+
+// findComponentsAtDepth recursively finds all components at a specific depth
+func (r *TreeRenderer) findComponentsAtDepth(comp *EnrichedComponent, targetDepth int, currentDepth int) []*EnrichedComponent {
+	var result []*EnrichedComponent
+
+	if currentDepth == targetDepth {
+		result = append(result, comp)
+	}
+
+	if currentDepth < targetDepth {
+		// Check children
+		for _, child := range comp.Children {
+			result = append(result, r.findComponentsAtDepth(child, targetDepth, currentDepth+1)...)
+		}
+
+		// Check expanded dependencies
+		if comp.Dependencies != nil {
+			for _, dep := range comp.Dependencies {
+				if depComp, found := r.graph.AllNodes[dep.BOMRef]; found {
+					if len(depComp.Children) > 0 || len(depComp.Dependencies) > 0 {
+						result = append(result, r.findComponentsAtDepth(depComp, targetDepth, currentDepth+1)...)
+					}
+				}
+			}
+		}
+	}
+
+	return result
 }
 
 // renderComponent renders a single component and its children
@@ -109,8 +235,9 @@ func (r *TreeRenderer) renderComponent(comp *EnrichedComponent, output io.Writer
 		}
 
 		header := FormatComponentHeader(comp, r.scheme)
-		fmt.Fprintf(output, "%s%s %s %s\n", prefix, r.scheme.TreeStructure.Sprint(connector), header,
-			r.scheme.FieldLabel.Sprint("(circular reference - already shown above)"))
+		depthIndicator := r.scheme.FieldLabel.Sprintf("[depth:%d]", depth)
+		fmt.Fprintf(output, "%s%s %s %s %s\n", prefix, r.scheme.TreeStructure.Sprint(connector), header,
+			depthIndicator, r.scheme.FieldLabel.Sprint("(circular reference - already shown above)"))
 		return
 	}
 
@@ -131,8 +258,15 @@ func (r *TreeRenderer) renderComponent(comp *EnrichedComponent, output io.Writer
 		connector = "┌─"
 	}
 
+	// Track maximum rendered depth
+	if depth > r.maxRenderedDepth {
+		r.maxRenderedDepth = depth
+	}
+
 	header := FormatComponentHeader(comp, r.scheme)
-	fmt.Fprintf(output, "%s%s %s\n", prefix, r.scheme.TreeStructure.Sprint(connector), header)
+	// Show current depth
+	depthIndicator := r.scheme.FieldLabel.Sprintf("[depth:%d]", depth)
+	fmt.Fprintf(output, "%s%s %s %s\n", prefix, r.scheme.TreeStructure.Sprint(connector), header, depthIndicator)
 
 	// Build child prefix
 	childPrefix := prefix
