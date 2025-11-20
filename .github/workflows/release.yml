@@ -22,6 +22,12 @@ jobs:
       contents: write
       attestations: write
     steps:
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          
       - name: Checkout Repository
         uses: actions/checkout@v5
         with:
