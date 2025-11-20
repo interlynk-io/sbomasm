@@ -56,3 +56,6 @@ samples/generated/
 *.pem
 *.key
 credentials.json
+
+# Downloaded tools
+sbom-tool

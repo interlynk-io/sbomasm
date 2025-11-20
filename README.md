@@ -50,7 +50,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
   - [Removing Components](#removing-components)
   - [Enriching SBOMs](#enriching-sboms)
   - [Viewing SBOMs](#viewing-sboms)
-  - [Signing and Verifying](#signing-and-veirfying)
+  - [Signing and Verifying](#signing-and-verifying)
 - [Industry Use Cases](#industry-use-cases)
   - [Microservices & Kubernetes](#microservices--kubernetes)
   - [Automotive Industry](#automotive-industry)
@@ -295,7 +295,7 @@ The view command is particularly useful for:
 - **SBOM Validation**: Verify SBOM completeness and structure
 - **Documentation**: Generate human-readable reports for stakeholders
 
-### Signing and Veirfying
+### Signing and Verifying
 
 SBOMs are intended to be shared. Unsigned SBOMs are like unsealed envelopes. Anyone can open it up and alter what is
 inside. Cryptographically signing your SBOM allows SBOM producers to **prove authenticity and establish trust**
@@ -577,9 +577,29 @@ Download from [releases page](https://github.com/interlynk-io/sbomasm/releases)
 ```bash
 git clone https://github.com/interlynk-io/sbomasm.git
 cd sbomasm
+
+# Show all available make targets
+make help
+
+# Build for current platform
 make build
+
+# Run tests
+make test
+
+# Build for all platforms
+make build-all
+
+# Verify the build
 ./build/sbomasm version
 ```
+
+The project includes a comprehensive Makefile with targets for development, testing, building, and releasing. Run `make help` to see all available commands including:
+- **Development**: `make fmt`, `make vet`, `make lint`
+- **Testing**: `make test`, `make test-coverage`, `make test-short`
+- **Building**: `make build`, `make build-all`, `make install`
+- **Release**: `make snapshot`, `make release`
+- **CI/CD**: `make ci`, `make pre-commit`
 
 ## Contributions
 
