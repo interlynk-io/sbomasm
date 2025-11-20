@@ -16,7 +16,7 @@
 
 package rm
 
-import "github.com/interlynk-io/sbomasm/pkg/rm/types"
+import "github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 
 type DOCFIELD string
 

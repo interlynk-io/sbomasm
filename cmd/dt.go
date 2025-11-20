@@ -21,9 +21,9 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/assemble"
-	"github.com/interlynk-io/sbomasm/pkg/dt"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble"
+	"github.com/interlynk-io/sbomasm/v2/pkg/dt"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/spf13/cobra"
 )
 

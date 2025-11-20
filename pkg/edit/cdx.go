@@ -27,9 +27,9 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 
-	liclib "github.com/interlynk-io/sbomasm/pkg/licenses"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	liclib "github.com/interlynk-io/sbomasm/v2/pkg/licenses"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
 var cdx_strings_to_types = map[string]cydx.ComponentType{

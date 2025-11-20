@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/interlynk-io/sbomasm/cmd"
+	"github.com/interlynk-io/sbomasm/v2/cmd"
 
 	"github.com/rogpeppe/go-internal/testscript"
 )

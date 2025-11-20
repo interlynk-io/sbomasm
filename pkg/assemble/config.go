@@ -27,8 +27,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/assemble/cdx"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v2"
 )

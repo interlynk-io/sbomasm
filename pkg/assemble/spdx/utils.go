@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/mitchellh/copystructure"
 	"github.com/pingcap/log"
 	"github.com/samber/lo"

@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/extract"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/enrich/clearlydef"
+	"github.com/interlynk-io/sbomasm/v2/pkg/enrich/extract"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
 func Engine(ctx context.Context, params *Config) (*EnrichSummary, error) {

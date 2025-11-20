@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
 // EditParams represents the parameters for the edit command

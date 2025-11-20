@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/interlynk-io/sbomasm/pkg/view"
+	"github.com/interlynk-io/sbomasm/v2/pkg/view"
 	"github.com/spf13/cobra"
 )
 

@@ -19,8 +19,8 @@ package cmd
 import (
 	"context"
 
-	"github.com/interlynk-io/sbomasm/pkg/edit"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/edit"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -103,7 +103,7 @@ func init() {
 	editCmd.Flags().String("copyright", "", "copyright to add e.g 'Copyright © 2024'")
 	editCmd.Flags().StringSlice("lifecycle", []string{}, "lifecycle to add e.g 'build'")
 	editCmd.Flags().String("description", "", "description to add e.g 'this is a cool app'")
-	editCmd.Flags().String("repository", "", "repository to add e.g 'github.com/interlynk-io/sbomasm'")
+	editCmd.Flags().String("repository", "", "repository to add e.g 'github.com/interlynk-io/sbomasm/v2'")
 	editCmd.Flags().String("type", "", "type to add e.g 'application'")
 
 	editCmd.Flags().Bool("timestamp", false, "add created-at timestamp")
