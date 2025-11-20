@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/spdx/tools-golang/spdx"
 )
 

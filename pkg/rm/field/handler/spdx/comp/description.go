@@ -17,8 +17,8 @@
 package comp
 
 import (
-	"github.com/interlynk-io/sbomasm/pkg/rm/field/spdx"
-	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/field/spdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 

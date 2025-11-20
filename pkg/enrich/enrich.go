@@ -23,9 +23,9 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/cheggaaa/pb/v3"
-	"github.com/interlynk-io/sbomasm/pkg/enrich/clearlydef"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/enrich/clearlydef"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/interlynk-io/sbomqs/pkg/licenses"
 	"github.com/spdx/tools-golang/spdx"
 )

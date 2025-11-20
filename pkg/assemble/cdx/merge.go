@@ -24,7 +24,7 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	dtrack "github.com/DependencyTrack/client-go"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/samber/lo"
 )
 

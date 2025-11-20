@@ -1,4 +1,4 @@
-module github.com/interlynk-io/sbomasm
+module github.com/interlynk-io/sbomasm/v2
 
 go 1.24.2
 

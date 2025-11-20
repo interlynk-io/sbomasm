@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/pkg/assemble/cdx"
-	"github.com/interlynk-io/sbomasm/pkg/assemble/spdx"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/samber/lo"
 )
 

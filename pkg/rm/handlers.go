@@ -22,14 +22,14 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/rm/cmps"
-	cdxcomp "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/comp"
-	cdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/cdx/meta"
-	spdxcomp "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx/comp"
-	spdxmeta "github.com/interlynk-io/sbomasm/pkg/rm/field/handler/spdx/meta"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/cmps"
+	cdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/cdx/comp"
+	cdxmeta "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/cdx/meta"
+	spdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx/comp"
+	spdxmeta "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx/meta"
 
-	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 

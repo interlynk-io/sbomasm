@@ -24,7 +24,7 @@ import (
 	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
 // Viewer is the main interface for SBOM viewing functionality

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/internal/version"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/internal/version"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/samber/lo"
 	"github.com/spdx/tools-golang/spdx"
 )

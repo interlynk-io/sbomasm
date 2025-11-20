@@ -15,7 +15,7 @@
 // limitations under the License.
 package main
 
-import "github.com/interlynk-io/sbomasm/cmd"
+import "github.com/interlynk-io/sbomasm/v2/cmd"
 
 func main() {
 	cmd.Execute()

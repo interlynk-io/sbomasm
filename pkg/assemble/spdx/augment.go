@@ -22,9 +22,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/interlynk-io/sbomasm/pkg/assemble/matcher"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/matcher"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
 	spdx_tv "github.com/spdx/tools-golang/tagvalue"

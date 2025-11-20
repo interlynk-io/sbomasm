@@ -24,8 +24,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/interlynk-io/sbomasm/pkg/enrich"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/enrich"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/spf13/cobra"
 )
 

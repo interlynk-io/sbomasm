@@ -23,7 +23,7 @@ import (
 
 	dtrack "github.com/DependencyTrack/client-go"
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 )
 
 type Params struct {

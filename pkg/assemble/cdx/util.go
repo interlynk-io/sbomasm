@@ -26,8 +26,8 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/sbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/samber/lo"
 	"sigs.k8s.io/release-utils/version"
 )

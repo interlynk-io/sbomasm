@@ -28,7 +28,7 @@ import (
 	"github.com/cheggaaa/pb/v3"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"golang.org/x/time/rate"
 )
 

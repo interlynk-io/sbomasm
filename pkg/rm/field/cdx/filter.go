@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
-	"github.com/interlynk-io/sbomasm/pkg/rm/types"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 )
 
 func FilterAuthorFromMetadata(selected []interface{}, params *types.RmParams) ([]interface{}, error) {

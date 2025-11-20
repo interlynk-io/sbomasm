@@ -23,7 +23,7 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/guacsec/sw-id-core/coordinates"
-	"github.com/interlynk-io/sbomasm/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/package-url/packageurl-go"
 	"github.com/spdx/tools-golang/spdx"
 )
