@@ -49,7 +49,7 @@ LDFLAGS = -buildid= -X $(PKG).gitVersion=$(GIT_VERSION) \
           -X $(PKG).buildDate=$(BUILD_DATE)
 
 BUILD_DIR = ./build
-BINARY_NAME = sbomqs
+BINARY_NAME = sbomasm
 TARGETOS ?= $(shell go env GOOS)
 TARGETARCH ?= $(shell go env GOARCH)
 
@@ -165,7 +165,7 @@ ci: deps generate vet ## Run CI pipeline locally with test summary
 	@echo "Running CI pipeline..."
 	@set +e; \
 	echo "Unit tests:"; \
-	go test -cover -race -failfast -p 1 $$(go list ./... | grep -v integration_test) 2>&1 | grep -E "^(ok|FAIL|coverage:)" | sed 's/github.com\/interlynk-io\/sbomqs\/v2\///' ; \
+	go test -cover -race -failfast -p 1 $$(go list ./... | grep -v integration_test) 2>&1 | grep -E "^(ok|FAIL|coverage:)" | sed 's/github.com\/interlynk-io\/sbomasm\/v2\///' ; \
 	UNIT_EXIT_CODE=$$?; \
 	echo ""; \
 	echo "Integration tests:"; \
