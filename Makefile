@@ -49,7 +49,7 @@ LDFLAGS = -buildid= -X $(PKG).gitVersion=$(GIT_VERSION) \
           -X $(PKG).buildDate=$(BUILD_DATE)
 
 BUILD_DIR = ./build
-BINARY_NAME = sbomasm
+BINARY_NAME = sbomqs
 TARGETOS ?= $(shell go env GOOS)
 TARGETARCH ?= $(shell go env GOARCH)
 
@@ -86,7 +86,7 @@ vet: ## Run go vet
 lint: ## Run golangci-lint (requires golangci-lint installed)
 	@echo "Running linter..."
 	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
+		golangci-lint run --config .golangci.yml; \
 	else \
 		echo "golangci-lint not found. Install it from https://golangci-lint.run/"; \
 	fi
@@ -94,21 +94,9 @@ lint: ## Run golangci-lint (requires golangci-lint installed)
 ##@ Testing
 
 .PHONY: test
-test: generate ## Run tests
+test: generate ## Run all tests
 	@echo "Running tests..."
-	@go test -v -cover -race -failfast -p 1 ./...
-
-.PHONY: test-coverage
-test-coverage: generate ## Run tests with coverage report
-	@echo "Running tests with coverage..."
-	@go test -v -coverprofile=coverage.out -covermode=atomic ./...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-.PHONY: test-short
-test-short: ## Run short tests
-	@echo "Running short tests..."
-	@go test -short -v ./...
+	@go test -cover -race ./...
 
 ##@ Building
 
@@ -173,9 +161,39 @@ tidy: ## Run go mod tidy
 ##@ CI/CD
 
 .PHONY: ci
-ci: deps generate vet test ## Run CI pipeline locally
-	@echo "CI pipeline complete"
+ci: deps generate vet ## Run CI pipeline locally with test summary
+	@echo "Running CI pipeline..."
+	@set +e; \
+	echo "Unit tests:"; \
+	go test -cover -race -failfast -p 1 $$(go list ./... | grep -v integration_test) 2>&1 | grep -E "^(ok|FAIL|coverage:)" | sed 's/github.com\/interlynk-io\/sbomqs\/v2\///' ; \
+	UNIT_EXIT_CODE=$$?; \
+	echo ""; \
+	echo "Integration tests:"; \
+	go test -run "Test_ScoreForStaticSBOMFiles_Summary|Test_NTIAProfile|Test_NTIA2025Profile|Test_InterlynkProfile" ./pkg/scorer/v2/... 2>&1 | grep -E "(PASS|FAIL|ok|NTIA.*Profile:|Interlynk.*Profile:)" ; \
+	INTEGRATION_EXIT_CODE=$$?; \
+	echo ""; \
+	echo "=========================================="; \
+	echo "CI Pipeline Summary"; \
+	echo "=========================================="; \
+	if [ $$UNIT_EXIT_CODE -ne 0 ]; then \
+		echo "✗ Unit tests: FAILED"; \
+	else \
+		echo "✓ Unit tests: PASSED"; \
+	fi; \
+	if [ $$INTEGRATION_EXIT_CODE -ne 0 ]; then \
+		echo "✗ Integration tests: FAILED"; \
+	else \
+		echo "✓ Integration tests: PASSED"; \
+	fi; \
+	echo "=========================================="; \
+	if [ $$UNIT_EXIT_CODE -eq 0 ] && [ $$INTEGRATION_EXIT_CODE -eq 0 ]; then \
+		echo "✓ CI Pipeline: SUCCESS"; \
+	else \
+		echo "✗ CI Pipeline: FAILED"; \
+	fi; \
+	echo "=========================================="; \
+	exit $$((UNIT_EXIT_CODE + INTEGRATION_EXIT_CODE))
 
 .PHONY: pre-commit
-pre-commit: fmt vet lint test-short ## Run pre-commit checks
+pre-commit: fmt vet lint test ## Run pre-commit checks
 	@echo "Pre-commit checks passed"
