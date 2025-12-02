@@ -41,8 +41,11 @@ for verification, and reports whether the signature is cryptographically valid. 
 the SBOM hasn't been tampered with since it was signed.
 
 Examples:
-  # Verify a signed SBOM
-  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY signed-sbom.json
+  # Verify a signed CycloneDX SBOM
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY signed-cyclonedx-sbom.json
+
+  # Verify a SPDX Detached Signature
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature "SIGNATURE HASH" --api-key $API_KEY signed-cyclonedx-sbom.json
 
   # Verify with environment variable for API key
   export SECURE_SBOM_API_KEY=your-api-key
@@ -68,6 +71,7 @@ var (
 	verifyTimeout      time.Duration
 	verifyRetryCount   int
 	verifyQuiet        bool
+	verifySignature	   string
 )
 
 // VerificationOutput represents the CLI output structure
@@ -84,8 +88,9 @@ func init() {
 	// Add verify command to root
 	rootCmd.AddCommand(verifyCmd)
 
-	// Required flags
+	// Verification Flag
 	verifyCmd.Flags().StringVar(&verifyKeyID, "key-id", "", "Key ID used to sign the SBOM")
+	verifyCmd.Flags().StringVar(&verifySignature, "signature", "", "Base64 signature to veirfy when using an SPDX SBOM")
 
 	// Authentication flags
 	verifyCmd.Flags().StringVar(&verifyAPIKey, "api-key", "", "API key for authentication (or set SECURE_SBOM_API_KEY)")
@@ -147,6 +152,20 @@ func validateVerifyFlags(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--retry cannot be negative")
 	}
 
+	// Detect SBOM format and validate signature requirement
+	if args[0] != "-" {
+		format, err := detectSBOMFormat(args[0])
+		if err != nil {
+			// If we can't detect the format, we'll let the SDK handle it later
+			// This allows the verification to proceed and fail with a more specific error
+			return nil
+		}
+
+		if format == "spdx" && verifySignature == "" {
+			return fmt.Errorf("--signature is required for SPDX SBOMs")
+		}
+	}
+
 	return nil
 }
 
@@ -179,14 +198,25 @@ func runVerifyCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("API health check failed: %w", err)
 	}
 
-	// Verify the SBOM
-	if !verifyQuiet {
-		fmt.Fprintf(os.Stderr, "Verifying SBOM signature with key %s...\n", verifyKeyID)
-	}
-
-	result, err := client.VerifySBOM(ctx, verifyKeyID, signedSBOM.Data())
-	if err != nil {
-		return fmt.Errorf("failed to verify SBOM: %w", err)
+	var result *securesbom.VerifyResultCMDResponse
+	if verifySignature != "" {
+		// SPDX SBOM - use separate signature
+		if !verifyQuiet {
+			fmt.Fprintf(os.Stderr, "Verifying SPDX SBOM with provided signature...\n")
+		}
+		result, err = client.VerifySPDXSBOM(ctx, verifyKeyID, verifySignature, signedSBOM.Data())
+		if err != nil {
+			return fmt.Errorf("failed to verify SPDX SBOM: %w", err)
+		}
+	} else {
+		// CycloneDX SBOM - signature embedded in SBOM
+		if !verifyQuiet {
+			fmt.Fprintf(os.Stderr, "Verifying CycloneDX SBOM with embedded signature...\n")
+		}
+		result, err = client.VerifySBOM(ctx, verifyKeyID, signedSBOM.Data())
+		if err != nil {
+			return fmt.Errorf("failed to verify CycloneDX SBOM: %w", err)
+		}
 	}
 
 	// Output the verification result
@@ -296,4 +326,33 @@ func outputVerificationText(output VerificationOutput) error {
 	}
 
 	return nil
+}
+
+// detectSBOMFormat attempts to detect if the SBOM is SPDX or CycloneDX
+func detectSBOMFormat(filepath string) (string, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	var peek map[string]interface{}
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&peek); err != nil {
+		return "", err
+	}
+
+	// SPDX SBOMs have "spdxVersion" field
+	if _, hasSPDXVersion := peek["spdxVersion"]; hasSPDXVersion {
+		return "spdx", nil
+	}
+
+	// CycloneDX SBOMs have "bomFormat" field
+	if bomFormat, hasBomFormat := peek["bomFormat"]; hasBomFormat {
+		if fmt.Sprintf("%v", bomFormat) == "CycloneDX" {
+			return "cyclonedx", nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to detect SBOM format")
 }
