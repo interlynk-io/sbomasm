@@ -342,8 +342,8 @@ func outputKeysTable(result *securesbom.KeyListResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 	defer w.Flush()
 
-	fmt.Fprintf(w, "KEY ID\tCREATED\tALGORITHM\n")
-	fmt.Fprintf(w, "------\t-------\t---------\n")
+	fmt.Fprintf(w, "KEY ID\tCREATED\tALGORITHM\tBACKEND\tPROTECTION LEVEL\tPURPOSE\n")
+	fmt.Fprintf(w, "------\t-------\t---------\t---------\t---------\t---------\n")
 
 	for _, key := range result.Keys {
 		createdAt := key.CreatedAt.Format("2006-01-02 15:04")
@@ -351,7 +351,8 @@ func outputKeysTable(result *securesbom.KeyListResponse) error {
 		if algorithm == "" {
 			algorithm = "default"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", key.ID, createdAt, algorithm)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", key.ID, createdAt, algorithm, key.Backend, key.ProtectionLevel,
+			key.Purpose)
 	}
 
 	if len(result.Keys) == 0 {

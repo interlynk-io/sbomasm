@@ -325,9 +325,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.cdx.sig
 # Verify the Signed SBOM using the API
 sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e sbom.cdx.signed.json
 
-# Air Gapped Verification
-
-Coming Soon
+# Sign and Verify SPDX SBOMs with SecureSBOM
 ```
 
 ## Industry Use Cases
