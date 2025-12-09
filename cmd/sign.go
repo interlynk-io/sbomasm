@@ -42,8 +42,11 @@ The output is the signed SBOM. The signing process adds cryptographic proof of
 authenticity and integrity to the SBOM.
 
 Examples:
-  # Sign an SBOM with a specific key
-  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY sbom.json
+  # Sign an CycloneDX SBOM with a specific key
+  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY cyclonedx-sbom.json
+
+  # Sign an SPDX SBOM with a specific key
+  sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY spdx-sbom.json
 
   # Sign with environment variable for API key
   export SECURE_SBOM_API_KEY=your-api-key

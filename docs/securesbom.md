@@ -1,8 +1,8 @@
 # SecureSBOM API
 
 `sbomasm` provides enterprise-grade cryptographic signing and verification for SBOMs through integration with
-ShiftLeftCyber's SecureSBOM API. The implementation supports the standard **CycloneDX 1.6 Signature Format** with
-**SPDX detached signature support** coming soon.
+ShiftLeftCyber's SecureSBOM API. The implementation supports the standard **CycloneDX 1.6 Signature Format** and 
+**SPDX** detached signatures
 
 ## Why Sign SBOMs?
 
@@ -64,10 +64,16 @@ sbomasm securesbomkey public <key-id>
 sbomasm sign --key-id <your-key-id> <input-sbom>
 ```
 
-### Verifying an SBOM
+### Verifying an SBOM (CycloneDX)
 
 ```bash
 sbomasm verify --key-id <key-id> <signed-sbom>
+```
+
+### Verifying an SBOM (SPDX)
+
+```bash
+sbomasm verify --key-id <key-id> --signature <base64 signature> <signed-sbom>
 ```
 
 ## Command Options
@@ -95,8 +101,11 @@ sbomasm verify --key-id <key-id> <signed-sbom>
 #### Required Options
 - `--key-id <string>`: Public key ID used to verify the signature
 
+#### Required Options (SPDX Verification)
+- `--signature <string>`: base64 signature of the SBOM
+
 #### Authentication Options
-- `--api-key <string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
+- `--api-key <base64 string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
 
 #### Output Options
 - `-q, --quiet`: Suppress output except for errors (exit code indicates success/failure)
@@ -122,12 +131,12 @@ sbomasm verify --key-id <key-id> <signed-sbom>
 4. **Signature Generation**: Creates a cryptographic signature using your private key
 5. **Format Integration**: Embeds the signature according to format standards:
    - **CycloneDX**: Uses the standard 1.6 signature format within the SBOM
-   - **SPDX**: Adds detached signature metadata (coming soon)
-6. **Output**: Returns the signed SBOM with embedded cryptographic proof
+   - **SPDX**: Adds detached signature metadata
+6. **Output**: Returns the signed SBOM with embedded cryptographic proof or deatached signature for SPDX
 
 ### Verification Process
 
-1. **Signature Extraction**: Extracts the embedded signature from the signed SBOM
+1. **Signature Extraction**: Extracts the embedded signature from the signed SBOM or uses the value passed in
 2. **Key Retrieval**: Fetches the corresponding public key using the key ID
 3. **Hash Verification**: Validates the SBOM content against the signature
 4. **Integrity Check**: Confirms the SBOM has not been modified since signing
@@ -137,7 +146,7 @@ sbomasm verify --key-id <key-id> <signed-sbom>
 
 The SecureSBOM API manages your cryptographic keys securely:
 - **Key Generation**: Creates an ECDSA key pair
-- **Secure Storage**: Private keys are securely stored in Hardware Security Modules (HSM), with Google Cloud KMS as the default backend
+- **Secure Storage**: Private keys are securely stored in a Hardware Security Modules (HSM)
 - **Access Control**: Keys are tied to your API account and access permissions
 - **Public Key Sharing**: Public keys can be shared for verification purposes
 
@@ -151,6 +160,9 @@ sbomasm sign --key-id prod-key-2024 --output signed-sbom.json sbom.json
 
 # Verify the signed SBOM
 sbomasm verify --key-id prod-key-2024 signed-sbom.json
+
+# Verify the signed SPDX SBOM
+sbomasm verify --key-id prod-key-2024 --signature "MEUCIQDmi8q+VTLgRcByA....." signed-sbom.json
 ```
 
 ### Environment Variables Setup
@@ -353,16 +365,10 @@ sbomasm sign --timeout 60s --retry 5 --key-id my-key sbom.json
 |--------|---------|---------|--------------|-------|
 | CycloneDX | 1.6+ | ✅ | ✅ | Uses standard signature format |
 | CycloneDX | 1.4-1.5 | ✅ | ✅ | Compatible with 1.6 signature format |
-
-### Coming Soon
-
-| Format | Version | Signing | Verification | Notes |
-|--------|---------|---------|--------------|-------|
-| SPDX | 2.3+ | 🔄 | 🔄 | Detached signature support |
+| SPDX | 2.3+ | ✅ | ✅ | Detached signature support |
 
 ## Future Enhancements
 
-* **SPDX Support**: Detached signature format for SPDX SBOMs
 * **Signature Metadata**: Additional signature attributes and custom claims
 * **Spport for Air Gapped Verification**: Veirfy a signed sbom offline with only the public key
 * **CycloneDX Multi-Signature Support**: Multiple signatures on single SBOM
