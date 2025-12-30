@@ -69,6 +69,7 @@ var (
 	signTimeout    time.Duration
 	signRetryCount int
 	signQuiet      bool
+	signDetached   bool
 )
 
 func init() {
@@ -76,6 +77,9 @@ func init() {
 
 	// Required flags
 	signCmd.Flags().StringVar(&signKeyID, "key-id", "", "Key ID to use for signing")
+
+	// Detached
+	signCmd.Flags().BoolVar(&signDetached, "detached", false, "return a detached signature")
 
 	// Authentication flags
 	signCmd.Flags().StringVar(&signAPIKey, "api-key", "", "API key for authentication (or set SECURE_SBOM_API_KEY)")
@@ -166,7 +170,11 @@ func runSignCommand(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Signing SBOM with key %s...\n", signKeyID)
 	}
 
-	result, err := client.SignSBOM(ctx, signKeyID, sbom.Data())
+	opts := securesbom.SignOptions{
+		Detached: signDetached,
+	}
+
+	result, err := client.SignSBOMWithOptions(ctx, signKeyID, sbom.Data(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to sign SBOM: %w", err)
 	}
