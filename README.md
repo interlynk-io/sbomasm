@@ -326,6 +326,8 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.cdx.sig
 sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e sbom.cdx.signed.json
 
 # Sign and Verify SPDX SBOMs with SecureSBOM
+sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.spdx.signed.json sbom.spdx.json
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature "SIGNATURE_HASH" sbom.spdx.signed.json
 ```
 
 ## Industry Use Cases

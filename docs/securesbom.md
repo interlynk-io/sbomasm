@@ -1,7 +1,7 @@
 # SecureSBOM API
 
 `sbomasm` provides enterprise-grade cryptographic signing and verification for SBOMs through integration with
-ShiftLeftCyber's SecureSBOM API. The implementation supports the standard **CycloneDX 1.6 Signature Format** and 
+ShiftLeftCyber's SecureSBOM API. The implementation supports the standard **CycloneDX Signature Format** and 
 **SPDX** detached signatures
 
 ## Why Sign SBOMs?
