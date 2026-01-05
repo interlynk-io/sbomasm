@@ -16,8 +16,8 @@ require (
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.52.0
-	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.1.0
-	github.com/spdx/tools-golang v0.5.5
+	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
+	github.com/spdx/tools-golang v0.5.6
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.27.1
 	golang.org/x/time v0.14.0
@@ -40,8 +40,8 @@ require (
 )
 
 require (
-	github.com/DependencyTrack/client-go v0.17.0
-	github.com/anchore/go-struct-converter v0.0.0-20250211213226-cce56d595160 // indirect
+	github.com/DependencyTrack/client-go v0.18.0
+	github.com/anchore/go-struct-converter v0.1.0 // indirect
 	github.com/cheggaaa/pb/v3 v3.1.7
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
