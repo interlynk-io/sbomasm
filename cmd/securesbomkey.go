@@ -115,6 +115,7 @@ var (
 	keyTimeout      time.Duration
 	keyRetryCount   int
 	keyQuiet        bool
+	filesystemKey   bool
 )
 
 func init() {
@@ -136,6 +137,13 @@ func init() {
 	// Output flags for list and generate commands
 	keyListCmd.Flags().StringVar(&keyOutputFormat, "output", "table", "Output format: table, json")
 	keyGenerateCmd.Flags().StringVar(&keyOutputFormat, "output", "table", "Output format: table, json")
+
+	keyGenerateCmd.Flags().BoolVar(
+        &filesystemKey,
+        "filesystemkey",
+        false,
+        "Generate filesystem-backed key (NOT FOR PRODUCTION USE)",
+    )
 
 	// Output file flag for public command
 	keyPublicCmd.Flags().StringVar(&keyOutput, "output", "", "Output file path (default: stdout)")
@@ -235,12 +243,19 @@ func runKeyGenerateCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("API health check failed: %w", err)
 	}
 
-	// Generate key
-	if !keyQuiet {
-		fmt.Fprintf(os.Stderr, "Generating new key...\n")
+	var backend string
+	if filesystemKey {
+		backend = securesbom.KeyBackendFile
+	} else {
+		backend = securesbom.KeyBackendKMS
 	}
 
-	key, err := client.GenerateKey(ctx)
+	// Generate key
+	if !keyQuiet {
+		fmt.Fprintf(os.Stderr, "Generating new key (backend=%s)...\n", backend)
+	}
+
+	key, err := client.GenerateKeyWithBackend(ctx, backend)
 	if err != nil {
 		return fmt.Errorf("failed to generate key: %w", err)
 	}
