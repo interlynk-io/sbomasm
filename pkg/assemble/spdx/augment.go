@@ -547,7 +547,7 @@ func (a *augmentMerge) stringToDocElementID(s string) common.DocElementID {
 	// Check for document reference
 	if idx := strings.Index(s, ":"); idx > 0 {
 		return common.DocElementID{
-			DocumentRefID: s[:idx],
+			DocumentRefID: common.DocumentID(s[:idx]),
 			ElementRefID:  common.ElementID(s[idx+1:]),
 		}
 	}

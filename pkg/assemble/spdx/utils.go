@@ -500,7 +500,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 			// if the relationship has a DocumentRef defined, and the
 			// document is part of the merge set, we should null it out.
 			if rel.RefA.DocumentRefID != "" {
-				if lo.Contains(docNames, rel.RefA.DocumentRefID) {
+				if lo.Contains(docNames, string(rel.RefA.DocumentRefID)) {
 					clone.RefA.DocumentRefID = ""
 				} else {
 					log.Warn(fmt.Sprintf("RefA: Could not find document name %s in the merge set", rel.RefA.DocumentRefID))
@@ -508,7 +508,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 			}
 
 			if rel.RefB.DocumentRefID != "" {
-				if lo.Contains(docNames, rel.RefB.DocumentRefID) {
+				if lo.Contains(docNames, string(rel.RefB.DocumentRefID)) {
 					clone.RefB.DocumentRefID = ""
 				} else {
 					log.Warn(fmt.Sprintf("RefB: Could not find document name %s in the merge set", rel.RefB.DocumentRefID))
@@ -518,7 +518,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 			if rel.RefA.ElementRefID != "" {
 				namespace := doc.DocumentNamespace
 				if rel.RefA.DocumentRefID != "" {
-					namespace = getDocumentNamespace(rel.RefA.DocumentRefID, ms)
+					namespace = getDocumentNamespace(string(rel.RefA.DocumentRefID), ms)
 				}
 
 				key := createLookupKey(namespace, string(rel.RefA.ElementRefID))
@@ -534,7 +534,7 @@ func genRelationships(ms *merge, pkgMapper map[string]string, fileMapper map[str
 			if rel.RefB.ElementRefID != "" {
 				namespace := doc.DocumentNamespace
 				if rel.RefB.DocumentRefID != "" {
-					namespace = getDocumentNamespace(rel.RefB.DocumentRefID, ms)
+					namespace = getDocumentNamespace(string(rel.RefB.DocumentRefID), ms)
 				}
 
 				key := createLookupKey(namespace, string(rel.RefB.ElementRefID))
