@@ -17,7 +17,7 @@ require (
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.52.0
 	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
-	github.com/spdx/tools-golang v0.5.6
+	github.com/spdx/tools-golang v0.5.7
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.27.1
 	golang.org/x/time v0.14.0
