@@ -79,9 +79,29 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
 
 	f.Seek(0, io.SeekStart)
 
-	if err := xml.NewDecoder(f).Decode(&cdx); err == nil {
-		if strings.HasPrefix(cdx.XMLNS, "http://cyclonedx.org") {
-			return SBOMSpecCDX, FileFormatXML, nil
+	// Use streaming XML parser to check only the root element's namespace
+	// This allows detection even if the XML is malformed deeper in the document
+	decoder := xml.NewDecoder(f)
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		if se, ok := token.(xml.StartElement); ok {
+			// Check if this is the root element with CycloneDX namespace
+			if se.Name.Space == "http://cyclonedx.org/schema/bom/1.6" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.5" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.4" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.3" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.2" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.1" ||
+				se.Name.Space == "http://cyclonedx.org/schema/bom/1.0" ||
+				strings.HasPrefix(se.Name.Space, "http://cyclonedx.org") {
+				f.Seek(0, io.SeekStart)
+				return SBOMSpecCDX, FileFormatXML, nil
+			}
+			// Not a CycloneDX document, stop checking
+			break
 		}
 	}
 	f.Seek(0, io.SeekStart)
