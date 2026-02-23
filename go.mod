@@ -7,13 +7,13 @@ toolchain go1.24.6
 require (
 	github.com/CycloneDX/cyclonedx-go v0.10.0
 	github.com/fatih/color v1.18.0
-	github.com/github/go-spdx/v2 v2.3.6
+	github.com/github/go-spdx/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/package-url/packageurl-go v0.1.3
+	github.com/package-url/packageurl-go v0.1.4
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.52.0
 	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
