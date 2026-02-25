@@ -58,23 +58,40 @@ func writeSPDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error 
 	return nil
 }
 
-// spdxPackageToRow converts an SPDX package to a CSV row representation.
-// The order of fields must match the header row defined in the CSV output.
-// The fields included are:
-// - Name
-// - Version
-// - Type (set to "PACKAGE" for SPDX packages)
-// - Author (extracted from PackageOriginator if it's a Person)
-// - Supplier (extracted from PackageSupplier)
-// - Group (no direct SPDX equivalent, left blank)
-// - Scope (no direct SPDX equivalent, left blank)
-// - PURL (extracted from external references of type "purl")
-// - CPE (extracted from external references of type "cpe23Type" or "cpe22Type")
-// - Declared License
-// - License Comments
-// - Copyright Text
-// - Description
-// - Checksums (MD5, SHA1, SHA256, SHA512)
+/*
+spdxPackageToRow converts an SPDX package to a CSV row representation.
+
+The order of fields must match the header row defined in the CSV output.
+The fields included are:
+
+1. Name
+
+2. Version
+
+3. Type (emits PrimaryPackagePurpose verbatim, e.g. "APPLICATION", "LIBRARY"; blank if unset)
+
+4. Author (extracted from PackageOriginator if it's a Person or Organization)
+
+5. Supplier (extracted from PackageSupplier)
+
+6. Group (no direct SPDX equivalent, left blank)
+
+7. Scope (no direct SPDX equivalent, left blank)
+
+8. PURL (extracted from external references of type "purl")
+
+9. CPE (extracted from external references of type "cpe23Type" or "cpe22Type")
+
+10. Declared License
+
+11. License Comments
+
+12. Copyright Text
+
+13. Description
+
+14. Checksums (MD5, SHA1, SHA256, SHA512)
+*/
 func spdxPackageToRow(p *spdx23.Package) []string {
 	return []string{
 		p.PackageName,
@@ -82,8 +99,8 @@ func spdxPackageToRow(p *spdx23.Package) []string {
 		p.PrimaryPackagePurpose,
 		spdxOriginatorName(p.PackageOriginator),
 		spdxSupplierName(p.PackageSupplier),
-		"", // Group — no SPDX equivalent
-		"", // Scope — no SPDX equivalent
+		"", // Group   no SPDX equivalent
+		"", // Scope   no SPDX equivalent
 		spdxExtractPURL(p.PackageExternalReferences),
 		spdxExtractCPE(p.PackageExternalReferences),
 		p.PackageLicenseDeclared,
@@ -97,38 +114,55 @@ func spdxPackageToRow(p *spdx23.Package) []string {
 	}
 }
 
-// spdxFileToRow converts an SPDX file to a CSV row representation.
-// The order of fields must match the header row defined in the CSV output.
-// The fields included are:
-// - Name (FileName in SPDX)
-// - Version (files don't have versions in SPDX, left blank)
-// - Type (set to "FILE" for SPDX files)
-// - Author (no file-level author in SPDX, left blank)
-// - Supplier (no file-level supplier in SPDX, left blank)
-// - Group (no direct SPDX equivalent, left blank)
-// - Scope (no direct SPDX equivalent, left blank)
-// - PURL (files don't have PURLs in SPDX, left blank)
-// - CPE (files don't have CPEs in SPDX, left blank)
-// - Declared License (LicenseConcluded in SPDX)
-// - License Comments
-// - Copyright Text
-// - Description (files don't have descriptions in SPDX, left blank)
-// - Checksums (MD5, SHA1, SHA256, SHA512)
+/*
+spdxFileToRow converts an SPDX file to a CSV row representation.
+
+The order of fields must match the header row defined in the CSV output.
+The fields included are:
+
+1. Name (FileName in SPDX)
+
+2. Version (files don't have versions in SPDX, left blank)
+
+3. Type (set to "FILE" for SPDX files)
+
+4. Author (no file-level author in SPDX, left blank)
+
+5. Supplier (no file-level supplier in SPDX, left blank)
+
+6. Group (no direct SPDX equivalent, left blank)
+
+7. Scope (no direct SPDX equivalent, left blank)
+
+8. PURL (files don't have PURLs in SPDX, left blank)
+
+9. CPE (files don't have CPEs in SPDX, left blank)
+
+10. Declared License (LicenseConcluded in SPDX)
+
+11. License Comments
+
+12. Copyright Text
+
+13. Description (files don't have descriptions in SPDX, left blank)
+
+14. Checksums (MD5, SHA1, SHA256, SHA512)
+*/
 func spdxFileToRow(f *spdx23.File) []string {
 	return []string{
 		f.FileName,
-		"", // Version — files don't have versions in SPDX
+		"", // Version: files don't have versions in SPDX
 		"FILE",
-		"", // Author — no file-level author in SPDX
-		"", // Supplier — no file-level supplier in SPDX
+		"", // Author   no file-level author in SPDX
+		"", // Supplier   no file-level supplier in SPDX
 		"", // Group
 		"", // Scope
-		"", // Purl — files don't have PURLs in SPDX
-		"", // Cpe — files don't have CPEs in SPDX
+		"", // Purl   files don't have PURLs in SPDX
+		"", // Cpe   files don't have CPEs in SPDX
 		f.LicenseConcluded,
 		f.LicenseComments,
 		f.FileCopyrightText,
-		"", // Description — files don't have descriptions in SPDX
+		"", // Description   files don't have descriptions in SPDX
 		spdxChecksumValue(f.Checksums, common.MD5),
 		spdxChecksumValue(f.Checksums, common.SHA1),
 		spdxChecksumValue(f.Checksums, common.SHA256),

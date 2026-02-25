@@ -26,24 +26,43 @@ import (
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
-// var headers defines the CSV header row for the flattened SBOM output. The fields included are:
-// - Name: The name of the component or file.
-// - Version: The version of the component, if applicable.
-// - Type: The type of the entry (e.g., "PACKAGE" for SPDX packages, "FILE" for SPDX files, or the component type for CycloneDX).
-// - Author: The author of the component, if available (extracted from SPDX PackageOriginator or CycloneDX Component's author field).
-// - Supplier: The supplier of the component, if available (extracted from SPDX PackageSupplier or CycloneDX Component's supplier field).
-// - Group: The group or namespace of the component, if available (extracted from CycloneDX Component's group field).
-// - Scope: The scope of the component, if available (extracted from CycloneDX Component's scope field).
-// - Purl: The Package URL (PURL) of the component, if available (extracted from CycloneDX Component's purl field).
-// - Cpe: The Common Platform Enumeration (CPE) identifier of the component, if available (extracted from CycloneDX Component's cpe field).
-// - LicenseExpressions: A comma-separated list of license expressions associated with the component.
-// - LicenseNames: A comma-separated list of license names associated with the component.
-// - Copyright: The copyright information for the component, if available (extracted from SPDX PackageCopyrightText or CycloneDX Component's copyright field).
-// - Description: A description of the component, if available (extracted from SPDX PackageDescription or CycloneDX Component's description field).
-// - MD5: The MD5 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
-// - SHA-1: The SHA-1 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
-// - SHA-256: The SHA-256 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
-// - SHA-512: The SHA-512 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
+/*
+var headers defines the CSV header row for the flattened SBOM output. The fields included are:
+
+1. Name: The name of the component or file.
+
+2. Version: The version of the component, if applicable.
+
+3. Type: The type of the entry (e.g., "PACKAGE" for SPDX packages, "FILE" for SPDX files, or the component type for CycloneDX).
+
+4. Author: The author of the component, if available (extracted from SPDX PackageOriginator or CycloneDX Component's author field).
+
+5. Supplier: The supplier of the component, if available (extracted from SPDX PackageSupplier or CycloneDX Component's supplier field).
+
+6. Group: The group or namespace of the component, if available (extracted from CycloneDX Component's group field).
+
+7. Scope: The scope of the component, if available (extracted from CycloneDX Component's scope field).
+
+8. Purl: The Package URL (PURL) of the component, if available (extracted from CycloneDX Component's purl field).
+
+9. Cpe: The Common Platform Enumeration (CPE) identifier of the component, if available (extracted from CycloneDX Component's cpe field).
+
+10. LicenseExpressions: A comma-separated list of license expressions associated with the component.
+
+11. LicenseNames: A comma-separated list of license names associated with the component.
+
+12. Copyright: The copyright information for the component, if available (extracted from SPDX PackageCopyrightText or CycloneDX Component's copyright field).
+
+13. Description: A description of the component, if available (extracted from SPDX PackageDescription or CycloneDX Component's description field).
+
+14. MD5: The MD5 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
+
+15. SHA-1: The SHA-1 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
+
+16. SHA-256: The SHA-256 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
+
+17. SHA-512: The SHA-512 hash of the file, if applicable (extracted from CycloneDX Component's hashes).
+*/
 var headers = []string{
 	"Name",
 	"Version",
@@ -84,8 +103,10 @@ func Serialize(ctx context.Context, doc sbom.SBOMDocument, out io.Writer) error 
 	switch doc.SpecType() {
 	case string(sbom.SBOMSpecCDX):
 		return writeCDX(ctx, doc, w)
+
 	case string(sbom.SBOMSpecSPDX):
 		return writeSPDX(ctx, doc, w)
+
 	default:
 		return fmt.Errorf("unsupported spec type: %s", doc.SpecType())
 	}

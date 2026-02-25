@@ -62,23 +62,40 @@ func writeCDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error {
 	return nil
 }
 
-// cdxComponentToRow converts a CycloneDX component to a CSV row representation.
-// The order of fields must match the header row defined in the CSV output.
-// The fields included are:
-// - Name
-// - Version
-// - Type
-// - Author
-// - Supplier
-// - Group
-// - Scope
-// - PackageURL
-// - CPE
-// - License Expressions (comma-separated if multiple)
-// - License Names (comma-separated if multiple)
-// - Copyright
-// - Description
-// - Hashes (MD5, SHA1, SHA256, SHA512)
+/*
+cdxComponentToRow converts a CycloneDX component to a CSV row representation.
+
+The order of fields must match the header row defined in the CSV output.
+The fields included are:
+
+1. Name
+
+2. Version
+
+3. Type
+
+4. Author
+
+5. Supplier
+
+6. Group
+
+7. Scope
+
+8. PackageURL
+
+9. CPE
+
+10. License Expressions (comma-separated if multiple)
+
+11. License Names (comma-separated if multiple)
+
+12. Copyright
+
+13. Description
+
+14. Hashes (MD5, SHA1, SHA256, SHA512)
+*/
 func cdxComponentToRow(c *cydx.Component) []string {
 	return []string{
 		c.Name,

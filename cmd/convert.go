@@ -37,7 +37,7 @@ Usage:
 
 Examples:
   # Convert a CycloneDX SBOM to CSV and print to stdout
-  $ sbomasm convert --format samples/cdx/sbomqs-cdx.json
+  $ sbomasm convert --format csv samples/cdx/sbomqs-cdx.json
 
   # Convert an SPDX SBOM to CSV and write to a file
   $ sbomasm convert --format csv --output sbomqs-cdx.csv samples/cdx/sbomqs-cdx.json

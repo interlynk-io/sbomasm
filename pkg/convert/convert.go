@@ -71,6 +71,7 @@ func Convert(p *ConvertParams) error {
 	case "csv":
 		log.Debugf("serializing sbom document to format %s", p.Format)
 		return csv.Serialize(*p.Ctx, doc, out)
+
 	default:
 		return fmt.Errorf("unsupported output format: %s", p.Format)
 	}
