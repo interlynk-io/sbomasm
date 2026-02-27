@@ -87,7 +87,7 @@ var headers = []string{
 func Serialize(ctx context.Context, doc sbom.SBOMDocument, out io.Writer) error {
 	log := logger.FromContext(ctx)
 
-	log.Debugf("intializing serialization process of SBOM document to CSV format")
+	log.Debugf("initializing serialization process of SBOM document to CSV format")
 
 	w := csv.NewWriter(out)
 	defer w.Flush()
