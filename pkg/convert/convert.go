@@ -64,12 +64,11 @@ func Convert(p *ConvertParams) error {
 		out = f
 	}
 
-	log.Debugf("output will be written to %s", p.Output)
+	log.Debugf("output will be written to %s", out.Name())
 
 	// dispatch to format serializer
 	switch p.Format {
 	case "csv":
-		log.Debugf("serializing sbom document to format %s", p.Format)
 		return csv.Serialize(*p.Ctx, doc, out)
 
 	default:

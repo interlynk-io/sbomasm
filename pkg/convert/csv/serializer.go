@@ -86,7 +86,8 @@ var headers = []string{
 // Serialize writes the SBOM document as CSV to the given writer
 func Serialize(ctx context.Context, doc sbom.SBOMDocument, out io.Writer) error {
 	log := logger.FromContext(ctx)
-	log.Debugf("intializing serialization of sbom document to csv format")
+
+	log.Debugf("intializing serialization process of SBOM document to CSV format")
 
 	w := csv.NewWriter(out)
 	defer w.Flush()
@@ -96,8 +97,7 @@ func Serialize(ctx context.Context, doc sbom.SBOMDocument, out io.Writer) error 
 		return fmt.Errorf("writing csv headers: %w", err)
 	}
 
-	log.Debugf("writing sbom document to csv format with header: %v", headers)
-	log.Debugf("sbom document spec type: %s", doc.SpecType())
+	log.Debugf("writing headers to CSV document: %v", headers)
 
 	// dispatch based on spec type
 	switch doc.SpecType() {

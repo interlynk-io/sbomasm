@@ -1,4 +1,4 @@
-// Copyright 2025 Interlynk.io
+// Copyright 2026 Interlynk.io
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,7 +36,6 @@ func initTestLogger() {
 	initLoggerOnce.Do(logger.InitProdLogger)
 }
 
-// === Inline SBOM fixtures ===
 var cdxSBOM = []byte(`
 {
   "bomFormat": "CycloneDX",
@@ -287,7 +286,7 @@ func Test_CDX_HeaderRow(t *testing.T) {
 	}
 }
 
-func Test_CDX_TotalRowCount(t *testing.T) {
+func Test_CDX_RowCount(t *testing.T) {
 	path := writeTempFile(t, cdxSBOM, ".cdx.json")
 	defer os.Remove(path)
 
@@ -427,7 +426,7 @@ func Test_SPDX_HeaderRow(t *testing.T) {
 	}
 }
 
-func Test_SPDX_TotalRowCount(t *testing.T) {
+func Test_SPDX_RowCount(t *testing.T) {
 	path := writeTempFile(t, spdxSBOM, ".spdx.json")
 	defer os.Remove(path)
 
@@ -540,12 +539,8 @@ func Test_SPDX_File_Fields(t *testing.T) {
 	}
 }
 
-// Not valid SBOM at all
-var cdxMalformedJSON = []byte(`
-{
-  this is not valid json
-}
-`)
+// Not valid JSON at all.
+var cdxMalformedJSON = []byte(`{this is not valid json`)
 
 // Valid JSON but no bomFormat or SPDXID  Detect cannot identify the spec.
 var cdxEmptyJSON = []byte(`{}`)
@@ -556,8 +551,7 @@ var cdxMissingBomFormat = []byte(`{
   "serialNumber": "urn:uuid:12345",
   "version": 1,
   "components": []
-}
-`)
+}`)
 
 // bomFormat present but not the expected "CycloneDX" value.
 var cdxWrongBomFormat = []byte(`{
@@ -572,11 +566,7 @@ var cdxWrongVersionType = []byte(`{
   "specVersion": "1.5",
   "version": "not-an-integer",
   "components": [
-    {
-  	  "type": "library", 
-	  "name": "lib-a",
-	  "version": "1.0.0"
-	}
+    {"type": "library", "name": "lib-a", "version": "1.0.0"}
   ]
 }`)
 
@@ -654,21 +644,14 @@ var cdxNestedComponents = []byte(`{
       "name": "parent-lib",
       "version": "1.0.0",
       "components": [
-        {
-	      "type": "library",
-		  "name": "nested-child-lib",
-		  "version": "0.1.0"
-		}
+        {"type": "library", "name": "nested-child-lib", "version": "0.1.0"}
       ]
     }
   ]
 }`)
 
-// Not valid SBOM at all.
-var spdxMalformedJSON = []byte(`
-{
-  this is not valid json
-}`)
+// Not valid JSON at all.
+var spdxMalformedJSON = []byte(`{this is not valid json`)
 
 // Valid JSON without an SPDXID field  Detect cannot identify it as SPDX.
 var spdxMissingSPDXID = []byte(`{
@@ -886,7 +869,6 @@ func Test_CDX_NoComponents_RowCount(t *testing.T) {
 	defer os.Remove(path)
 
 	rows := parseAndSerialize(t, path)
-
 	// header + metadata component only; no body components
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows (header + metadata component), got %d", len(rows))
@@ -898,7 +880,6 @@ func Test_CDX_EmptyComponentsArray_RowCount(t *testing.T) {
 	defer os.Remove(path)
 
 	rows := parseAndSerialize(t, path)
-
 	// header + metadata component; empty components array contributes nothing
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows (header + metadata component), got %d", len(rows))
@@ -964,7 +945,6 @@ func Test_CDX_NestedComponents_OnlyTopLevelWritten(t *testing.T) {
 	defer os.Remove(path)
 
 	rows := parseAndSerialize(t, path)
-
 	// header + 1 top-level component; the nested child must NOT appear
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows (header + parent only), got %d  nested sub-components should not be written", len(rows))
@@ -1158,10 +1138,7 @@ var cdxAbsentType = []byte(`{
   "specVersion": "1.5",
   "version": 1,
   "components": [
-    {
-      "name": "no-type-lib",
-	  "version": "1.0.0"
-	}
+    {"name": "no-type-lib", "version": "1.0.0"}
   ]
 }`)
 
@@ -1193,12 +1170,7 @@ var cdxLicenseNameAndID = []byte(`{
       "name": "dual-id-lib",
       "version": "1.0.0",
       "licenses": [
-        {
-	      "license": {
-		    "id": "MIT",
-			"name": "MIT License"
-		  }
-		}
+        {"license": {"id": "MIT", "name": "MIT License"}}
       ]
     }
   ]
@@ -1220,8 +1192,6 @@ func Test_CDX_LicenseName_TakesPrecedenceOverID(t *testing.T) {
 		t.Errorf("LicenseNames = %q, want %q  Name should take precedence over ID", row[namesIdx], "MIT License")
 	}
 }
-
-// === SPDX package: Type absent (no primaryPackagePurpose) ===
 
 var spdxPackageNoType = []byte(`{
   "spdxVersion": "SPDX-2.3",
@@ -1259,8 +1229,6 @@ func Test_SPDX_PackageNoType_EmptyTypeColumn(t *testing.T) {
 	}
 }
 
-// === SPDX package: LicenseNames column (PackageLicenseComments) ===
-
 var spdxPackageLicenseComments = []byte(`{
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
@@ -1281,7 +1249,7 @@ var spdxPackageLicenseComments = []byte(`{
   ]
 }`)
 
-func Test_SPDX_PackageLicenseComments_InLicenseNamesColumn(t *testing.T) {
+func Test_SPDX_LicenseColumns(t *testing.T) {
 	path := writeTempFile(t, spdxPackageLicenseComments, ".spdx.json")
 	defer os.Remove(path)
 
@@ -1292,13 +1260,16 @@ func Test_SPDX_PackageLicenseComments_InLicenseNamesColumn(t *testing.T) {
 	header := rows[0]
 	row := rows[1]
 
+	exprIdx := columnIndex(t, header, "LicenseExpressions")
+	if row[exprIdx] != "MIT" {
+		t.Errorf("LicenseExpressions = %q, want %q", row[exprIdx], "MIT")
+	}
+
 	namesIdx := columnIndex(t, header, "LicenseNames")
-	if row[namesIdx] != "Approved by legal on 2024-01-01" {
-		t.Errorf("LicenseNames = %q, want %q", row[namesIdx], "Approved by legal on 2024-01-01")
+	if row[namesIdx] != "" {
+		t.Errorf("LicenseNames = %q, want %q (SPDX has no named-license concept)", row[namesIdx], "")
 	}
 }
-
-// === SPDX file: all four checksum algorithms present ===
 
 // spdxFileToRow uses the CORRECT column order: MD5(13), SHA-1(14), SHA-256(15), SHA-512(16).
 var spdxFileAllChecksums = []byte(`{
@@ -1354,8 +1325,6 @@ func Test_SPDX_FileAllChecksums(t *testing.T) {
 		})
 	}
 }
-
-// === SPDX package: MD5 and SHA-1 columns contain their correct values ===
 
 func Test_SPDX_Package_MD5AndSHA1_CorrectColumns(t *testing.T) {
 	path := writeTempFile(t, spdxSBOM, ".spdx.json")

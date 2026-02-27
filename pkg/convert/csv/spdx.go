@@ -37,7 +37,8 @@ func writeSPDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error 
 	if !ok {
 		return fmt.Errorf("failed to cast document to SPDX document")
 	}
-	log.Debugf("writing SPDX SBOM document to csv format")
+
+	log.Debugf("writing SPDX SBOM to CSV output")
 
 	// write all packages
 	for _, p := range spdxDoc.Packages {
@@ -45,7 +46,8 @@ func writeSPDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error 
 			return fmt.Errorf("writing package row: %w", err)
 		}
 	}
-	log.Debugf("all %d components are written to csv output", len(spdxDoc.Packages))
+
+	log.Debugf("total %d components are written to CSV output", len(spdxDoc.Packages))
 
 	// write all files
 	for _, f := range spdxDoc.Files {
@@ -53,7 +55,10 @@ func writeSPDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error 
 			return fmt.Errorf("writing file row: %w", err)
 		}
 	}
-	log.Debugf("all %d files are written to csv output", len(spdxDoc.Files))
+
+	log.Debugf("total %d files are written to CSV output", len(spdxDoc.Files))
+
+	log.Debugf("successfully completed writing SPDX SBOM to CSV output")
 
 	return nil
 }
@@ -104,11 +109,11 @@ func spdxPackageToRow(p *spdx23.Package) []string {
 		spdxExtractPURL(p.PackageExternalReferences),
 		spdxExtractCPE(p.PackageExternalReferences),
 		p.PackageLicenseDeclared,
-		p.PackageLicenseComments,
+		"", // LicenseNames: no named-license concept in SPDX separate from the expression
 		p.PackageCopyrightText,
 		p.PackageDescription,
-		spdxChecksumValue(p.PackageChecksums, common.SHA1),
 		spdxChecksumValue(p.PackageChecksums, common.MD5),
+		spdxChecksumValue(p.PackageChecksums, common.SHA1),
 		spdxChecksumValue(p.PackageChecksums, common.SHA256),
 		spdxChecksumValue(p.PackageChecksums, common.SHA512),
 	}
@@ -160,7 +165,7 @@ func spdxFileToRow(f *spdx23.File) []string {
 		"", // Purl   files don't have PURLs in SPDX
 		"", // Cpe   files don't have CPEs in SPDX
 		f.LicenseConcluded,
-		f.LicenseComments,
+		"", // LicenseNames: no named-license concept in SPDX separate from the expression
 		f.FileCopyrightText,
 		"", // Description   files don't have descriptions in SPDX
 		spdxChecksumValue(f.Checksums, common.MD5),
@@ -176,7 +181,7 @@ func spdxOriginatorName(originator *common.Originator) string {
 	if originator == nil {
 		return ""
 	}
-	if originator.OriginatorType == "Person" {
+	if originator.OriginatorType == "Person" || originator.OriginatorType == "Organization" {
 		return originator.Originator
 	}
 	return ""

@@ -32,14 +32,12 @@ import (
 func writeCDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error {
 	log := logger.FromContext(ctx)
 
-	log.Debugf("writing CycloneDX SBOM document to csv format")
+	log.Debugf("writing CycloneDX SBOM to CSV output")
 
 	bom, ok := doc.Document().(*cydx.BOM)
 	if !ok {
 		return fmt.Errorf("failed type coversion document to CycloneDX BOM")
 	}
-
-	log.Debugf("bom document is converted to CycloneDX BOM struct: %+v", bom)
 
 	// write primary component first
 	if bom.Metadata != nil && bom.Metadata.Component != nil {
@@ -47,7 +45,8 @@ func writeCDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error {
 			return fmt.Errorf("writing metadata component row: %w", err)
 		}
 	}
-	log.Debugf("primary component is written to csv output")
+
+	componentsCount := 0
 
 	// write all other components
 	if bom.Components != nil {
@@ -56,8 +55,13 @@ func writeCDX(ctx context.Context, doc sbom.SBOMDocument, w *csv.Writer) error {
 				return fmt.Errorf("writing component row: %w", err)
 			}
 		}
+
+		componentsCount = len(*bom.Components)
 	}
-	log.Debugf("%d other components are written to csv output", len(*bom.Components))
+
+	log.Debugf("total %d components are written to CSV output", componentsCount)
+
+	log.Debugf("successfully completed writing CycloneDX SBOM to CSV output")
 
 	return nil
 }
