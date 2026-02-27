@@ -51,7 +51,7 @@ func Convert(p *ConvertParams) error {
 		return fmt.Errorf("parsing sbom file: %w", err)
 	}
 
-	log.Debugf("sbom file is parsed to sbom document: %+v", doc)
+	log.Debugf("sbom file is parsed to SBOM document")
 
 	// resolve output writer
 	out := os.Stdout
