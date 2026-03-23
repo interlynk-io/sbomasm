@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.10.0
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.19.0
 	github.com/github/go-spdx/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
