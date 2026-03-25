@@ -142,9 +142,9 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			}
 
 			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
-				if targetComp.Licenses == nil {
-					targetComp.Licenses = &cydx.Licenses{}
-				}
+
+				// when force is true => overwrite existing licenses with recieved license from clearlydefined
+				targetComp.Licenses = &cydx.Licenses{}
 
 				addedLicenses := make(map[string]bool)
 				declaredLicense := compWithCorrespondingDefResponse.Licensed.Declared
@@ -164,7 +164,6 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 					} else if isLicenseExpression(declaredLicense) {
 						log.Debugf("License expression detected: %s", declaredLicense)
 						*targetComp.Licenses = append(*targetComp.Licenses, cydx.LicenseChoice{Expression: declaredLicense})
-
 					} else {
 						log.Debugf("Custom license detected: %s", declaredLicense)
 						if isCDX_1_6_Version {
