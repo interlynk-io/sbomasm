@@ -143,7 +143,7 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 
 			if force || (targetComp.Licenses == nil || len(*targetComp.Licenses) == 0) {
 
-				// when force is true => overwrite existing licenses with recieved license from clearlydefined
+				// initialize or overwrite licenses when forced or when no licenses exist, using licenses received from ClearlyDefined
 				targetComp.Licenses = &cydx.Licenses{}
 
 				addedLicenses := make(map[string]bool)
