@@ -1,10 +1,10 @@
 module github.com/interlynk-io/sbomasm/v2
 
-go 1.25.0
+go 1.25.7
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.10.0
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.19.0
 	github.com/github/go-spdx/v2 v2.4.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
@@ -14,7 +14,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.5
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.53.0
-	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
+	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.5.0
 	github.com/spdx/tools-golang v0.5.7
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.27.1
