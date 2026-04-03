@@ -7,6 +7,10 @@
 
 `sbomasm` is a comprehensive toolkit for managing Software Bill of Materials (SBOMs) throughout their lifecycle. From assembling multiple SBOMs into unified documents, to editing metadata for compliance, removing sensitive information, enriching with additional context and cryptorgaphically sign and verify SBOMs - sbomasm handles it all.
 
+## Interlynk Free Tier — Full SBOM Compliance, Zero Friction
+
+Get started with SBOM compliance in under two minutes — no credit card, no time limit. Interlynk's free plan includes a guided setup where you pick your compliance standard (CRA/EU, FDA Cybersecurity, NTIA, or Telecom), upload your SBOM, and instantly see your compliance score with actionable gaps highlighted. You get compliance scoring against one standard, up to 5 products with 5 versions each, unlimited users, built-in vulnerability detection, API access for CI/CD integration, weekly compliance digests, and ShareLynk — a public link to share your compliance posture with customers and partners. Everything beyond the free tier is visible with a clear upgrade path, and you can start a 15-day Enterprise trial anytime to unlock unlimited products, SBOM automation, RBAC, analytics, license management, and workflow integrations. [**Get Started Free →**](https://app.interlynk.io)
+
 ## Quick Start
 
 ```bash
@@ -61,8 +65,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
   - [Dependency Track Integration](#dependency-track-integration)
   - [Batch Operations](#batch-operations)
 - [Command Reference](#command-reference)
-- [SBOM Platform - Free Community Tier](#sbom-platform---free-community-tier)
-- [SBOM Card](#sbom-card)
+- [Interlynk Free Tier](#interlynk-free-tier--full-sbom-compliance-zero-friction)
 - [Installation](#installation)
 - [Contributions](#contributions)
 - [Other SBOM Open Source tools](#other-sbom-open-source-tools)
@@ -536,15 +539,6 @@ Detailed documentation for each command:
 - [view](docs/view.md) - Visualize SBOMs in human-readable format
 - [generate](docs/generate.md) - Create configuration templates
 - [sign/verify](docs/securesbom.md) - Cryptographically Sign & Verify SBOMs
-
-## SBOM Platform - Free Community Tier
-
-Our SBOM Automation Platform has a free community tier that provides a comprehensive solution to manage SBOMs (Software Bill of Materials) effortlessly. From centralized SBOM storage, built-in SBOM editor, continuous vulnerability mapping and assessment, and support for organizational policies, all while ensuring compliance and enhancing software supply chain security using integrated SBOM quality scores. The community tier is ideal for small teams. Learn more [here](https://www.interlynk.io/community-tier) or [Sign up](https://app.interlynk.io/auth)
-
-## SBOM Card
-
-[![SBOMCard](https://api.interlynk.io/api/v1/badges?type=hcard&project_group_id=c706ae8e-56dc-4386-9c8e-11c2401c0e94
-)](https://app.interlynk.io/customer/products?id=c706ae8e-56dc-4386-9c8e-11c2401c0e94&signed_url_params=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGtaVFZqTVdKaUxUSTJPV0V0TkdNeE55MWhaVEZpTFRBek1ETmlOREF3TlRjNFpDST0iLCJleHAiOm51bGwsInB1ciI6InNoYXJlX2x5bmsvc2hhcmVfbHluayJ9fQ==--84180d9ed3c786dce7119abc7fc35eb7adb0fbc8a9093c4f6e7e5d0ad778089e)
 
 ## Installation
 
