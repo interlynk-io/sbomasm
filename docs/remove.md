@@ -1,471 +1,460 @@
-# Remove Command
+# sbomasm remove command
 
-The `rm` (remove) command strips components, fields, or sensitive information from SBOMs. This is essential for sharing SBOMs externally, protecting intellectual property, and reducing SBOM size.
+This command is designed to support the following primary use cases:
 
-## Overview
+- **Field Removal**: removal of specific fields from document metadata or components
+- **Component Removal**: removal of entire components and their associated dependency links
+- **Dependency Removal**: removal of dependency relationships *(not yet supported)*
 
-`sbomasm rm` allows you to:
-- Remove entire components by name or pattern
-- Strip specific fields from components or metadata
-- Clean sensitive information before external sharing
-- Reduce SBOM size by removing unnecessary data
-- Filter components based on various criteria
+## Why Common Field Method?
 
-## Basic Usage
+We initially considered two approaches for field removal:
 
-```bash
-sbomasm rm --subject <target> --search <pattern> [options] <input-sbom>
-```
+- **Schema-Based Removal**: where users specify exact schema paths (e.g., `CreationInfo->Creator->Person` for SPDX).
+- **Common Fields-Based Removal**: where users simply target common fields (e.g., `author`, `license`, `repository`, `purl`, `cpe`, `supplier`, etc).
 
-## Command Options
+We decided to proceed with the **common field-based** method for the following reasons:
 
-### Subject Selection (Required)
+- No need to know full JSON paths of fields located in SPDX and CycloneDX.
+- Compatible across SPDX and CycloneDX.
+- Focuses on high-level user intent instead of internal SBOM layout.
 
-- `--subject <target>`: What to remove
-  - `component-name`: Remove components by name
-  - `component-data`: Remove specific component fields
-  - `component-from-dependency`: Remove component from dependency graph
-  - `primary-dependency`: Remove primary component dependencies
-  - `author`: Remove author information
-  - `supplier`: Remove supplier information
-  - `repository`: Remove repository references
-  - `primary-component-dependency`: Remove primary component from dependencies
+## sbomasm implementation
 
-### Search Options
+### 1. Field Removal
 
-- `--search <pattern>`: Pattern to match for removal
-  - For components: exact name or pattern
-  - For fields: field identifier
-  - Can be repeated for multiple patterns
+Removes specific fields from the document metadata or from components.
 
-### Output Options
+#### Common fields supported for document scope
 
-- `--output <path>`: Output file path (default: modifies in place with backup)
-- `-o <path>`: Short form of --output
-- `--force`: Skip confirmation prompts
+| Field         | SPDX                                    | CycloneDX                          |
+|---------------|-----------------------------------------|------------------------------------|
+| `author`      | `creationInfo.creators` (Person type)   | `metadata.authors`                 |
+| `supplier`    | `creationInfo.creators` (Organization)  | `metadata.supplier`                |
+| `tool`        | `creationInfo.creators` (Tool type)     | `metadata.tools`                   |
+| `lifecycle`   | *(custom extension)*                    | `metadata.lifecycles`              |
+| `license`     | `dataLicense`                           | `metadata.licenses`                |
+| `repository`  | *(not applicable)*                      | `metadata.component.externalRefs`  |
+| `timestamp`   | `creationInfo.created`                  | `metadata.timestamp`               |
 
-### Filter Options
+#### Common fields supported for component scope
 
-- `--type <type>`: Filter by component type
-- `--version <version>`: Filter by version
-- `--purl-type <type>`: Filter by package URL type
-- `--license <license>`: Filter by license
+| Field         | SPDX                    | CycloneDX              |
+|---------------|-------------------------|------------------------|
+| `author`      | `originator`            | `authors`              |
+| `copyright`   | `copyrightText`         | `copyright`            |
+| `cpe`         | `externalRefs` (cpe23)  | `cpe`                  |
+| `hash`        | `packageChecksums` / checksums | `hashes`  |
+| `license`     | `licenseDeclared`       | `licenses`             |
+| `purl`        | `externalRefs` (purl)   | `purl`                 |
+| `repository`  | `externalRefs` (vcs)    | `externalReferences`   |
+| `supplier`    | `packageSupplier`       | `supplier`             |
+| `type`        | `primaryPackagePurpose` | `type`                 |
 
-## Remove Targets
-
-### Remove Components by Name
-
-Remove specific components from the SBOM:
+#### Syntax
 
 ```bash
-# Remove a single component
-sbomasm rm \
-  --subject component-name \
-  --search "internal-debug-tool" \
-  input.json -o output.json
-
-# Remove multiple components
-sbomasm rm \
-  --subject component-name \
-  --search "test-framework" \
-  --search "mock-server" \
-  --search "debug-console" \
-  input.json -o output.json
+sbomasm rm --field <field> --scope <document|component> [--value <value>] [--name <component-name>] [--version <component-version>] [--all] [input-sbom] [-o output-sbom]
 ```
 
-### Remove Component Fields
+#### Examples on "Field Removal from document"
 
-Strip specific fields from components:
+Remove all authors from the document:
 
 ```bash
-# Remove all repository URLs
-sbomasm rm \
-  --subject repository \
-  input.json -o output.json
-
-# Remove supplier information
-sbomasm rm \
-  --subject supplier \
-  input.json -o output.json
-
-# Remove internal hashes
-sbomasm rm \
-  --subject component-data \
-  --search "internal-hash" \
-  input.json -o output.json
+sbomasm rm --field author --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field author --scope document input.cdx.json -o output.cdx.json
 ```
 
-### Remove from Dependencies
-
-Clean up dependency relationships:
+Remove only the author entry containing `hello@interlynk.io`:
 
 ```bash
-# Remove component from dependency graph
-sbomasm rm \
-  --subject component-from-dependency \
-  --search "deprecated-lib" \
-  input.json -o output.json
-
-# Remove all primary component dependencies
-sbomasm rm \
-  --subject primary-dependency \
-  input.json -o output.json
+sbomasm rm --field author --value "hello@interlynk.io" --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field author --value "hello@interlynk.io" --scope document input.cdx.json -o output.cdx.json
 ```
 
-## Filtering Options
-
-### By Component Type
-
-Remove components of specific types:
+Remove license from the document:
 
 ```bash
-# Remove all test libraries
-sbomasm rm \
-  --subject component-name \
-  --type "test" \
-  input.json -o output.json
-
-# Remove development dependencies
-sbomasm rm \
-  --subject component-name \
-  --type "development" \
-  input.json -o output.json
+sbomasm rm --field license --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field license --scope document input.cdx.json -o output.cdx.json
 ```
 
-### By Package Type
-
-Filter by package URL type:
+Remove a specific license by value:
 
 ```bash
-# Remove all npm packages
-sbomasm rm \
-  --subject component-name \
-  --purl-type "npm" \
-  input.json -o output.json
-
-# Remove internal packages
-sbomasm rm \
-  --subject component-name \
-  --purl-type "generic" \
-  --search "internal-*" \
-  input.json -o output.json
+sbomasm rm --field license --value "CC0-1.0" --scope document input.spdx.json -o output.spdx.json
 ```
 
-### By License
-
-Remove components with specific licenses:
+Remove lifecycle from the document:
 
 ```bash
-# Remove GPL licensed components
-sbomasm rm \
-  --subject component-name \
-  --license "GPL-3.0" \
-  input.json -o output.json
-
-# Remove components with unknown licenses
-sbomasm rm \
-  --subject component-name \
-  --license "UNKNOWN" \
-  input.json -o output.json
+sbomasm rm --field lifecycle --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field lifecycle --value "design" --scope document input.cdx.json -o output.cdx.json
 ```
 
-## Examples
-
-### Prepare SBOM for External Sharing
-
-Remove internal components and sensitive data:
+Remove tool from the document:
 
 ```bash
-#!/bin/bash
-# prepare-external.sh
-
-# Step 1: Remove internal components
-sbomasm rm \
-  --subject component-name \
-  --search "internal-*" \
-  --search "debug-*" \
-  --search "test-*" \
-  original.json -o step1.json
-
-# Step 2: Remove repository URLs
-sbomasm rm \
-  --subject repository \
-  step1.json -o step2.json
-
-# Step 3: Remove internal supplier info
-sbomasm rm \
-  --subject supplier \
-  --search "Internal Team" \
-  step2.json -o external-ready.json
-
-echo "SBOM prepared for external sharing: external-ready.json"
+sbomasm rm --field tool --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field tool --value "cyclonedx-gomod" --scope document input.cdx.json -o output.cdx.json
 ```
 
-### Clean Development Dependencies
-
-Remove non-production components:
+Remove supplier from the document:
 
 ```bash
-# Remove dev dependencies from Node.js project
-sbomasm rm \
-  --subject component-name \
-  --purl-type "npm" \
-  --search "*-dev" \
-  --search "*-test" \
-  --search "eslint*" \
-  --search "jest*" \
-  input.json -o production.json
+sbomasm rm --field supplier --scope document input.spdx.json -o output.spdx.json
+sbomasm rm --field supplier --value "Acme, Inc (https://github.com/acme)" --scope document input.spdx.json -o output.spdx.json
 ```
 
-### Automotive Industry Compliance
-
-Remove non-safety-critical components:
+Remove repository from the document *(CycloneDX only; SPDX does not have this field)*:
 
 ```bash
-# Keep only safety-critical components
-sbomasm rm \
-  --subject component-name \
-  --type "development" \
-  input.json -o step1.json
-
-sbomasm rm \
-  --subject component-name \
-  --search "logging-*" \
-  --search "metrics-*" \
-  step1.json -o safety-critical.json
+sbomasm rm --field repository --scope document input.cdx.json -o output.cdx.json
+sbomasm rm --field repository --value "https://kyverno.io/" --scope document input.cdx.json -o output.cdx.json
 ```
 
-### Remove Deprecated Components
+**NOTE**: Currently, `--key` is accepted but filtering by key name alone is not supported for key-value pair fields. Only `--value` filtering is effective. For example, given:
 
-Clean up legacy dependencies:
+```json
+"authors": [
+  { "name": "Interlynk", "email": "hello@interlynk.io" },
+  { "name": "VulnCon",   "email": "vulncon@sbom.dev"   }
+]
+```
+
+Using `--value "Interlynk"` (a key name, not a value) will not match. Use the actual value: `--value "hello@interlynk.io"`.
+
+#### Example on "Field Removal from a specific component"
+
+Requires both `--name` and `--version` to identify the target component.
+
+Remove `purl` from a specific component:
 
 ```bash
-# List of deprecated components
-deprecated=(
-  "old-auth-lib"
-  "legacy-parser"
-  "deprecated-util"
-)
-
-output="input.json"
-for comp in "${deprecated[@]}"; do
-  sbomasm rm \
-    --subject component-name \
-    --search "$comp" \
-    "$output" -o "$output"
-  
-  sbomasm rm \
-    --subject component-from-dependency \
-    --search "$comp" \
-    "$output" -o "$output"
-done
+sbomasm rm --field purl --scope component --name "nginx" --version "v1.21.0" input.spdx.json -o output.spdx.json
+sbomasm rm --field purl --scope component --name "nginx" --version "v1.21.0" input.cdx.json -o output.cdx.json
 ```
 
-### GDPR Compliance
-
-Remove personal information:
+Remove `license` from a specific component:
 
 ```bash
-# Remove all author information for GDPR
-sbomasm rm \
-  --subject author \
-  input.json -o step1.json
-
-# Remove email addresses from suppliers
-sbomasm edit \
-  --subject document \
-  --supplier "Company Name (website.com)" \
-  step1.json -o gdpr-compliant.json
+sbomasm rm --field license --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+sbomasm rm --field license --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.cdx.json -o output.cdx.json
 ```
+
+Remove a specific `license` value from a component:
+
+```bash
+sbomasm rm --field license --value "Apache-2.0" --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+Remove `cpe` from a specific component:
+
+```bash
+sbomasm rm --field cpe --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+Remove `hash` from a specific component:
+
+```bash
+sbomasm rm --field hash --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+Remove a specific `hash` value from a component:
+
+```bash
+sbomasm rm --field hash --value "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e" --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+Remove `supplier` from a specific component:
+
+```bash
+sbomasm rm --field supplier --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+Remove supplier by partial value (substring match):
+
+```bash
+sbomasm rm --field supplier --value "Flux" --scope component --name "github.com/fluxcd/pkg/oci" --version "v0.45.0" input.spdx.json -o output.spdx.json
+```
+
+#### Example on "Field Removal from all components"
+
+Use `-a` (or `--all`) instead of `--name` and `--version` to apply to every component.
+
+Remove `purl` from all components:
+
+```bash
+sbomasm rm --field purl --scope component -a input.spdx.json -o output.spdx.json
+sbomasm rm --field purl --scope component -a input.cdx.json -o output.cdx.json
+```
+
+Remove a specific `license` value from all components:
+
+```bash
+sbomasm rm --field license --value "Apache-2.0" --scope component -a input.spdx.json -o output.spdx.json
+```
+
+Remove `supplier` having a specific value from all components:
+
+```bash
+sbomasm rm --field supplier --value "Azure (https://azure.microsoft.com)" --scope component -a input.cdx.json -o output.cdx.json
+```
+
+Remove a specific `purl` value from all components:
+
+```bash
+sbomasm rm --field purl --value "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0" --scope component -a input.spdx.json -o output.spdx.json
+```
+
+### 2. Component Removal
+
+Removes entire components and their associated dependency links.
+
+#### Syntax
+
+```bash
+sbomasm rm --components [--name <component-name> --version <component-version>] [--field <field>] [--value <value>] [input-sbom] [-o output-sbom]
+```
+
+#### Remove a specific component by name and version
+
+```bash
+sbomasm rm --components --name "nginx" --version "v1.21.0" input.spdx.json -o output.spdx.json
+sbomasm rm --components --name "nginx" --version "v1.21.0" input.cdx.json -o output.cdx.json
+```
+
+This also removes all dependency relationships linked to the removed component.
+
+#### Remove all components where a field is present
+
+Removes every component that has the specified field set (non-empty):
+
+```bash
+# Remove all components that have an author field
+sbomasm rm --components --field author input.spdx.json -o output.spdx.json
+sbomasm rm --components --field author input.cdx.json -o output.cdx.json
+
+# Remove all components that have a purl
+sbomasm rm --components --field purl input.spdx.json -o output.spdx.json
+
+# Remove all components that have a cpe
+sbomasm rm --components --field cpe input.cdx.json -o output.cdx.json
+
+# Remove all components that have a license
+sbomasm rm --components --field license input.spdx.json -o output.spdx.json
+
+# Remove all components that have a supplier
+sbomasm rm --components --field supplier input.spdx.json -o output.spdx.json
+
+# Remove all components that have a hash
+sbomasm rm --components --field hash input.cdx.json -o output.cdx.json
+
+# Remove all components that have a repository
+sbomasm rm --components --field repository input.spdx.json -o output.spdx.json
+```
+
+#### Remove all components where a field matches a specific value
+
+Removes every component whose specified field contains the given value (substring match):
+
+```bash
+# Remove all components with license "Apache-2.0"
+sbomasm rm --components --field license --value "Apache-2.0" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field license --value "Apache-2.0" input.cdx.json -o output.cdx.json
+
+# Remove all components with a specific purl
+sbomasm rm --components --field purl --value "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module" input.spdx.json -o output.spdx.json
+
+# Remove all components authored by a specific person (partial name match)
+sbomasm rm --components --field author --value "dan@sigstore.dev" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field author --value "Dan" input.cdx.json -o output.cdx.json
+
+# Remove all components with a specific copyright
+sbomasm rm --components --field copyright --value "Copyright 2025, the Kyverno project" input.spdx.json -o output.spdx.json
+
+# Remove all components with a specific supplier
+sbomasm rm --components --field supplier --value "Sigstore (https://sigstore.dev)" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field supplier --value "Sigstore" input.cdx.json -o output.cdx.json
+
+# Remove all components with a specific hash value
+sbomasm rm --components --field hash --value "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335" input.spdx.json -o output.spdx.json
+
+# Remove all components with a specific repository
+sbomasm rm --components --field repository --value "https://github.com/sigstore/rekor" input.spdx.json -o output.spdx.json
+
+# Remove all components of type "library"
+sbomasm rm --components --field type --value "library" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field type --value "library" input.cdx.json -o output.cdx.json
+```
+
+### 3. Dependency Removal (Not yet supported)
+
+Remove a dependency edge and optionally the target component.
+
+#### Syntax
+
+```bash
+sbomasm rm --dependency --id <purl>
+```
+
+#### Example
+
+```bash
+sbomasm rm --dependency --id "pkg:golang/sigs.k8s.io/structured-merge-diff/v4@v4.6.0?type=module"
+```
+
+## Optional Flags
+
+| Flag          | Short | Purpose                                              |
+|---------------|-------|------------------------------------------------------|
+| `--dry-run`   |       | Preview what would be removed without making changes |
+| `--summary`   |       | Print a list of matched entries instead of removing  |
+| `--output`    | `-o`  | Write the modified SBOM to the specified file        |
+| `--all`       | `-a`  | Apply field removal to all components                |
+| `--debug`     |       | Enable verbose debug logging                         |
+
+## Pattern Matching
+
+Value filtering uses **substring matching** via `strings.Contains()`. This means:
+
+- `--value "Apache"` matches `"Apache-2.0"`, `"Apache-1.1"`, `"LicenseRef-Apache"`, etc.
+- `--value "dan@sigstore.dev"` matches any field value that contains that string.
+- `--value "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0"` matches PURLs containing that substring.
+
+Name and version matching (for `--name` / `--version`) uses **case-insensitive exact matching** via `strings.EqualFold()`.
+
+**There is no wildcard or regex support.** Patterns like `test-*` or `internal-[0-9]+` will be treated as literal strings.
+
+Field values of `NOASSERTION` are treated as empty and will not match any `--value` filter.
+
+## Safety Features
+
+### Dry Run
+
+Preview which entries would be removed without modifying the SBOM:
+
+```bash
+sbomasm rm --dry-run --field license --scope component -a input.spdx.json
+sbomasm rm --dry-run --components --field purl --value "pkg:golang/..." input.cdx.json
+```
+
+### Summary Mode
+
+Print a summary of matched entries without applying the removal:
+
+```bash
+sbomasm rm --summary --field purl --scope component -a input.spdx.json
+sbomasm rm --summary --components --field license --value "Apache-2.0" input.cdx.json
+```
+
+Use `--dry-run` and `--summary` together to inspect the scope of changes before committing them.
 
 ## Batch Processing
 
-### Remove from Multiple SBOMs
+### Remove a field from multiple SBOMs
 
 ```bash
 #!/bin/bash
-# batch-remove.sh
-
-REMOVE_PATTERNS=(
-  "test-*"
-  "mock-*"
-  "debug-*"
-  "*-dev"
-)
-
 for sbom in sboms/*.json; do
-  output="cleaned/$(basename $sbom)"
-  cp "$sbom" "$output"
-  
-  for pattern in "${REMOVE_PATTERNS[@]}"; do
-    sbomasm rm \
-      --subject component-name \
-      --search "$pattern" \
-      "$output" -o "$output"
-  done
-  
+  output="cleaned/$(basename "$sbom")"
+  sbomasm rm --field purl --scope component -a "$sbom" -o "$output"
   echo "Cleaned: $output"
 done
 ```
 
-### Pipeline Integration
+### Chain multiple removal operations
+
+Since each invocation writes to a file, chain them using intermediate outputs:
+
+```bash
+# Step 1: Remove all author fields from document metadata
+sbomasm rm --field author --scope document input.cdx.json -o step1.cdx.json
+
+# Step 2: Remove all supplier fields from components
+sbomasm rm --field supplier --scope component -a step1.cdx.json -o step2.cdx.json
+
+# Step 3: Remove all components with a specific license
+sbomasm rm --components --field license --value "GPL-3.0" step2.cdx.json -o final.cdx.json
+```
+
+### CI/CD pipeline integration
 
 ```bash
 #!/bin/bash
-# ci-clean.sh
+# ci-clean.sh — strip internal metadata before publishing the SBOM
 
-# Remove based on environment
-if [ "$ENVIRONMENT" = "production" ]; then
-  # Remove all non-production components
-  sbomasm rm \
-    --subject component-name \
-    --type "development" \
-    input.json -o temp.json
-  
-  sbomasm rm \
-    --subject component-name \
-    --type "test" \
-    temp.json -o production.json
-else
-  cp input.json production.json
-fi
+# Remove internal author info
+sbomasm rm --field author --scope document "$INPUT_SBOM" -o step1.json
 
-# Always remove internal components for external
-if [ "$DISTRIBUTION" = "external" ]; then
-  sbomasm rm \
-    --subject component-name \
-    --search "internal-*" \
-    production.json -o external.json
-fi
-```
+# Remove repository references from all components
+sbomasm rm --field repository --scope component -a step1.json -o step2.json
 
-## Pattern Matching
+# Remove components matching an internal supplier
+sbomasm rm --components --field supplier --value "Internal Team" step2.json -o "$OUTPUT_SBOM"
 
-### Wildcard Patterns
-
-Use wildcards for flexible matching:
-
-```bash
-# Remove all components starting with "test-"
-sbomasm rm --subject component-name --search "test-*" input.json
-
-# Remove all components ending with "-dev"
-sbomasm rm --subject component-name --search "*-dev" input.json
-
-# Remove all components containing "debug"
-sbomasm rm --subject component-name --search "*debug*" input.json
-```
-
-### Regular Expressions
-
-Some patterns support regex:
-
-```bash
-# Remove versioned test components
-sbomasm rm --subject component-name --search "test-v[0-9]+" input.json
-
-# Remove numbered internal components
-sbomasm rm --subject component-name --search "internal-[0-9]{3}" input.json
-```
-
-## Safety Features
-
-### Backup Creation
-
-By default, creates backups before modification:
-
-```bash
-# Original file backed up as input.json.bak
-sbomasm rm --subject component-name --search "component" input.json
-
-# Skip backup with --force
-sbomasm rm --force --subject component-name --search "component" input.json
-```
-
-### Dry Run
-
-Preview what will be removed:
-
-```bash
-# Show what would be removed without making changes
-sbomasm rm --dry-run \
-  --subject component-name \
-  --search "test-*" \
-  input.json
-```
-
-### Confirmation Prompts
-
-Interactive confirmation for destructive operations:
-
-```bash
-# Will prompt: "Remove 15 components matching 'test-*'? [y/N]"
-sbomasm rm --subject component-name --search "test-*" input.json
-
-# Skip prompt with --force
-sbomasm rm --force --subject component-name --search "test-*" input.json
+echo "Published SBOM written to $OUTPUT_SBOM"
 ```
 
 ## Best Practices
 
-1. **Always Backup**: Keep original SBOMs before bulk removals
-2. **Test Patterns**: Use `--dry-run` to verify patterns before removal
-3. **Document Removals**: Keep a log of what was removed and why
-4. **Validate After**: Check SBOM validity after removals
-5. **Use Specific Patterns**: Avoid overly broad patterns that might remove too much
-
-## Troubleshooting
-
-### Nothing Removed
-
-```bash
-# Check if pattern matches anything
-sbomasm rm --dry-run --subject component-name --search "pattern" input.json
-
-# List all component names to verify
-jq '.components[].name' input.json | sort | uniq
-```
-
-### Too Much Removed
-
-```bash
-# Restore from backup
-cp input.json.bak input.json
-
-# Use more specific pattern
-sbomasm rm --subject component-name --search "test-utils-*" input.json
-```
-
-### Dependency Issues
-
-```bash
-# After removing components, fix broken dependencies
-sbomasm rm --subject component-from-dependency --search "removed-component" input.json
-```
+1. **Use `--dry-run` first**: Always preview removals before applying them, especially with broad `--all` or field-only component removals.
+2. **Use `--summary` for auditing**: Confirm which components or fields will be affected before modifying the SBOM.
+3. **Keep originals**: Back up your SBOM files before running bulk removals.
+4. **Be precise with values**: Since matching is substring-based, overly short values (e.g., `"lib"`) may match more than intended.
+5. **Validate after removal**: Check that the resulting SBOM is still valid using a tool like `sbomqs`.
 
 ## Field Reference
 
-### Removable Fields by Subject
+### Field availability by scope
 
-| Subject | What Gets Removed |
-|---------|------------------|
-| component-name | Entire component and its data |
-| component-data | Specific fields within components |
-| author | All author information |
-| supplier | All supplier information |
-| repository | Repository URLs and references |
-| component-from-dependency | Component from dependency graph |
-| primary-dependency | Dependencies of primary component |
+| Field         | Document scope | Component scope |
+|---------------|:--------------:|:---------------:|
+| `author`      | ✓              | ✓               |
+| `copyright`   |                | ✓               |
+| `cpe`         |                | ✓               |
+| `hash`        |                | ✓               |
+| `license`     | ✓              | ✓               |
+| `lifecycle`   | ✓              |                 |
+| `purl`        |                | ✓               |
+| `repository`  | ✓ (CDX only)   | ✓               |
+| `supplier`    | ✓              | ✓               |
+| `timestamp`   | ✓              |                 |
+| `tool`        | ✓              |                 |
+| `type`        |                | ✓               |
 
-### Format-Specific Behavior
+### Format-specific behavior
 
-| Format | Removal Behavior |
-|--------|-----------------|
-| SPDX | Removes packages and updates relationships |
-| CycloneDX | Removes components and updates dependency graph |
+| Format    | Author removal                                   | Supplier removal                    |
+|-----------|--------------------------------------------------|-------------------------------------|
+| SPDX      | Removes `Person:` entries from `creationInfo.creators` | Removes `Organization:` entries from `creationInfo.creators` |
+| CycloneDX | Removes entries from `metadata.authors`          | Removes `metadata.supplier`         |
+
+| Format    | Component removal                                    |
+|-----------|------------------------------------------------------|
+| SPDX      | Removes packages and updates the relationships array |
+| CycloneDX | Removes from `components` array and updates `dependencies` |
+
+### Flags quick reference
+
+| Flag          | Short | Type     | Description                                      |
+|---------------|-------|----------|--------------------------------------------------|
+| `--field`     | `-f`  | string   | Field to remove                                  |
+| `--scope`     | `-s`  | string   | Scope: `document` or `component`                 |
+| `--value`     | `-v`  | string   | Filter by value (substring match)                |
+| `--key`       | `-k`  | string   | Filter by key *(limited support)*                |
+| `--all`       | `-a`  | bool     | Apply to all components (field removal)          |
+| `--components`| `-c`  | bool     | Enable component removal mode                    |
+| `--name`      | `-n`  | string   | Component name (exact, case-insensitive)         |
+| `--version`   |       | string   | Component version (exact, case-insensitive)      |
+| `--dependency`|       | bool     | Enable dependency removal *(not yet supported)*  |
+| `--id`        |       | string   | Dependency PURL to remove *(not yet supported)*  |
+| `--dry-run`   |       | bool     | Preview changes without applying them            |
+| `--summary`   |       | bool     | Print matched entries without removing           |
+| `--output`    | `-o`  | string   | Output file path                                 |
+| `--debug`     |       | bool     | Enable debug logging                             |
 
 ## See Also
 
-- [Edit Command](edit.md) - Modify SBOM metadata
-- [Assemble Command](assemble.md) - Merge multiple SBOMs
-- [Generate Command](generate.md) - Create configuration templates
+[Test samples and full worked examples](../samples/test/remove/README.md), complete set of test cases covering every supported removal scenario with real SBOM files.
