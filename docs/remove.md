@@ -34,7 +34,6 @@ Removes specific fields from the document metadata or from components.
 | `tool`        | `creationInfo.creators` (Tool type)     | `metadata.tools`                   |
 | `lifecycle`   | *(custom extension)*                    | `metadata.lifecycles`              |
 | `license`     | `dataLicense`                           | `metadata.licenses`                |
-| `description` | `documentComment`                       | `metadata.component.description`   |
 | `repository`  | *(not applicable)*                      | `metadata.component.externalRefs`  |
 | `timestamp`   | `creationInfo.created`                  | `metadata.timestamp`               |
 
@@ -45,7 +44,6 @@ Removes specific fields from the document metadata or from components.
 | `author`      | `originator`            | `authors`              |
 | `copyright`   | `copyrightText`         | `copyright`            |
 | `cpe`         | `externalRefs` (cpe23)  | `cpe`                  |
-| `description` | `packageDescription`        | `description`          |
 | `hash`        | `packageChecksums` / checksums | `hashes`  |
 | `license`     | `licenseDeclared`       | `licenses`             |
 | `purl`        | `externalRefs` (purl)   | `purl`                 |
@@ -416,7 +414,6 @@ echo "Published SBOM written to $OUTPUT_SBOM"
 | `author`      | ✓              | ✓               |
 | `copyright`   |                | ✓               |
 | `cpe`         |                | ✓               |
-| `description` | ✓              | ✓               |
 | `hash`        |                | ✓               |
 | `license`     | ✓              | ✓               |
 | `lifecycle`   | ✓              |                 |
