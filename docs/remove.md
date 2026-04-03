@@ -1,4 +1,4 @@
-# sbomasm removal command
+# sbomasm remove command
 
 This command is designed to support the following primary use cases:
 
@@ -45,8 +45,8 @@ Removes specific fields from the document metadata or from components.
 | `author`      | `originator`            | `authors`              |
 | `copyright`   | `copyrightText`         | `copyright`            |
 | `cpe`         | `externalRefs` (cpe23)  | `cpe`                  |
-| `description` | `packageComment`        | `description`          |
-| `hash`        | `packageVerificationCode` / checksums | `hashes`  |
+| `description` | `packageDescription`        | `description`          |
+| `hash`        | `packageChecksums` / checksums | `hashes`  |
 | `license`     | `licenseDeclared`       | `licenses`             |
 | `purl`        | `externalRefs` (purl)   | `purl`                 |
 | `repository`  | `externalRefs` (vcs)    | `externalReferences`   |
