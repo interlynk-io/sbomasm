@@ -1,0 +1,66 @@
+package cmd
+
+import (
+	"context"
+
+	"github.com/interlynk-io/sbomasm/v2/pkg/generate/gsbom"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/spf13/cobra"
+)
+
+// generateSbomCmd represents the generate sbom command
+var generateSbomCmd = &cobra.Command{
+	Use:          "sbom",
+	Short:        "Generate SBOM from component metadata",
+	Long:         "Generate an SBOM from component manifests and artifact metadata",
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		// Logger setup
+		debug, _ := cmd.Flags().GetBool("debug")
+		if debug {
+			logger.InitDebugLogger()
+		} else {
+			logger.InitProdLogger()
+		}
+
+		ctx := logger.WithLogger(context.Background())
+
+		params, err := extractGenerateSBOMArgs(cmd)
+		if err != nil {
+			return err
+		}
+
+		params.Ctx = &ctx
+
+		return gsbom.Generate(params)
+	},
+}
+
+func init() {
+	// Flags
+	generateSbomCmd.Flags().StringP("config", "c", ".artifact-metadata.yaml", "artifact metadata config file")
+	generateSbomCmd.Flags().StringSliceP("input", "i", []string{}, "component input files")
+	generateSbomCmd.Flags().StringP("output", "o", "", "output SBOM file (default stdout)")
+	generateSbomCmd.Flags().StringSliceP("tags", "t", []string{}, "include components with these tags")
+	generateSbomCmd.Flags().StringSlice("exclude-tags", []string{}, "exclude components with these tags")
+	generateSbomCmd.Flags().String("format", "cyclonedx", "output format (cyclonedx|spdx)")
+	generateSbomCmd.Flags().StringP("recurse", "r", "", "recursively discover component files")
+	generateSbomCmd.Flags().String("filename", ".components.json", "filename for recursive discovery")
+	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
+}
+
+func extractGenerateSBOMArgs(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) {
+	params := gsbom.NewGenerateSBOMParams()
+
+	params.ConfigPath, _ = cmd.Flags().GetString("config")
+	params.InputFiles, _ = cmd.Flags().GetStringSlice("input")
+	params.Output, _ = cmd.Flags().GetString("output")
+	params.Tags, _ = cmd.Flags().GetStringSlice("tags")
+	params.ExcludeTags, _ = cmd.Flags().GetStringSlice("exclude-tags")
+	params.Format, _ = cmd.Flags().GetString("format")
+	params.RecursePath, _ = cmd.Flags().GetString("recurse")
+	params.Filename, _ = cmd.Flags().GetString("filename")
+
+	return params, nil
+}
