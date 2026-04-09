@@ -17,48 +17,64 @@ package gsbom
 import (
 	"fmt"
 	"os"
+
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
+// Generate is the main entry point for generating an SBOM. It does the following steps:
+// - Load artifact metadata from config file and map to internal model
+// - Collect input component files (explicit or recursive)
+// - Parse component files into internal component model
+// - Merge all components into a single list
+// - Deduplicate components and collect warnings for duplicates
+// - Prepare final component list by Filtering components by tags
+// - Build dependency graph based on "dependency-of" references
+// - Build BOM model from artifact, components, and dependency graph
+// - Serialize BOM to output file in specified format (CycloneDX or SPDX)
 func Generate(params *GenerateSBOMParams) error {
 	var errors []error
 
-	// STEP 3: Load config
+	// Load config: `.artifact-metadata.yaml`
+	// artifact refers to the primary component information
 	artifact, err := LoadArtifactConfig(params.ConfigPath)
 	if err != nil {
 		return err
 	}
 
-	// STEP 4: Collect input files
+	// Collect input files: `.components.json` (explicit/recursive)
+	// `.components.json` files contain component information
 	files, warn := CollectInputFiles(params)
 	errors = append(errors, warn...)
 
-	// STEP 5: Parse
+	// Parse component files into intrnal component model
+	// it returns list of components of each files
 	groups, warn := ParseComponentFiles(files)
 	errors = append(errors, warn...)
 
-	// STEP 6: Merge
+	// Merge all components into a single list
 	merged := MergeAll(groups)
 
-	// STEP 7: Dedup
+	// Dedup components and collect warnings for duplicates
 	components, warn := DeduplicateComponents(merged)
 	errors = append(errors, warn...)
 
-	// STEP 8: Filter
+	// Filter components by tags
 	components = FilterComponents(components, params.Tags, params.ExcludeTags)
 
-	// STEP 9: Lookup map
+	// Lookup map for components by name@version for easy reference
 	compMap := BuildComponentMap(components)
 
-	// STEP 10: Dependency graph
+	// Dependency graph to build parent-child relationships
+	// based on "dependency-of" references
 	graph, warn := BuildDependencyGraph(components, compMap)
 	errors = append(errors, warn...)
 
-	// STEP 11: Build BOM
+	// Build BOM model from artifact, components, and dependency graph
 	bom := BuildBOM(artifact, components, graph)
 
-	// STEP 12: Serialize
+	// Serialize: default to CycloneDX, but support SPDX
 	switch params.Format {
-	case "spdx":
+	case string(sbom.SBOMSpecSPDX):
 		err = SerializeSPDX(bom, params.Output)
 	default:
 		err = SerializeCycloneDX(bom, params.Output)
@@ -68,7 +84,7 @@ func Generate(params *GenerateSBOMParams) error {
 		return err
 	}
 
-	// STEP 14: Print warnings
+	// Print warnings
 	for _, w := range errors {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", w)
 	}

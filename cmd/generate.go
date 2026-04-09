@@ -33,11 +33,6 @@ Example:
 	  -i src/miniz/.components.json \
 	  -o device-firmware-2.1.0.cdx.json
 `,
-	// Args:         cobra.NoArgs,
-	// SilenceUsage: true,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Printf("%s", assemble.DefaultConfigYaml())
-	// },
 }
 
 func init() {

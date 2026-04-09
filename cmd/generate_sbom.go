@@ -40,31 +40,20 @@ var generateSbomCmd = &cobra.Command{
 
 		ctx := logger.WithLogger(context.Background())
 
-		params, err := extractGenerateSBOMArgs(cmd)
+		// extract generate sbom Params` from flags
+		params, err := extractGenerateSBOM(cmd)
 		if err != nil {
 			return err
 		}
 
 		params.Ctx = &ctx
-
 		return gsbom.Generate(params)
 	},
 }
 
-func init() {
-	// Flags
-	generateSbomCmd.Flags().StringP("config", "c", ".artifact-metadata.yaml", "artifact metadata config file")
-	generateSbomCmd.Flags().StringSliceP("input", "i", []string{}, "component input files")
-	generateSbomCmd.Flags().StringP("output", "o", "", "output SBOM file (default stdout)")
-	generateSbomCmd.Flags().StringSliceP("tags", "t", []string{}, "include components with these tags")
-	generateSbomCmd.Flags().StringSlice("exclude-tags", []string{}, "exclude components with these tags")
-	generateSbomCmd.Flags().String("format", "cyclonedx", "output format (cyclonedx|spdx)")
-	generateSbomCmd.Flags().StringP("recurse", "r", "", "recursively discover component files")
-	generateSbomCmd.Flags().String("filename", ".components.json", "filename for recursive discovery")
-	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
-}
-
-func extractGenerateSBOMArgs(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) {
+// extractGenerateSBOM extracts the parameters for the
+// generate sbom command from the command flags
+func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) {
 	params := gsbom.NewGenerateSBOMParams()
 
 	params.ConfigPath, _ = cmd.Flags().GetString("config")
@@ -77,4 +66,17 @@ func extractGenerateSBOMArgs(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, err
 	params.Filename, _ = cmd.Flags().GetString("filename")
 
 	return params, nil
+}
+
+func init() {
+	// Flags
+	generateSbomCmd.Flags().StringP("config", "c", ".artifact-metadata.yaml", "artifact metadata config file")
+	generateSbomCmd.Flags().StringSliceP("input", "i", []string{}, "component input files")
+	generateSbomCmd.Flags().StringP("output", "o", "", "output SBOM file (default stdout)")
+	generateSbomCmd.Flags().StringSliceP("tags", "t", []string{}, "include components with these tags")
+	generateSbomCmd.Flags().StringSlice("exclude-tags", []string{}, "exclude components with these tags")
+	generateSbomCmd.Flags().String("format", "cyclonedx(default)", "output format (cyclonedx|spdx)")
+	generateSbomCmd.Flags().StringP("recurse", "r", "", "recursively discover component files")
+	generateSbomCmd.Flags().String("filename", ".components.json", "filename for recursive discovery")
+	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
 }
