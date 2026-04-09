@@ -1,3 +1,17 @@
+// Copyright 2026 Interlynk.io
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package gsbom
 
 import (
@@ -10,21 +24,21 @@ import (
 )
 
 type Component struct {
-	Name         string
-	Version      string
-	Type         string
-	Supplier     Supplier
-	License      string
-	PURL         string
-	CPE          string
-	Hashes       []Hash
-	DependencyOf []string
-	Tags         []string
+	Name         string   `json:"name"`
+	Version      string   `json:"version"`
+	Type         string   `json:"type"`
+	Supplier     Supplier `json:"supplier"`
+	License      string   `json:"license"`
+	PURL         string   `json:"purl"`
+	CPE          string   `json:"cpe"`
+	Hashes       []Hash   `json:"hashes"`
+	DependencyOf []string `json:"dependency-of"`
+	Tags         []string `json:"tags"`
 }
 
 type Hash struct {
-	Algorithm string
-	Value     string
+	Algorithm string `json:"algorithm"`
+	Value     string `json:"value"`
 }
 
 func ParseComponentFiles(files []string) ([][]Component, []error) {
