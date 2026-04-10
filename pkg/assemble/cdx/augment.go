@@ -647,7 +647,7 @@ func (a *augmentMerge) updateMetadata() {
 	}
 
 	// Update timestamp
-	a.primary.Metadata.Timestamp = utcNowTime()
+	a.primary.Metadata.Timestamp = UTCNowTime()
 
 	// Add tool information
 	if a.primary.Metadata.Tools == nil {
