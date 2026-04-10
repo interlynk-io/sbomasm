@@ -20,6 +20,9 @@ type BOM struct {
 	Dependencies map[string][]string
 }
 
+// BuildBOM performs the following functionality:
+// - takes artifact information, components list and a dependency graph and
+// - builds a BOM struct that represents the complete SBOM information.
 func BuildBOM(artifact *Artifact, components []Component, graph *DependencyGraph) *BOM {
 
 	bom := &BOM{

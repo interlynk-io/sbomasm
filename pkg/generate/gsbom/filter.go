@@ -14,30 +14,36 @@
 
 package gsbom
 
+// FilterComponents takes a list of components and applies include and exclude tag filters.
+// - If includeTags is provided, only components that have at least one of the specified tags will be included.
+// - If excludeTags is provided, any component that has at least one of the specified exclude tags will be excluded.
+// And finally returns a list of components that match the filtering criteria.
 func FilterComponents(components []Component, includeTags, excludeTags []string) []Component {
 	var filteredComponentsList []Component
 
-	for _, c := range components {
+	for _, comp := range components {
+
 		// Step 1: include filter
 		if len(includeTags) > 0 {
-			if !hasAnyTag(c.Tags, includeTags) {
+			if !hasAnyTag(comp.Tags, includeTags) {
 				continue
 			}
 		}
 
 		// Step 2: exclude filter
 		if len(excludeTags) > 0 {
-			if hasAnyTag(c.Tags, excludeTags) {
+			if hasAnyTag(comp.Tags, excludeTags) {
 				continue
 			}
 		}
 
-		filteredComponentsList = append(filteredComponentsList, c)
+		filteredComponentsList = append(filteredComponentsList, comp)
 	}
 
 	return filteredComponentsList
 }
 
+// hasAnyTag checks if there is any common tag between componentTags and filterTags.
 func hasAnyTag(componentTags, filterTags []string) bool {
 	for _, ct := range componentTags {
 		for _, ft := range filterTags {

@@ -17,8 +17,6 @@ package gsbom
 import (
 	"fmt"
 	"os"
-
-	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 )
 
 // Generate is the main entry point for generating an SBOM. It does the following steps:
@@ -34,8 +32,7 @@ import (
 func Generate(params *GenerateSBOMParams) error {
 	var errors []error
 
-	// Load config: `.artifact-metadata.yaml`
-	// artifact refers to the primary component information
+	// 1. Load artifact from config: `.artifact-metadata.yaml`
 	artifact, err := LoadArtifactConfig(params.ConfigPath)
 	if err != nil {
 		return err
@@ -47,38 +44,32 @@ func Generate(params *GenerateSBOMParams) error {
 	errors = append(errors, warn...)
 
 	// Parse component files into intrnal component model
-	// it returns list of components of each files
-	groups, warn := ParseComponentFiles(files)
+	// it returns list of components present in each files
+	componentLists, warn := ParseComponentFiles(files)
 	errors = append(errors, warn...)
 
 	// Merge all components into a single list
-	merged := MergeAll(groups)
+	componentMergedLists := MergeAll(componentLists)
 
 	// Dedup components and collect warnings for duplicates
-	components, warn := DeduplicateComponents(merged)
+	componentUniqueLists, warn := DeduplicateComponents(componentMergedLists)
 	errors = append(errors, warn...)
 
-	// Filter components by tags
-	components = FilterComponents(components, params.Tags, params.ExcludeTags)
+	// 2. Final component list(post filtering components by tags)
+	componentFileteredLists := FilterComponents(componentUniqueLists, params.Tags, params.ExcludeTags)
 
 	// Lookup map for components by name@version for easy reference
-	compMap := BuildComponentMap(components)
+	compMap := BuildComponentMap(componentFileteredLists)
 
-	// Dependency graph to build parent-child relationships
-	// based on "dependency-of" references
-	graph, warn := BuildDependencyGraph(components, compMap)
+	// 3. Dependency graph to build parent-child relationships
+	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap)
 	errors = append(errors, warn...)
 
 	// Build BOM model from artifact, components, and dependency graph
-	bom := BuildBOM(artifact, components, graph)
+	bom := BuildBOM(artifact, componentFileteredLists, graph)
 
-	// Serialize: default to CycloneDX, but support SPDX
-	switch params.Format {
-	case string(sbom.SBOMSpecSPDX):
-		err = SerializeSPDX(bom, params.Output)
-	default:
-		err = SerializeCycloneDX(bom, params.Output)
-	}
+	// Serialize BOM to output file in specified format (CycloneDX or SPDX)
+	err = Serialize(params.Format, bom, params.Output)
 
 	if err != nil {
 		return err

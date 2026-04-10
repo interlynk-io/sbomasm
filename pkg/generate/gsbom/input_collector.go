@@ -20,14 +20,17 @@ import (
 	"path/filepath"
 )
 
+// CollectInputFiles collects input component files based on the provided parameters.
+// It supports both explicit input files and recursive collection from a specified path.
+// It returns a list of collected file paths and any warnings encountered during the process.
 func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 	var files []string
 	var warnings []error
 
-	// 1. Add explicit inputs FIRST
+	// 1. COllect explicit inputs FIRST
 	files = append(files, params.InputFiles...)
 
-	// 2. Handle recurse
+	// 2. Handle recurse if RecursePath is provided
 	if params.RecursePath != "" {
 		err := filepath.Walk(params.RecursePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {

@@ -20,18 +20,23 @@ func componentKey(c Component) string {
 	return c.Name + "@" + c.Version
 }
 
+// MergeAll takes a list of component lists and
+// merges them into a single list.
 func MergeAll(componentLists [][]Component) []Component {
-	var merged []Component
+	var mergedComponentList []Component
 
-	for _, group := range componentLists {
-		merged = append(merged, group...)
+	for _, components := range componentLists {
+		mergedComponentList = append(mergedComponentList, components...)
 	}
 
-	return merged
+	return mergedComponentList
 }
 
+// DeduplicateComponents takes a list of components:
+// - removes duplicates based on name and version
+// - and finally returns a list of unique components
 func DeduplicateComponents(components []Component) ([]Component, []error) {
-	var result []Component
+	var componentUniqueLists []Component
 	var warnings []error
 
 	seen := make(map[string]bool)
@@ -45,8 +50,8 @@ func DeduplicateComponents(components []Component) ([]Component, []error) {
 		}
 
 		seen[key] = true
-		result = append(result, c)
+		componentUniqueLists = append(componentUniqueLists, c)
 	}
 
-	return result, warnings
+	return componentUniqueLists, warnings
 }

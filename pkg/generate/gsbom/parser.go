@@ -23,6 +23,10 @@ import (
 	"strings"
 )
 
+const (
+	ComponentFileSchema = "interlynk/component-manifest/v1"
+)
+
 type Component struct {
 	Name         string   `json:"name"`
 	Version      string   `json:"version"`
@@ -41,18 +45,21 @@ type Hash struct {
 	Value     string `json:"value"`
 }
 
+// ParseComponentFiles perform following fucntionality:
+// - takes a list of file paths,
+// - parses each file and extract components and
+// - returns a list of components from all files.
 func ParseComponentFiles(files []string) ([][]Component, []error) {
-	var allComponentsByFiles [][]Component
+	var allComponentsFromFiles [][]Component
 	var warnings []error
 
 	for _, file := range files {
-		listComponentsInFile, err := parseFile(file)
+		components, err := parseFile(file)
 		if err != nil {
 			warnings = append(warnings, fmt.Errorf("file %s: %v", file, err))
 			continue
 		}
-
-		allComponentsByFiles = append(allComponentsByFiles, listComponentsInFile) // keep per-file grouping
+		allComponentsFromFiles = append(allComponentsFromFiles, components)
 	}
 
 	/*
@@ -63,9 +70,11 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 			  [c4, c5, c6],  // file3
 			]
 	*/
-	return allComponentsByFiles, warnings
+	return allComponentsFromFiles, warnings
 }
 
+// parseFile determines the file format based on the extension
+// and calls the appropriate parser.
 func parseFile(path string) ([]Component, error) {
 	switch {
 	case strings.HasSuffix(path, ".json"):
@@ -82,6 +91,8 @@ type componentJSON struct {
 	Components []Component `json:"components"`
 }
 
+// parseJSON reads a JSON file and
+// unmarshals into a list of components.
 func parseJSON(path string) ([]Component, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -93,13 +104,17 @@ func parseJSON(path string) ([]Component, error) {
 		return nil, err
 	}
 
-	if doc.Schema != "interlynk/component-manifest/v1" {
-		return nil, fmt.Errorf("invalid schema")
+	// Validate schema marker
+	if doc.Schema != ComponentFileSchema {
+		return nil, fmt.Errorf("invalid schema: expected %s, got %s", ComponentFileSchema, doc.Schema)
 	}
 
 	return doc.Components, nil
 }
 
+// parseCSV reads a CSV file and parses it into a list of components.
+// The first line must be the schema marker,
+// and the second line must be column headers.
 func parseCSV(path string) ([]Component, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -115,8 +130,13 @@ func parseCSV(path string) ([]Component, error) {
 		return nil, err
 	}
 
-	if len(header) == 0 || header[0] != "#interlynk/component-manifest/v1" {
-		return nil, fmt.Errorf("invalid schema marker")
+	// let's remove "#" from header[0]
+	if len(header) > 0 {
+		header[0] = strings.TrimPrefix(header[0], "#")
+	}
+
+	if len(header) == 0 || header[0] != ComponentFileSchema {
+		return nil, fmt.Errorf("invalid schema marker: expected %s, got %s", ComponentFileSchema, header[0])
 	}
 
 	// Next line = column headers
@@ -142,12 +162,14 @@ func parseCSV(path string) ([]Component, error) {
 		}
 
 		c := Component{
-			Name:    record[colIndex["name"]],
-			Version: record[colIndex["version"]],
-			Type:    record[colIndex["type"]],
-			License: record[colIndex["license"]],
-			PURL:    record[colIndex["purl"]],
-			CPE:     record[colIndex["cpe"]],
+			Name:     record[colIndex["name"]],
+			Version:  record[colIndex["version"]],
+			Type:     record[colIndex["type"]],
+			License:  record[colIndex["license"]],
+			PURL:     record[colIndex["purl"]],
+			CPE:      record[colIndex["cpe"]],
+			Supplier: parseSupplierFromCSV(record, colIndex),
+			Hashes:   parseHashesFromCSV(record, colIndex),
 		}
 
 		// dependency_of
@@ -164,4 +186,24 @@ func parseCSV(path string) ([]Component, error) {
 	}
 
 	return components, nil
+}
+
+func parseSupplierFromCSV(record []string, colIndex map[string]int) Supplier {
+	return Supplier{
+		Name:  record[colIndex["supplier_name"]],
+		Email: record[colIndex["supplier_email"]],
+	}
+}
+
+func parseHashesFromCSV(record []string, colIndex map[string]int) []Hash {
+	v := record[colIndex["hash_value"]]
+	if v != "" {
+		return []Hash{
+			{
+				Algorithm: record[colIndex["hash_algorithm"]],
+				Value:     v,
+			},
+		}
+	}
+	return nil
 }

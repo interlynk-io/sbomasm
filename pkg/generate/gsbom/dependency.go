@@ -34,6 +34,9 @@ type DependencyGraph struct {
 	Edges map[string][]string
 }
 
+// BuildDependencyGraph performs the following functionality:
+// - takes a list of components and a component map (keyed by name@version) and
+// - builds a dependency graph based on the "dependency-of" field in components.
 func BuildDependencyGraph(components []Component, compMap map[string]Component) (*DependencyGraph, []error) {
 	graph := &DependencyGraph{
 		Edges: make(map[string][]string),
@@ -50,8 +53,7 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component) 
 
 				// Check if parent exists
 				if _, ok := compMap[parentRef]; !ok {
-					warnings = append(warnings,
-						fmt.Errorf("missing dependency reference: %s → %s", childKey, parentRef))
+					warnings = append(warnings, fmt.Errorf("missing dependency reference: %s -> %s", childKey, parentRef))
 					continue
 				}
 
