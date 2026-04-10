@@ -16,63 +16,38 @@ package gsbom
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"time"
 
-	"github.com/google/uuid"
+	spdx_assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
+	"github.com/spdx/tools-golang/spdx/v2/v2_3"
+	"sigs.k8s.io/release-utils/version"
 )
 
 func SerializeSPDX(bom *BOM, output string) error {
-	doc := &spdx.Document{}
+	doc := v2_3.Document{}
 
 	// --- Document ---
-	doc.SPDXIdentifier = "SPDXRef-DOCUMENT"
+	doc.SPDXIdentifier = common.ElementID("DOCUMENT")
 	doc.DocumentName = bom.Artifact.Name
-	doc.DataLicense = "CC0-1.0"
-	doc.SPDXVersion = "SPDX-2.3"
-	doc.DocumentNamespace = "https://sbomasm.interlynk.io/spdx/" + bom.Artifact.Name + "-" + uuid.New().String()
-
-	doc.CreationInfo = &spdx.CreationInfo{
-		Created: time.Now().Format(time.RFC3339),
-		Creators: []common.Creator{
-			{
-				CreatorType: "Tool",
-				Creator:     "sbomasm",
-			},
-		},
-	}
+	doc.DataLicense = v2_3.DataLicense
+	doc.SPDXVersion = v2_3.Version
+	doc.DocumentNamespace = spdx_assemble.ComposeNamespace(bom.Artifact.Name)
+	doc.CreationInfo = buildCreatorInfoTool()
 
 	// --- Primary Package ---
-	primaryID := "SPDXRef-" + componentKey(Component{
-		Name:    bom.Artifact.Name,
-		Version: bom.Artifact.Version,
-	})
-
-	primaryPkg := &spdx.Package{
-		PackageName:             bom.Artifact.Name,
-		PackageVersion:          bom.Artifact.Version,
-		PackageSPDXIdentifier:   common.ElementID(primaryID),
-		PackageDownloadLocation: "NOASSERTION",
-	}
-
+	primaryPkg, primaryID := buildPrimaryPackage(bom.Artifact)
 	doc.Packages = append(doc.Packages, primaryPkg)
 
 	// --- Components as Packages ---
 	compIDMap := make(map[string]string)
 
 	for _, c := range bom.Components {
-		id := "SPDXRef-" + componentKey(c)
-
-		pkg := &spdx.Package{
-			PackageName:             c.Name,
-			PackageVersion:          c.Version,
-			PackageSPDXIdentifier:   common.ElementID(id),
-			PackageDownloadLocation: "NOASSERTION",
-		}
-
+		pkg, id := buildSPDXPackage(c)
 		doc.Packages = append(doc.Packages, pkg)
 		compIDMap[componentKey(c)] = id
 	}
@@ -87,7 +62,7 @@ func SerializeSPDX(bom *BOM, output string) error {
 		Relationship: common.TypeRelationshipDescribe,
 	})
 
-	// 2. Primary → top-level components
+	// 2. Primary -> top-level components
 	for _, c := range bom.Components {
 		if len(c.DependencyOf) == 0 {
 			childID := compIDMap[componentKey(c)]
@@ -100,7 +75,7 @@ func SerializeSPDX(bom *BOM, output string) error {
 		}
 	}
 
-	// 3. Component → dependencies
+	// 3. Component -> dependencies
 	for parent, children := range bom.Dependencies {
 		parentID := compIDMap[parent]
 
@@ -134,4 +109,102 @@ func SerializeSPDX(bom *BOM, output string) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(doc)
+}
+
+func buildCreatorInfoTool() *spdx.CreationInfo {
+	ci := v2_3.CreationInfo{}
+	ci.Created = time.Now().UTC().Format(time.RFC3339)
+	ci.Creators = []common.Creator{
+		{
+			CreatorType: "Tool",
+			Creator:     fmt.Sprintf("sbomasm-%s", version.GetVersionInfo().GitVersion),
+		},
+	}
+	return &ci
+}
+
+func buildExternalRefs(purl string) []*spdx.PackageExternalReference {
+	if purl == "" {
+		return nil
+	}
+
+	return []*spdx.PackageExternalReference{
+		{
+			Category: "PACKAGE-MANAGER",
+			RefType:  "purl",
+			Locator:  purl,
+		},
+	}
+}
+
+func buildSPDXPackage(c Component) (*spdx.Package, string) {
+	id := "SPDXRef-" + componentKey(c)
+
+	pkg := &spdx.Package{
+		PackageSPDXIdentifier: common.ElementID(id),
+	}
+
+	if c.Name != "" {
+		pkg.PackageName = c.Name
+	}
+	if c.Version != "" {
+		pkg.PackageVersion = c.Version
+	}
+	if c.License != "" {
+		pkg.PackageLicenseConcluded = c.License
+	}
+
+	pkg.PackageExternalReferences = buildExternalRefs(c.PURL)
+	pkg.PackageChecksums = buildChecksums(c.Hashes)
+
+	return pkg, id
+}
+
+func buildChecksums(hashes []Hash) []spdx.Checksum {
+	var out []spdx.Checksum
+
+	for _, h := range hashes {
+		if h.Value == "" {
+			continue
+		}
+
+		out = append(out, spdx.Checksum{
+			Algorithm: common.ChecksumAlgorithm(h.Algorithm),
+			Value:     h.Value,
+		})
+	}
+
+	return out
+}
+
+func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
+	id := "SPDXRef-" + componentKey(Component{
+		Name:    a.Name,
+		Version: a.Version,
+		PURL:    a.PURL,
+	})
+
+	pkg := &spdx.Package{}
+
+	pkg.PackageSPDXIdentifier = common.ElementID(id)
+
+	if a.Name != "" {
+		pkg.PackageName = a.Name
+	}
+	if a.Version != "" {
+		pkg.PackageVersion = a.Version
+	}
+	if a.LicenseID != "" {
+		pkg.PackageLicenseConcluded = a.LicenseID
+	}
+
+	// PURL → ExternalRef
+	pkg.PackageExternalReferences = buildExternalRefs(a.PURL)
+
+	// (Optional but good) Description → comment
+	if a.Description != "" {
+		pkg.PackageDescription = a.Description
+	}
+
+	return pkg, id
 }

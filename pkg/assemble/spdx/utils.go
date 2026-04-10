@@ -127,7 +127,7 @@ func cloneRelationship(c *spdx.Relationship) (*spdx.Relationship, error) {
 	return relCopy.(*spdx.Relationship), nil
 }
 
-func composeNamespace(docName string) string {
+func ComposeNamespace(docName string) string {
 	uuid := uuid.New().String()
 	path := fmt.Sprintf("%s/%s-%s", "spdxdocs", docName, uuid)
 	url := url.URL{
@@ -288,7 +288,7 @@ func genSpdxDocument(ms *merge) (*v2_3.Document, error) {
 	doc.DataLicense = v2_3.DataLicense
 	doc.SPDXIdentifier = common.ElementID("DOCUMENT")
 	doc.DocumentName = ms.settings.App.Name
-	doc.DocumentNamespace = composeNamespace(ms.settings.App.Name)
+	doc.DocumentNamespace = ComposeNamespace(ms.settings.App.Name)
 
 	return &doc, nil
 }
