@@ -134,22 +134,22 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 		pkg.PackageLicenseConcluded = "NOASSERTION"
 	}
 
-	// Supplier
-	if a.Supplier.Name != "" {
-		pkg.PackageSupplier.Supplier = a.Supplier.Name
-		pkg.PackageSupplier.SupplierType = "Organization"
-	} else {
-		pkg.PackageSupplier.Supplier = "NOASSERTION"
-	}
+	// // Supplier
+	// if a.Supplier != (Supplier{}) && a.Supplier.Name != "" {
+	// 	pkg.PackageSupplier.Supplier = a.Supplier.Name
+	// 	pkg.PackageSupplier.SupplierType = "Organization"
+	// } else {
+	// 	pkg.PackageSupplier.Supplier = "NOASSERTION"
+	// }
 
-	// Authors -> use Originator (SPDX field)
-	if len(a.Authors) > 0 {
-		first := a.Authors[0]
-		if first.Name != "" {
-			pkg.PackageOriginator.Originator = first.Name
-			pkg.PackageOriginator.OriginatorType = "Person"
-		}
-	}
+	// // Authors -> use Originator (SPDX field)
+	// if len(a.Authors) > 0 {
+	// 	first := a.Authors[0]
+	// 	if first.Name != "" {
+	// 		pkg.PackageOriginator.Originator = first.Name
+	// 		pkg.PackageOriginator.OriginatorType = "Person"
+	// 	}
+	// }
 
 	// Copyright
 	pkg.PackageCopyrightText = buildCopyright(a.Copyright)
