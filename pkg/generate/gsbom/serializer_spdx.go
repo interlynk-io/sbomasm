@@ -113,44 +113,14 @@ func SerializeSPDX(bom *BOM, output string) error {
 	return encoder.Encode(doc)
 }
 
-func buildCreatorInfoTool() *spdx.CreationInfo {
-	ci := v2_3.CreationInfo{}
-	ci.Created = time.Now().UTC().Format(time.RFC3339)
-	ci.Creators = []common.Creator{
-		{
-			CreatorType: "Tool",
-			Creator:     fmt.Sprintf("sbomasm-%s", version.GetVersionInfo().GitVersion),
-		},
-	}
-	return &ci
-}
-
-func buildExternalRefs(purl string) []*spdx.PackageExternalReference {
-	if purl == "" {
-		return nil
-	}
-
-	return []*spdx.PackageExternalReference{
-		{
-			Category: "PACKAGE-MANAGER",
-			RefType:  "purl",
-			Locator:  purl,
-		},
-	}
-}
-
 func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
-	key := componentKey(Component{
-		Name:    a.Name,
-		Version: a.Version,
-	})
-
+	key := componentKey(Component{Name: a.Name, Version: a.Version})
 	spdxID := makeSPDXID(key)
-	fmt.Println("spdxID: ", spdxID)
 
-	pkg := &spdx.Package{}
-	pkg.PackageSPDXIdentifier = common.ElementID(spdxID)
-	fmt.Println("pkg.PackageSPDXIdentifier: ", pkg.PackageSPDXIdentifier)
+	pkg := &spdx.Package{
+		PackageSPDXIdentifier:   common.ElementID(spdxID),
+		PackageDownloadLocation: "NOASSERTION",
+	}
 
 	if a.Name != "" {
 		pkg.PackageName = a.Name
@@ -160,7 +130,29 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 	}
 	if a.LicenseID != "" {
 		pkg.PackageLicenseConcluded = a.LicenseID
+	} else {
+		pkg.PackageLicenseConcluded = "NOASSERTION"
 	}
+
+	// Supplier
+	if a.Supplier.Name != "" {
+		pkg.PackageSupplier.Supplier = a.Supplier.Name
+		pkg.PackageSupplier.SupplierType = "Organization"
+	} else {
+		pkg.PackageSupplier.Supplier = "NOASSERTION"
+	}
+
+	// Authors -> use Originator (SPDX field)
+	if len(a.Authors) > 0 {
+		first := a.Authors[0]
+		if first.Name != "" {
+			pkg.PackageOriginator.Originator = first.Name
+			pkg.PackageOriginator.OriginatorType = "Person"
+		}
+	}
+
+	// Copyright
+	pkg.PackageCopyrightText = buildCopyright(a.Copyright)
 
 	// PURL -> ExternalRef
 	pkg.PackageExternalReferences = buildExternalRefs(a.PURL)
@@ -178,7 +170,8 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	spdxID := makeSPDXID(key)
 
 	pkg := &spdx.Package{
-		PackageSPDXIdentifier: common.ElementID(spdxID),
+		PackageSPDXIdentifier:   common.ElementID(spdxID),
+		PackageDownloadLocation: "NOASSERTION",
 	}
 
 	if c.Name != "" {
@@ -195,6 +188,40 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	pkg.PackageChecksums = buildChecksums(c.Hashes)
 
 	return pkg, spdxID
+}
+
+func buildCreatorInfoTool() *spdx.CreationInfo {
+	ci := v2_3.CreationInfo{}
+	ci.Created = time.Now().UTC().Format(time.RFC3339)
+	ci.Creators = []common.Creator{
+		{
+			CreatorType: "Tool",
+			Creator:     fmt.Sprintf("sbomasm-%s", version.GetVersionInfo().GitVersion),
+		},
+	}
+	return &ci
+}
+
+func buildCopyright(copyright string) string {
+	if copyright != "" {
+		return copyright
+	} else {
+		return "NOASSERTION"
+	}
+}
+
+func buildExternalRefs(purl string) []*spdx.PackageExternalReference {
+	if purl == "" {
+		return nil
+	}
+
+	return []*spdx.PackageExternalReference{
+		{
+			Category: "PACKAGE-MANAGER",
+			RefType:  "purl",
+			Locator:  purl,
+		},
+	}
 }
 
 func buildChecksums(hashes []Hash) []spdx.Checksum {

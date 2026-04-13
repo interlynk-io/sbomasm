@@ -202,20 +202,71 @@ func buildHashes(hashes []Hash) *[]cydx.Hash {
 	return &out
 }
 
-func buildPrimaryComponent(artifact Artifact) *cydx.Component {
-	return &cydx.Component{
-		Name:        artifact.Name,
-		Version:     artifact.Version,
-		Type:        cydx.ComponentTypeApplication,
-		Description: artifact.Description,
-		PackageURL:  artifact.PURL,
-		CPE:         artifact.CPE,
-		BOMRef: getBomRef(Component{
-			Name:    artifact.Name,
-			Version: artifact.Version,
-			PURL:    artifact.PURL,
-		}),
+func buildPrimaryComponent(a Artifact) *cydx.Component {
+	comp := cydx.Component{
+		Type:   cydx.ComponentType(a.PrimaryPurpose),
+		BOMRef: getBomRef(Component{Name: a.Name, Version: a.Version, PURL: a.PURL}),
 	}
+
+	if a.Name != "" {
+		comp.Name = a.Name
+	}
+	if a.Version != "" {
+		comp.Version = a.Version
+	}
+	if a.Description != "" {
+		comp.Description = a.Description
+	}
+	if a.PURL != "" {
+		comp.PackageURL = a.PURL
+	}
+	if a.CPE != "" {
+		comp.CPE = a.CPE
+	}
+
+	// Supplier
+	if a.Supplier.Name != "" || a.Supplier.Email != "" {
+		s := cydx.OrganizationalEntity{
+			Name: a.Supplier.Name,
+		}
+		if a.Supplier.Email != "" {
+			s.Contact = &[]cydx.OrganizationalContact{
+				{Email: a.Supplier.Email},
+			}
+		}
+		comp.Supplier = &s
+	}
+
+	// License
+	if a.LicenseID != "" {
+		comp.Licenses = &cydx.Licenses{
+			{License: &cydx.License{ID: a.LicenseID}},
+		}
+	}
+
+	// Authors
+	if len(a.Authors) > 0 {
+		var authors []cydx.OrganizationalContact
+		for _, au := range a.Authors {
+			if au.Name == "" && au.Email == "" {
+				continue
+			}
+			authors = append(authors, cydx.OrganizationalContact{
+				Name:  au.Name,
+				Email: au.Email,
+			})
+		}
+		if len(authors) > 0 {
+			comp.Authors = &authors
+		}
+	}
+
+	// Copyright
+	if a.Copyright != "" {
+		comp.Copyright = a.Copyright
+	}
+
+	return &comp
 }
 
 func buildSupplier(s Supplier) *cydx.OrganizationalEntity {
