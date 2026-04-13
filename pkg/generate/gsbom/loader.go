@@ -1,0 +1,132 @@
+// Copyright 2026 Interlynk.io
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package gsbom
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/interlynk-io/sbomasm/v2/pkg/generate/app"
+	"go.yaml.in/yaml/v2"
+)
+
+// LoadArtifactConfig performs the following steps:
+// 1. Reads the YAML config file from the given path, by default ".artifact-metadata.yaml" in the current directory.
+// 2. Unmarshals the YAML data into an app.Config struct.
+// 3. Validates required fields and sanitizes optional fields (trims whitespace, converts "[optional]" to empty).
+// 4. Maps the app.Config to an Artifact struct and returns it.
+func LoadArtifactConfig(path string) (*Artifact, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg app.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse yaml: %w", err)
+	}
+
+	if err := validateAndSanitize(&cfg); err != nil {
+		return nil, err
+	}
+
+	artifact := mapToArtifact(cfg)
+	return artifact, nil
+}
+
+// mapToArtifact converts an app.Config to an Artifact struct.
+func mapToArtifact(cfg app.Config) *Artifact {
+	return &Artifact{
+		Name:           cfg.App.Name,
+		Version:        cfg.App.Version,
+		Description:    cfg.App.Description,
+		PrimaryPurpose: cfg.App.PrimaryPurpose,
+
+		Supplier: Supplier{
+			Name:  cfg.App.Supplier.Name,
+			Email: cfg.App.Supplier.Email,
+		},
+
+		Authors: func() []Author {
+			authors := make([]Author, len(cfg.App.Author))
+			for i, a := range cfg.App.Author {
+				authors[i] = Author{
+					Name:  a.Name,
+					Email: a.Email,
+				}
+			}
+			return authors
+		}(),
+
+		LicenseID: cfg.App.License.Id,
+		PURL:      cfg.App.Purl,
+		CPE:       cfg.App.CPE,
+		Copyright: cfg.App.Copyright,
+	}
+}
+
+// validateAndSanitize performs the following:
+// 1. Checks that required fields (Name, Version, PrimaryPurpose) are present.
+// 2. Trims whitespace from all string fields.
+// 3. Converts any field with value "[optional]" (case-insensitive) to an empty string.
+func validateAndSanitize(cfg *app.Config) error {
+	if cfg == nil {
+		return fmt.Errorf("config is nil")
+	}
+
+	// --- sanitize helper ---
+	sanitize := func(v string) string {
+		v = strings.TrimSpace(v)
+		if strings.EqualFold(v, "[optional]") {
+			return ""
+		}
+		return v
+	}
+
+	// --- sanitize fields ---
+	cfg.App.Name = sanitize(cfg.App.Name)
+	cfg.App.Version = sanitize(cfg.App.Version)
+	cfg.App.Description = sanitize(cfg.App.Description)
+	cfg.App.PrimaryPurpose = sanitize(cfg.App.PrimaryPurpose)
+	cfg.App.Purl = sanitize(cfg.App.Purl)
+	cfg.App.CPE = sanitize(cfg.App.CPE)
+	cfg.App.Copyright = sanitize(cfg.App.Copyright)
+
+	cfg.App.Supplier.Name = sanitize(cfg.App.Supplier.Name)
+	cfg.App.Supplier.Email = sanitize(cfg.App.Supplier.Email)
+
+	cfg.App.License.Id = sanitize(cfg.App.License.Id)
+
+	for i := range cfg.App.Author {
+		cfg.App.Author[i].Name = sanitize(cfg.App.Author[i].Name)
+		cfg.App.Author[i].Email = sanitize(cfg.App.Author[i].Email)
+	}
+
+	// --- required validation ---
+	if cfg.App.Name == "" {
+		return fmt.Errorf("artifact name is required")
+	}
+	if cfg.App.Version == "" {
+		return fmt.Errorf("artifact version is required")
+	}
+	if cfg.App.PrimaryPurpose == "" {
+		return fmt.Errorf("artifact primary_purpose is required")
+	}
+
+	return nil
+}

@@ -15,6 +15,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +27,7 @@ var generateCmd = &cobra.Command{
 	Short: "Generate a sample config file for assembling sboms",
 	Long: `The generate command will generate a sample config file for assembling sboms.
 Example:
+	$ sbomasm generate
 	$ sbomasm generate config
 	$ sbomasm generate sbom -r . -o device-firmware-2.1.0.cdx.json
 	$ sbomasm generate sbom \
@@ -33,6 +37,10 @@ Example:
 	  -i src/miniz/.components.json \
 	  -o device-firmware-2.1.0.cdx.json
 `,
+	Run: func(cmd *cobra.Command, args []string) {
+		// default behavior -> print full config (legacy)
+		fmt.Printf("%s", assemble.DefaultConfigYaml())
+	},
 }
 
 func init() {

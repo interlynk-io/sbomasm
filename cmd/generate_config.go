@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/interlynk-io/sbomasm/v2/pkg/assemble"
+	"github.com/interlynk-io/sbomasm/v2/pkg/generate/app"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +25,6 @@ var generateConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Generate artifact metadata config",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s", assemble.DefaultConfigYaml())
+		fmt.Printf("%s", app.DefaultAppYaml())
 	},
 }
