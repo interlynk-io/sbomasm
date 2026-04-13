@@ -20,21 +20,26 @@ import (
 	"path/filepath"
 )
 
-// CollectInputFiles collects input component files based on the provided parameters.
-// It supports both explicit input files and recursive collection from a specified path.
-// It returns a list of collected file paths and any warnings encountered during the process.
+// CollectInputFiles performs the following steps:
+// - Appends any explicitly provided input files to the list.
+// - If a RecursePath is provided, it walks through the directory tree starting from that path.
+//   - For each file encountered, it checks if the filename matches the specified Filename (e.g., ".components.json").
+//   - If a match is found, the file path is added to the list of files.
+//   - Any errors encountered while accessing paths are collected as warnings.
+//
+// - Finally, it returns the list of collected file paths and any warnings.
 func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 	var files []string
-	var warnings []error
+	var errors []error
 
-	// 1. COllect explicit inputs FIRST
+	// 1. Collect explicit inputs FIRST
 	files = append(files, params.InputFiles...)
 
 	// 2. Handle recurse if RecursePath is provided
 	if params.RecursePath != "" {
 		err := filepath.Walk(params.RecursePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				warnings = append(warnings, fmt.Errorf("error accessing path %s: %v", path, err))
+				errors = append(errors, fmt.Errorf("error accessing path %s: %v", path, err))
 				return nil
 			}
 
@@ -51,9 +56,9 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 		})
 
 		if err != nil {
-			warnings = append(warnings, err)
+			errors = append(errors, err)
 		}
 	}
 
-	return files, warnings
+	return files, errors
 }

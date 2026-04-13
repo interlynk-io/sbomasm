@@ -43,6 +43,10 @@ func Generate(params *GenerateSBOMParams) error {
 	files, warn := CollectInputFiles(params)
 	errors = append(errors, warn...)
 
+	if len(files) == 0 {
+		return fmt.Errorf("no component files found in input paths")
+	}
+
 	// Parse component files into intrnal component model
 	// it returns list of components present in each files
 	componentLists, warn := ParseComponentFiles(files)
@@ -50,6 +54,9 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Merge all components into a single list
 	componentMergedLists := MergeAll(componentLists)
+	if len(componentMergedLists) == 0 {
+		return fmt.Errorf("no components found in input files")
+	}
 
 	// Dedup components and collect warnings for duplicates
 	componentUniqueLists, warn := DeduplicateComponents(componentMergedLists)

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	spdx_assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
@@ -40,16 +42,16 @@ func SerializeSPDX(bom *BOM, output string) error {
 	doc.CreationInfo = buildCreatorInfoTool()
 
 	// --- Primary Package ---
-	primaryPkg, primaryID := buildPrimaryPackage(bom.Artifact)
+	primaryPkg, primarySPDXID := buildPrimaryPackage(bom.Artifact)
 	doc.Packages = append(doc.Packages, primaryPkg)
 
 	// --- Components as Packages ---
 	compIDMap := make(map[string]string)
 
 	for _, c := range bom.Components {
-		pkg, id := buildSPDXPackage(c)
+		pkg, spdxID := buildSPDXPackage(c)
 		doc.Packages = append(doc.Packages, pkg)
-		compIDMap[componentKey(c)] = id
+		compIDMap[componentKey(c)] = spdxID
 	}
 
 	// --- Relationships ---
@@ -58,18 +60,18 @@ func SerializeSPDX(bom *BOM, output string) error {
 	// 1. Document DESCRIBES primary
 	rels = append(rels, &spdx.Relationship{
 		RefA:         common.MakeDocElementID("", "DOCUMENT"),
-		RefB:         common.MakeDocElementID("", primaryID),
+		RefB:         common.MakeDocElementID("", primarySPDXID),
 		Relationship: common.TypeRelationshipDescribe,
 	})
 
 	// 2. Primary -> top-level components
 	for _, c := range bom.Components {
 		if len(c.DependencyOf) == 0 {
-			childID := compIDMap[componentKey(c)]
+			childSPDXID := compIDMap[componentKey(c)]
 
 			rels = append(rels, &spdx.Relationship{
-				RefA:         common.MakeDocElementID("", primaryID),
-				RefB:         common.MakeDocElementID("", childID),
+				RefA:         common.MakeDocElementID("", primarySPDXID),
+				RefB:         common.MakeDocElementID("", childSPDXID),
 				Relationship: common.TypeRelationshipDependsOn,
 			})
 		}
@@ -137,11 +139,46 @@ func buildExternalRefs(purl string) []*spdx.PackageExternalReference {
 	}
 }
 
+func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
+	key := componentKey(Component{
+		Name:    a.Name,
+		Version: a.Version,
+	})
+
+	spdxID := makeSPDXID(key)
+	fmt.Println("spdxID: ", spdxID)
+
+	pkg := &spdx.Package{}
+	pkg.PackageSPDXIdentifier = common.ElementID(spdxID)
+	fmt.Println("pkg.PackageSPDXIdentifier: ", pkg.PackageSPDXIdentifier)
+
+	if a.Name != "" {
+		pkg.PackageName = a.Name
+	}
+	if a.Version != "" {
+		pkg.PackageVersion = a.Version
+	}
+	if a.LicenseID != "" {
+		pkg.PackageLicenseConcluded = a.LicenseID
+	}
+
+	// PURL -> ExternalRef
+	pkg.PackageExternalReferences = buildExternalRefs(a.PURL)
+
+	// (Optional but good) Description -> comment
+	if a.Description != "" {
+		pkg.PackageDescription = a.Description
+	}
+
+	return pkg, spdxID
+}
+
 func buildSPDXPackage(c Component) (*spdx.Package, string) {
-	id := "SPDXRef-" + componentKey(c)
+	key := componentKey(c)
+	spdxID := makeSPDXID(key)
 
 	pkg := &spdx.Package{
-		PackageSPDXIdentifier: common.ElementID(id),
+		PackageSPDXIdentifier: common.ElementID(spdxID),
 	}
 
 	if c.Name != "" {
@@ -157,7 +194,7 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	pkg.PackageExternalReferences = buildExternalRefs(c.PURL)
 	pkg.PackageChecksums = buildChecksums(c.Hashes)
 
-	return pkg, id
+	return pkg, spdxID
 }
 
 func buildChecksums(hashes []Hash) []spdx.Checksum {
@@ -177,34 +214,21 @@ func buildChecksums(hashes []Hash) []spdx.Checksum {
 	return out
 }
 
-func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
-	id := "SPDXRef-" + componentKey(Component{
-		Name:    a.Name,
-		Version: a.Version,
-		PURL:    a.PURL,
-	})
+func sanitizeSPDXID(s string) string {
+	s = strings.ToLower(s)
 
-	pkg := &spdx.Package{}
+	// replace illegal chars
+	s = strings.ReplaceAll(s, "@", "-")
+	s = strings.ReplaceAll(s, "/", "-")
+	s = strings.ReplaceAll(s, ":", "-")
 
-	pkg.PackageSPDXIdentifier = common.ElementID(id)
+	// keep only allowed chars
+	reg := regexp.MustCompile(`[^a-z0-9.\-]`)
+	s = reg.ReplaceAllString(s, "-")
 
-	if a.Name != "" {
-		pkg.PackageName = a.Name
-	}
-	if a.Version != "" {
-		pkg.PackageVersion = a.Version
-	}
-	if a.LicenseID != "" {
-		pkg.PackageLicenseConcluded = a.LicenseID
-	}
+	return s
+}
 
-	// PURL → ExternalRef
-	pkg.PackageExternalReferences = buildExternalRefs(a.PURL)
-
-	// (Optional but good) Description → comment
-	if a.Description != "" {
-		pkg.PackageDescription = a.Description
-	}
-
-	return pkg, id
+func makeSPDXID(key string) string {
+	return "SPDXRef-" + sanitizeSPDXID(key)
 }

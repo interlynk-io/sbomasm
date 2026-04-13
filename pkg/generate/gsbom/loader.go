@@ -33,6 +33,9 @@ import (
 func LoadArtifactConfig(path string) (*Artifact, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("artifact metadata file not found: %s\nrun 'sbomasm generate config > %s'", path, path)
+		}
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
@@ -98,6 +101,14 @@ func validateAndSanitize(cfg *app.Config) error {
 		return v
 	}
 
+	validValue := func(v string) bool {
+		vl := strings.ToLower(v)
+		if vl == "" || vl == "[required]" {
+			return false
+		}
+		return true
+	}
+
 	// --- sanitize fields ---
 	cfg.App.Name = sanitize(cfg.App.Name)
 	cfg.App.Version = sanitize(cfg.App.Version)
@@ -118,15 +129,31 @@ func validateAndSanitize(cfg *app.Config) error {
 	}
 
 	// --- required validation ---
-	if cfg.App.Name == "" {
+	if !validValue(cfg.App.Name) {
 		return fmt.Errorf("artifact name is required")
 	}
-	if cfg.App.Version == "" {
+	if !validValue(cfg.App.Version) {
 		return fmt.Errorf("artifact version is required")
 	}
-	if cfg.App.PrimaryPurpose == "" {
+	if validValue(cfg.App.PrimaryPurpose) {
+		if !allowedPrimaryPurpose[cfg.App.PrimaryPurpose] {
+			return fmt.Errorf("invalid primary_purpose: %s\nallowed values are: application, framework, library, container, platform, firmware, operating-system, device, file", cfg.App.PrimaryPurpose)
+		}
+	} else {
 		return fmt.Errorf("artifact primary_purpose is required")
 	}
 
 	return nil
+}
+
+var allowedPrimaryPurpose = map[string]bool{
+	"application":      true,
+	"framework":        true,
+	"library":          true,
+	"container":        true,
+	"platform":         true,
+	"firmware":         true,
+	"operating-system": true,
+	"device":           true,
+	"file":             true,
 }

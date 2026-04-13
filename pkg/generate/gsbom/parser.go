@@ -51,12 +51,12 @@ type Hash struct {
 // - returns a list of components from all files.
 func ParseComponentFiles(files []string) ([][]Component, []error) {
 	var allComponentsFromFiles [][]Component
-	var warnings []error
+	var errors []error
 
 	for _, file := range files {
 		components, err := parseFile(file)
 		if err != nil {
-			warnings = append(warnings, fmt.Errorf("file %s: %v", file, err))
+			errors = append(errors, fmt.Errorf("file %s: %v", file, err))
 			continue
 		}
 		allComponentsFromFiles = append(allComponentsFromFiles, components)
@@ -70,7 +70,7 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 			  [c4, c5, c6],  // file3
 			]
 	*/
-	return allComponentsFromFiles, warnings
+	return allComponentsFromFiles, errors
 }
 
 // parseFile determines the file format based on the extension
