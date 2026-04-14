@@ -14,7 +14,10 @@
 
 package gsbom
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func BuildComponentMap(components []Component) map[string]Component {
 	m := make(map[string]Component)
@@ -52,6 +55,7 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 		// Case 1: has dependency-of
 		if len(c.DependencyOf) > 0 {
 			for _, parentRef := range c.DependencyOf {
+				parentRef = strings.TrimSpace(parentRef)
 
 				if seen[parentRef] {
 					continue // skip duplicate parent references

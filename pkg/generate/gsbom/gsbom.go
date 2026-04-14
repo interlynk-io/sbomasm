@@ -30,7 +30,7 @@ import (
 // - Build BOM model from artifact, components, and dependency graph
 // - Serialize BOM to output file in specified format (CycloneDX or SPDX)
 func Generate(params *GenerateSBOMParams) error {
-	var errors []error
+	var warnings []error
 
 	// 1. Load artifact from config: `.artifact-metadata.yaml`
 	artifact, err := LoadArtifactConfig(params.ConfigPath)
@@ -41,7 +41,7 @@ func Generate(params *GenerateSBOMParams) error {
 	// Collect input files: `.components.json` (explicit/recursive)
 	// `.components.json` files contain component information
 	files, warn := CollectInputFiles(params)
-	errors = append(errors, warn...)
+	warnings = append(warnings, warn...)
 
 	if len(files) == 0 {
 		return fmt.Errorf("no component files found in input paths")
@@ -50,7 +50,7 @@ func Generate(params *GenerateSBOMParams) error {
 	// Parse component files into intrnal component model
 	// it returns list of components present in each files
 	componentLists, warn := ParseComponentFiles(files)
-	errors = append(errors, warn...)
+	warnings = append(warnings, warn...)
 
 	// Merge all components into a single list
 	componentMergedLists := MergeAll(componentLists)
@@ -60,7 +60,7 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Dedup components and collect warnings for duplicates
 	componentUniqueLists, warn := DeduplicateComponents(componentMergedLists)
-	errors = append(errors, warn...)
+	warnings = append(warnings, warn...)
 
 	// 2. Final component list(post filtering components by tags)
 	componentFileteredLists := FilterComponents(componentUniqueLists, params.Tags, params.ExcludeTags)
@@ -70,7 +70,7 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// 3. Dependency graph to build parent-child relationships
 	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap, artifact)
-	errors = append(errors, warn...)
+	warnings = append(warnings, warn...)
 
 	// Build BOM model from artifact, components, and dependency graph
 	bom := BuildBOM(artifact, componentFileteredLists, graph)
@@ -78,13 +78,15 @@ func Generate(params *GenerateSBOMParams) error {
 	// Serialize BOM to output file in specified format (CycloneDX or SPDX)
 	err = Serialize(params.Format, bom, params.Output)
 
+	// Print warnings
+	defer func() {
+		for _, w := range warnings {
+			fmt.Fprintf(os.Stderr, "warning: %v\n", w)
+		}
+	}()
+
 	if err != nil {
 		return err
-	}
-
-	// Print warnings
-	for _, w := range errors {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", w)
 	}
 
 	return nil

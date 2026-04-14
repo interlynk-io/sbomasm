@@ -179,7 +179,16 @@ func parseCSV(path string) ([]Component, error) {
 
 		// tags
 		if v := record[colIndex["tags"]]; v != "" {
-			c.Tags = strings.Split(v, ",")
+			raw := strings.Split(v, ",")
+			var cleaned []string
+			for _, r := range raw {
+				t := strings.TrimSpace(r)
+				if t != "" {
+					cleaned = append(cleaned, t)
+				}
+			}
+			c.Tags = cleaned
+			// c.Tags = strings.Split(v, ",")
 		}
 
 		components = append(components, c)
