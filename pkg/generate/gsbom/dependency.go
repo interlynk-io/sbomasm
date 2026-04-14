@@ -47,9 +47,16 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 	for _, c := range components {
 		childKey := componentKey(c)
 
+		seen := make(map[string]bool)
+
 		// Case 1: has dependency-of
 		if len(c.DependencyOf) > 0 {
 			for _, parentRef := range c.DependencyOf {
+
+				if seen[parentRef] {
+					continue // skip duplicate parent references
+				}
+				seen[parentRef] = true
 
 				// Check for self-dependency
 				if parentRef == childKey {
@@ -77,7 +84,6 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 	graph.Edges = edges
 
 	warnings = append(warnings, warn1...)
-	fmt.Printf("dependency graph 1: %+v\n", edges)
 
 	// 3. Attach orphans to root (artifact)
 	root := componentKey(Component{
