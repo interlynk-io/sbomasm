@@ -16,6 +16,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/generate/gsbom"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
@@ -46,6 +48,10 @@ var generateSbomCmd = &cobra.Command{
 			return err
 		}
 
+		if err := validateGenerateSBOMParams(params); err != nil {
+			return err
+		}
+
 		params.Ctx = &ctx
 		return gsbom.Generate(params)
 	},
@@ -67,6 +73,12 @@ func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) 
 
 	return params, nil
 }
+func validateGenerateSBOMParams(params *gsbom.GenerateSBOMParams) error {
+	if hasOverlap(params.Tags, params.ExcludeTags) {
+		return fmt.Errorf("conflicting tags: same tag in include and exclude")
+	}
+	return nil
+}
 
 func init() {
 	// Flags
@@ -79,4 +91,17 @@ func init() {
 	generateSbomCmd.Flags().StringP("recurse", "r", "", "recursively discover component manifest files under the given directory")
 	generateSbomCmd.Flags().String("filename", ".components.json", "filename to look for during recursive discovery (e.g. my-deps.json)")
 	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
+}
+
+func hasOverlap(include, exclude []string) bool {
+	set := make(map[string]bool)
+	for _, v := range include {
+		set[strings.ToLower(v)] = true
+	}
+	for _, v := range exclude {
+		if set[strings.ToLower(v)] {
+			return true
+		}
+	}
+	return false
 }

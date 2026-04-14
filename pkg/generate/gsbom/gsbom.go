@@ -64,6 +64,9 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// 2. Final component list(post filtering components by tags)
 	componentFileteredLists := FilterComponents(componentUniqueLists, params.Tags, params.ExcludeTags)
+	if len(componentFileteredLists) == 0 && len(componentUniqueLists) > 0 {
+		return fmt.Errorf("no components left after applying tag filters")
+	}
 
 	// Lookup map for components by name@version for easy reference
 	compMap := BuildComponentMap(componentFileteredLists)

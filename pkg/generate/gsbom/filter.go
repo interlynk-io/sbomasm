@@ -14,6 +14,10 @@
 
 package gsbom
 
+import (
+	"strings"
+)
+
 // FilterComponents takes a list of components and applies include and exclude tag filters.
 // - If includeTags is provided, only components that have at least one of the specified tags will be included.
 // - If excludeTags is provided, any component that has at least one of the specified exclude tags will be excluded.
@@ -47,7 +51,7 @@ func FilterComponents(components []Component, includeTags, excludeTags []string)
 func hasAnyTag(componentTags, filterTags []string) bool {
 	for _, ct := range componentTags {
 		for _, ft := range filterTags {
-			if ct == ft {
+			if strings.EqualFold(ct, ft) {
 				return true
 			}
 		}
