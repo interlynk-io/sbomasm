@@ -14,8 +14,6 @@
 
 package gsbom
 
-import "fmt"
-
 func componentKey(c Component) string {
 	return c.Name + "@" + c.Version
 }
@@ -39,19 +37,47 @@ func DeduplicateComponents(components []Component) ([]Component, []error) {
 	var componentUniqueLists []Component
 	var warnings []error
 
-	seen := make(map[string]bool)
+	seen := make(map[string]*Component)
 
 	for _, c := range components {
 		key := componentKey(c)
 
-		if seen[key] {
-			warnings = append(warnings, fmt.Errorf("duplicate component: %s", key))
+		if existing, ok := seen[key]; ok {
+			mergeComponent(existing, c)
 			continue
 		}
-
-		seen[key] = true
-		componentUniqueLists = append(componentUniqueLists, c)
+		copy := c
+		seen[key] = &copy
+		componentUniqueLists = append(componentUniqueLists, copy)
 	}
 
 	return componentUniqueLists, warnings
+}
+
+func mergeComponent(dst *Component, src Component) {
+	// --- dependency-of (CRITICAL FIX) ---
+	dst.DependencyOf = unionStrings(dst.DependencyOf, src.DependencyOf)
+
+	// --- tags ---
+	dst.Tags = unionStrings(dst.Tags, src.Tags)
+}
+
+func unionStrings(a, b []string) []string {
+	seen := make(map[string]bool)
+	var out []string
+
+	for _, v := range a {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	for _, v := range b {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+
+	return out
 }
