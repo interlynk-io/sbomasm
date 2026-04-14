@@ -51,6 +51,12 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component) 
 		if len(c.DependencyOf) > 0 {
 			for _, parentRef := range c.DependencyOf {
 
+				// Check for self-dependency
+				if parentRef == childKey {
+					warnings = append(warnings, fmt.Errorf("component %s cannot be a dependency of itself", childKey))
+					continue
+				}
+
 				// Check if parent exists
 				if _, ok := compMap[parentRef]; !ok {
 					warnings = append(warnings, fmt.Errorf("missing dependency reference: %s -> %s", childKey, parentRef))
