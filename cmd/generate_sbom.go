@@ -65,8 +65,8 @@ func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) 
 	params.ConfigPath, _ = cmd.Flags().GetString("config")
 	params.InputFiles, _ = cmd.Flags().GetStringSlice("input")
 	params.Output, _ = cmd.Flags().GetString("output")
-	params.Tags, _ = cmd.Flags().GetStringSlice("tags")
-	params.ExcludeTags, _ = cmd.Flags().GetStringSlice("exclude-tags")
+	params.Tags = normalizeTags(getStringSliceFlag(cmd, "tags"))
+	params.ExcludeTags = normalizeTags(getStringSliceFlag(cmd, "exclude-tags"))
 	params.Format, _ = cmd.Flags().GetString("format")
 	params.RecursePath, _ = cmd.Flags().GetString("recurse")
 	params.Filename, _ = cmd.Flags().GetString("filename")
@@ -78,6 +78,23 @@ func validateGenerateSBOMParams(params *gsbom.GenerateSBOMParams) error {
 		return fmt.Errorf("conflicting tags: same tag in include and exclude")
 	}
 	return nil
+}
+
+func normalizeTags(tags []string) []string {
+	var normalized []string
+	for _, tag := range tags {
+		ttag := strings.TrimSpace(tag)
+		if ttag != "" {
+			normalized = append(normalized, strings.ToLower(ttag))
+		}
+	}
+	return normalized
+}
+
+// getStringSliceFlag safely gets a string slice flag, ignoring the error.
+func getStringSliceFlag(cmd *cobra.Command, name string) []string {
+	val, _ := cmd.Flags().GetStringSlice(name)
+	return val
 }
 
 func init() {
