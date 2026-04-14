@@ -72,15 +72,25 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 		compRefMap[componentKey(c)] = getBomRef(c)
 	}
 
+	// map root
+	rootKey := componentKey(Component{
+		Name:    bom.Artifact.Name,
+		Version: bom.Artifact.Version,
+	})
+
+	rootRef := getBomRef(Component{
+		Name:    bom.Artifact.Name,
+		Version: bom.Artifact.Version,
+		PURL:    bom.Artifact.PURL,
+	})
+
+	compRefMap[rootKey] = rootRef
+
 	// 1. Parent -> children
 	for parent, children := range bom.Dependencies {
 		parentRef := compRefMap[parent]
 		if parentRef == "" {
 			parentRef = parent // fallback
-		}
-
-		d := cydx.Dependency{
-			Ref: parentRef,
 		}
 
 		var childRefs []string
@@ -92,22 +102,26 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 			childRefs = append(childRefs, ref)
 		}
 
-		d.Dependencies = &childRefs
+		if len(childRefs) == 0 {
+			childRefs = []string{}
+		}
+
+		d := cydx.Dependency{
+			Ref:          parentRef,
+			Dependencies: &childRefs,
+		}
+
+		// d.Dependencies = &childRefs
 		deps = append(deps, d)
 	}
 
-	// 2. Primary → top-level components
+	// 2. Primary -? top-level components
 	var topLevel []string
 	for _, c := range bom.Components {
 		if len(c.DependencyOf) == 0 {
 			topLevel = append(topLevel, getBomRef(c))
 		}
 	}
-
-	deps = append(deps, cydx.Dependency{
-		Ref:          out.Metadata.Component.BOMRef,
-		Dependencies: &topLevel,
-	})
 
 	out.Dependencies = &deps
 

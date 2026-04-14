@@ -69,7 +69,7 @@ func Generate(params *GenerateSBOMParams) error {
 	compMap := BuildComponentMap(componentFileteredLists)
 
 	// 3. Dependency graph to build parent-child relationships
-	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap)
+	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap, artifact)
 	errors = append(errors, warn...)
 
 	// Build BOM model from artifact, components, and dependency graph

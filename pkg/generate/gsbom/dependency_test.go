@@ -28,7 +28,7 @@ func TestBuildDependencyGraph_Valid(t *testing.T) {
 
 	m := BuildComponentMap(comps)
 
-	graph, warnings := BuildDependencyGraph(comps, m)
+	graph, warnings := BuildDependencyGraph(comps, m, nil)
 
 	require.Len(t, warnings, 0)
 	require.Equal(t, []string{"libtls@3.9.0"}, graph.Edges["libmqtt@4.3.0"])
@@ -41,7 +41,7 @@ func TestBuildDependencyGraph_MissingReference(t *testing.T) {
 
 	m := BuildComponentMap(comps)
 
-	_, warnings := BuildDependencyGraph(comps, m)
+	_, warnings := BuildDependencyGraph(comps, m, nil)
 
 	require.Len(t, warnings, 1)
 }

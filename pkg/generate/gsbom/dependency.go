@@ -37,7 +37,7 @@ type DependencyGraph struct {
 // BuildDependencyGraph performs the following functionality:
 // - takes a list of components and a component map (keyed by name@version) and
 // - builds a dependency graph based on the "dependency-of" field in components.
-func BuildDependencyGraph(components []Component, compMap map[string]Component) (*DependencyGraph, []error) {
+func BuildDependencyGraph(components []Component, compMap map[string]Component, artifact *Artifact) (*DependencyGraph, []error) {
 	graph := &DependencyGraph{
 		Edges: make(map[string][]string),
 	}
@@ -72,5 +72,96 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component) 
 		}
 	}
 
+	// 2. Remove cycles
+	warn1, edges := detectAndRemoveCycles(graph.Edges)
+	graph.Edges = edges
+
+	warnings = append(warnings, warn1...)
+	fmt.Printf("dependency graph 1: %+v\n", edges)
+
+	// 3. Attach orphans to root (artifact)
+	root := componentKey(Component{
+		Name:    artifact.Name,
+		Version: artifact.Version,
+	})
+
+	attachOrphansToRoot(graph.Edges, components, root)
+
 	return graph, warnings
+}
+
+// detectAndRemoveCycles performs the following functionality:
+// - detects cycles in the dependency graph and removes edges that cause cycles.
+// - returns a list of warnings for detected cycles and the modified graph without cycles.
+func detectAndRemoveCycles(graph map[string][]string) ([]error, map[string][]string) {
+	var warnings []error
+
+	visited := make(map[string]bool)
+	stack := make(map[string]bool)
+
+	var dfs func(node string) bool
+
+	dfs = func(node string) bool {
+		if stack[node] {
+			return true // cycle detected
+		}
+		if visited[node] {
+			return false
+		}
+
+		visited[node] = true
+		stack[node] = true
+
+		children := graph[node]
+		fmt.Println("children: ", children)
+		var newChildren []string
+
+		for _, child := range children {
+			if dfs(child) {
+				// cycle edge -> drop it
+				warnings = append(warnings, fmt.Errorf("cycle detected: %s -> %s (edge removed)", node, child))
+				continue
+			}
+			newChildren = append(newChildren, child)
+		}
+
+		graph[node] = newChildren
+		stack[node] = false
+		return false
+	}
+
+	for node := range graph {
+		fmt.Println("Node1: ", node)
+		dfs(node)
+	}
+
+	return warnings, graph
+}
+
+func attachOrphansToRoot(graph map[string][]string, components []Component, root string) {
+	// 1. compute in-degree
+	inDegree := make(map[string]int)
+
+	for parent, children := range graph {
+		for _, child := range children {
+			inDegree[child]++
+		}
+		// ensure parent exists in map
+		if _, ok := inDegree[parent]; !ok {
+			inDegree[parent] = inDegree[parent]
+		}
+	}
+
+	// 2. attach only nodes with NO parent
+	for _, c := range components {
+		key := componentKey(c)
+
+		if key == root {
+			continue
+		}
+
+		if inDegree[key] == 0 {
+			graph[root] = append(graph[root], key)
+		}
+	}
 }
