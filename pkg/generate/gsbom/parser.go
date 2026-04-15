@@ -104,6 +104,10 @@ func parseJSON(path string) ([]Component, error) {
 		return nil, err
 	}
 
+	if strings.TrimSpace(doc.Schema) == "" {
+		return nil, fmt.Errorf("missing schema marker in JSON file")
+	}
+
 	// Validate schema marker
 	if doc.Schema != ComponentFileSchema {
 		return nil, fmt.Errorf("invalid schema: expected %s, got %s", ComponentFileSchema, doc.Schema)
