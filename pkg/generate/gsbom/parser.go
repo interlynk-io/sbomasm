@@ -129,6 +129,7 @@ func parseCSV(path string) ([]Component, error) {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1 // Allow variable-length rows for optional fields
 
 	// First line = schema marker
 	header, err := reader.Read()

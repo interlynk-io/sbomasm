@@ -123,7 +123,6 @@ func detectAndRemoveCycles(graph map[string][]string) ([]error, map[string][]str
 		stack[node] = true
 
 		children := graph[node]
-		fmt.Println("children: ", children)
 		var newChildren []string
 
 		for _, child := range children {
@@ -141,7 +140,6 @@ func detectAndRemoveCycles(graph map[string][]string) ([]error, map[string][]str
 	}
 
 	for node := range graph {
-		fmt.Println("Node1: ", node)
 		dfs(node)
 	}
 

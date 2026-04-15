@@ -31,9 +31,22 @@ import (
 func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 	var files []string
 	var errors []error
+	seen := make(map[string]bool) // Track unique file paths
+
+	// Helper to add file only if not already seen
+	addFile := func(path string) {
+		// Use Clean to normalize paths for comparison
+		cleanPath := filepath.Clean(path)
+		if !seen[cleanPath] {
+			seen[cleanPath] = true
+			files = append(files, path)
+		}
+	}
 
 	// 1. Collect explicit inputs FIRST
-	files = append(files, params.InputFiles...)
+	for _, f := range params.InputFiles {
+		addFile(f)
+	}
 
 	// 2. Handle recurse if RecursePath is provided
 	if params.RecursePath != "" {
@@ -44,12 +57,19 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 			}
 
 			if info.IsDir() {
+				// Skip common VCS and dependency directories
+				name := info.Name()
+				if name == ".git" || name == ".hg" || name == ".svn" ||
+					name == "node_modules" || name == "vendor" || name == ".venv" {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 
-			// Match filename
-			if info.Name() == params.Filename {
-				files = append(files, path)
+			// Match filename: either exact match or discover both .components.json and .components.csv
+			// when using the default filename
+			if shouldDiscoverFile(info.Name(), params.Filename) {
+				addFile(path)
 			}
 
 			return nil
@@ -61,4 +81,16 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []error) {
 	}
 
 	return files, errors
+}
+
+// shouldDiscoverFile checks if a file should be discovered during recursive walk.
+// If using default filename, discovers both .components.json and .components.csv.
+// Otherwise, matches the exact filename provided.
+func shouldDiscoverFile(name, filename string) bool {
+	// Default case: discover both JSON and CSV
+	if filename == ".components.json" {
+		return name == ".components.json" || name == ".components.csv"
+	}
+	// Custom filename: exact match only
+	return name == filename
 }
