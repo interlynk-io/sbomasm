@@ -168,35 +168,29 @@ func parseCSV(path string) ([]Component, error) {
 			return nil, err
 		}
 
+		// Skip empty rows
+		if len(record) == 0 || (len(record) == 1 && strings.TrimSpace(record[0]) == "") {
+			continue
+		}
+
 		c := Component{
-			Name:     record[colIndex["name"]],
-			Version:  record[colIndex["version"]],
-			Type:     record[colIndex["type"]],
-			License:  record[colIndex["license"]],
-			PURL:     record[colIndex["purl"]],
-			CPE:      record[colIndex["cpe"]],
+			Name:     getValue("name", record, colIndex),
+			Version:  getValue("version", record, colIndex),
+			Type:     getValue("type", record, colIndex),
+			License:  getValue("license", record, colIndex),
+			PURL:     getValue("purl", record, colIndex),
+			CPE:      getValue("cpe", record, colIndex),
 			Supplier: parseSupplierFromCSV(record, colIndex),
 			Hashes:   parseHashesFromCSV(record, colIndex),
 		}
 
-		// dependency_of
-		if v := record[colIndex["dependency_of"]]; v != "" {
-			c.DependencyOf = strings.Split(v, ",")
+		// Skip rows with no name/version (likely empty/malformed)
+		if c.Name == "" && c.Version == "" {
+			continue
 		}
 
-		// tags
-		if v := record[colIndex["tags"]]; v != "" {
-			raw := strings.Split(v, ",")
-			var cleaned []string
-			for _, r := range raw {
-				t := strings.TrimSpace(r)
-				if t != "" {
-					cleaned = append(cleaned, t)
-				}
-			}
-			c.Tags = cleaned
-			// c.Tags = strings.Split(v, ",")
-		}
+		c.DependencyOf = parseDependencyOfFromCSV(record, colIndex)
+		c.Tags = parseTagsFromCSV(record, colIndex)
 
 		components = append(components, c)
 	}
@@ -204,22 +198,74 @@ func parseCSV(path string) ([]Component, error) {
 	return components, nil
 }
 
+// parseSupplierFromCSV extracts supplier information from CSV record.
 func parseSupplierFromCSV(record []string, colIndex map[string]int) Supplier {
 	return Supplier{
-		Name:  record[colIndex["supplier_name"]],
-		Email: record[colIndex["supplier_email"]],
+		Name:  getValue("supplier_name", record, colIndex),
+		Email: getValue("supplier_email", record, colIndex),
 	}
 }
 
+// parseDependencyOfFromCSV extracts `dependency-of“ information from CSV record.
+func parseDependencyOfFromCSV(record []string, colIndex map[string]int) []string {
+	v := getValue("dependency_of", record, colIndex)
+
+	if v == "" {
+		return nil
+	}
+
+	raw := strings.Split(v, ",")
+
+	var allDeps []string
+	for _, r := range raw {
+		t := strings.TrimSpace(r)
+		if t != "" {
+			allDeps = append(allDeps, t)
+		}
+	}
+	return allDeps
+}
+
+// parseTagsFromCSV extracts tags information from CSV record.
+func parseTagsFromCSV(record []string, colIndex map[string]int) []string {
+	v := getValue("tags", record, colIndex)
+
+	if v == "" {
+		return nil
+	}
+
+	raw := strings.Split(v, ",")
+
+	var allTags []string
+	for _, r := range raw {
+		t := strings.TrimSpace(r)
+		if t != "" {
+			allTags = append(allTags, t)
+		}
+	}
+	return allTags
+}
+
+// parseHashesFromCSV extracts hash information from CSV record.
 func parseHashesFromCSV(record []string, colIndex map[string]int) []Hash {
-	v := record[colIndex["hash_value"]]
+	v := getValue("hash_value", record, colIndex)
+
 	if v != "" {
 		return []Hash{
 			{
-				Algorithm: record[colIndex["hash_algorithm"]],
+				Algorithm: getValue("hash_algorithm", record, colIndex),
 				Value:     v,
 			},
 		}
 	}
 	return nil
+}
+
+// getValue is a helper function to safely extract column values from a CSV record.
+func getValue(colName string, record []string, colIndex map[string]int) string {
+	idx, ok := colIndex[colName]
+	if !ok || idx >= len(record) {
+		return ""
+	}
+	return record[idx]
 }
