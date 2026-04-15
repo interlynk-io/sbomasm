@@ -16,8 +16,12 @@ package gsbom
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+// validDepRefRegex matches name@version format: at least one non-@ char, then @, then at least one non-@ char
+var validDepRefRegex = regexp.MustCompile(`^[^@\s]+@[^@\s]+$`)
 
 func BuildComponentMap(components []Component) map[string]Component {
 	m := make(map[string]Component)
@@ -61,6 +65,12 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 					continue // skip duplicate parent references
 				}
 				seen[parentRef] = true
+
+				// validate dependency-of reference format (name@version)
+				if !validDepRefRegex.MatchString(parentRef) {
+					warnings = append(warnings, fmt.Errorf("malformed dependency reference '%s' in component %s: expected format 'name@version'", parentRef, childKey))
+					continue
+				}
 
 				// Check for self-dependency
 				if parentRef == childKey {
