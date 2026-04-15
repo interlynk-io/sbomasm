@@ -15,6 +15,7 @@
 package gsbom
 
 import (
+	"fmt"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -24,6 +25,14 @@ import (
 	"io"
 	"os"
 )
+
+var allowedHashes = map[string]bool{
+	"SHA-1":   true,
+	"SHA-256": true,
+	"SHA-384": true,
+	"SHA-512": true,
+	"MD5":     true,
+}
 
 func SerializeCycloneDX(bom *BOM, output string) error {
 	out := cydx.NewBOM()
@@ -224,6 +233,13 @@ func buildHashes(hashes []Hash) *[]cydx.Hash {
 
 	for _, h := range hashes {
 		if h.Value == "" {
+			continue
+		}
+
+		algo := strings.ToUpper(strings.TrimSpace(h.Algorithm))
+
+		if !allowedHashes[algo] {
+			fmt.Printf("Warning: skipping unsupported hash algorithm: %s\n", h.Algorithm)
 			continue
 		}
 
