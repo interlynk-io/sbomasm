@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -76,13 +77,14 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 // parseFile determines the file format based on the extension
 // and calls the appropriate parser.
 func parseFile(path string) ([]Component, error) {
-	switch {
-	case strings.HasSuffix(path, ".json"):
+
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".json":
 		return parseJSON(path)
-	case strings.HasSuffix(path, ".csv"):
+	case ".csv":
 		return parseCSV(path)
 	default:
-		return nil, fmt.Errorf("unsupported file format")
+		return nil, fmt.Errorf("unsupported file format: %s", path)
 	}
 }
 
