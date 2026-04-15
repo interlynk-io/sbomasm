@@ -189,7 +189,7 @@ func buildLicenses(license string) *cydx.Licenses {
 	license = strings.TrimSpace(license)
 
 	// detect expressions (e.g. "MIT OR Apache-2.0")
-	if strings.ContainsAny(license, " ()") || strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH") {
+	if isLicenseExpression(license) {
 		return &cydx.Licenses{
 			{
 				Expression: license,
@@ -203,6 +203,16 @@ func buildLicenses(license string) *cydx.Licenses {
 			License: &cydx.License{ID: license},
 		},
 	}
+}
+
+func isLicenseExpression(l string) bool {
+	l = strings.ToUpper(l)
+
+	return strings.Contains(l, " AND ") ||
+		strings.Contains(l, " OR ") ||
+		strings.Contains(l, " WITH ") ||
+		strings.Contains(l, "(") ||
+		strings.Contains(l, ")")
 }
 
 func buildHashes(hashes []Hash) *[]cydx.Hash {
