@@ -15,6 +15,8 @@
 package gsbom
 
 import (
+	"strings"
+
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
 	"sigs.k8s.io/release-utils/version"
@@ -184,6 +186,18 @@ func buildLicenses(license string) *cydx.Licenses {
 		return nil
 	}
 
+	license = strings.TrimSpace(license)
+
+	// detect expressions (e.g. "MIT OR Apache-2.0")
+	if strings.ContainsAny(license, " ()") || strings.Contains(license, "AND") || strings.Contains(license, "OR") || strings.Contains(license, "WITH") {
+		return &cydx.Licenses{
+			{
+				Expression: license,
+			},
+		}
+	}
+
+	// simple license ID
 	return &cydx.Licenses{
 		{
 			License: &cydx.License{ID: license},
