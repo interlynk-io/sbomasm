@@ -54,6 +54,14 @@ func SerializeSPDX(bom *BOM, output string) error {
 		compIDMap[componentKey(c)] = spdxID
 	}
 
+	// Add primary component to map for dependency resolution
+	rootKey := componentKey(Component{
+		Name:    bom.Artifact.Name,
+		Version: bom.Artifact.Version,
+	})
+
+	compIDMap[rootKey] = primarySPDXID
+
 	// --- Relationships ---
 	var rels []*spdx.Relationship
 
@@ -64,25 +72,18 @@ func SerializeSPDX(bom *BOM, output string) error {
 		Relationship: common.TypeRelationshipDescribe,
 	})
 
-	// 2. Primary -> top-level components
-	for _, c := range bom.Components {
-		if len(c.DependencyOf) == 0 {
-			childSPDXID := compIDMap[componentKey(c)]
-
-			rels = append(rels, &spdx.Relationship{
-				RefA:         common.MakeDocElementID("", primarySPDXID),
-				RefB:         common.MakeDocElementID("", childSPDXID),
-				Relationship: common.TypeRelationshipDependsOn,
-			})
-		}
-	}
-
-	// 3. Component -> dependencies
+	// 2. Component -> dependencies (includes primary -> top-level via attachOrphansToRoot)
 	for parent, children := range bom.Dependencies {
 		parentID := compIDMap[parent]
+		if parentID == "" {
+			continue
+		}
 
 		for _, child := range children {
 			childID := compIDMap[child]
+			if childID == "" {
+				continue
+			}
 
 			rels = append(rels, &spdx.Relationship{
 				RefA:         common.MakeDocElementID("", parentID),
