@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interlynk.io/schemas/component-manifest-v1.schema.json",
+  "title": "Interlynk Component Manifest v1",
+  "description": "Hand-curated component manifest consumed by `sbomasm generate sbom`. See docs/spec/generate-sbom.md for the full specification, worked examples, and field semantics.",
+  "type": "object",
+  "required": ["schema", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "interlynk/component-manifest/v1",
+      "description": "Schema marker. Must be the literal string 'interlynk/component-manifest/v1'. Files without this field are silently skipped by `sbomasm generate sbom --recurse`."
+    },
+    "components": {
+      "type": "array",
+      "description": "List of third-party components. Required; may be empty but then the manifest contributes nothing to the merged SBOM.",
+      "items": { "$ref": "#/$defs/component" }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Component name."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Component version."
+        },
+        "type": {
+          "type": "string",
+          "default": "library",
+          "enum": [
+            "library",
+            "application",
+            "framework",
+            "container",
+            "operating-system",
+            "device",
+            "firmware",
+            "file",
+            "platform",
+            "device-driver",
+            "machine-learning-model",
+            "data"
+          ],
+          "description": "Component type. Mirrors CycloneDX component type. Defaults to 'library' if omitted."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what the component is and why it is in the project."
+        },
+        "supplier": { "$ref": "#/$defs/supplier" },
+        "license": { "$ref": "#/$defs/license" },
+        "purl": {
+          "type": "string",
+          "description": "Package URL. For patched/vendored components, MUST NOT equal any pedigree.ancestors[].purl — see 'Purl on patched components' in the spec."
+        },
+        "cpe": {
+          "type": "string",
+          "description": "CPE identifier."
+        },
+        "external_references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/externalReference" },
+          "description": "External references (website, VCS, distribution, etc.). Distribution URL is strongly recommended for vendored and native components."
+        },
+        "hashes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hash" },
+          "description": "Component hashes. Each entry is one of three forms: literal value, single-file reference, or directory reference with optional extension filter. See 'File-based hashes' in the spec."
+        },
+        "scope": {
+          "type": "string",
+          "default": "required",
+          "enum": ["required", "optional", "excluded"],
+          "description": "required — ships in runtime artifact AND is reachable at runtime. optional — ships in runtime artifact but may not be reached (feature flags, plugins, platform-conditional). excluded — does NOT ship in runtime artifact (build-time only: compilers, test harnesses, header-only dev deps). Rule of thumb: if the component's bytes are inside the final artifact a user downloads, it's 'required' or 'optional'; otherwise 'excluded'."
+        },
+        "pedigree": { "$ref": "#/$defs/pedigree" },
+        "depends-on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "References to components this depends on, in name@version or full purl format. If omitted, the component is a top-level dependency of the primary application from .artifact-metadata.yaml."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "String tags for per-build filtering via `sbomasm generate sbom --tags` / `--exclude-tags`. Can carry platform names (linux, macos, ios) for platform-specific SBOMs."
+        }
+      }
+    },
+    "supplier": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Organization or individual name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "license": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "SPDX license ID or expression (e.g. 'MIT', 'Apache-2.0 OR MIT'). Shorthand for { id: '...' }."
+        },
+        {
+          "type": "object",
+          "required": ["id"],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "SPDX license ID or expression."
+            },
+            "text": {
+              "type": "string",
+              "description": "Inline license text. Use when the license text must be embedded directly in the manifest."
+            },
+            "file": {
+              "type": "string",
+              "description": "Relative path (from the manifest file) to a file containing the full license text. Read at generate time. Recommended for vendored code — commit the upstream LICENSE file next to the vendored source."
+            }
+          }
+        }
+      ],
+      "description": "Four equivalent forms: 'MIT' | { id: 'MIT' } | { id: 'MIT', text: '...' } | { id: 'MIT', file: './LICENSE' }. Pick the richest form available. License expressions are passed through unparsed."
+    },
+    "externalReference": {
+      "type": "object",
+      "required": ["type", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "website",
+            "vcs",
+            "documentation",
+            "issue-tracker",
+            "distribution",
+            "support",
+            "release-notes",
+            "advisories",
+            "other"
+          ],
+          "description": "Reference type. Mirrors CycloneDX externalReference types."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "hash": {
+      "type": "object",
+      "required": ["algorithm"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "MD5",
+            "SHA-1",
+            "SHA-256",
+            "SHA-384",
+            "SHA-512",
+            "SHA3-256",
+            "SHA3-384",
+            "SHA3-512",
+            "BLAKE2b-256",
+            "BLAKE2b-384",
+            "BLAKE2b-512",
+            "BLAKE3"
+          ],
+          "description": "Hash algorithm. Literal `value` entries accept any CycloneDX-supported algorithm and are passed through unchanged. The file/path forms only compute SHA-256 and SHA-512 — other algorithms in those forms are a generate-time error."
+        },
+        "value": {
+          "type": "string",
+          "description": "Literal hex digest. Pasted by hand, frozen. Use this form when you have a pre-computed upstream digest that must not drift."
+        },
+        "file": {
+          "type": "string",
+          "description": "Relative path (from the manifest) to a single regular file whose hash is computed at generate time. Pointing at a directory is a hard error — use `path` for that."
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path (from the manifest) to a file or directory. When pointing at a directory, the generator walks recursively, filters by `extensions` (if given), skips symlinks, excludes hidden files and directories (dotfile basenames), and combines per-file digests via a sorted-manifest scheme (git-tree-object style) for determinism across filesystems. No-match is a hard error."
+        },
+        "extensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional file-extension filter for the directory form of `path`. Accepts entries like 'c', '.c', or '*.c' (leading dot and leading '*.' are both tolerated, case-insensitive). When omitted, every regular non-hidden file under the directory is included."
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["value"],
+          "properties": {
+            "file": false,
+            "path": false,
+            "extensions": false
+          }
+        },
+        {
+          "required": ["file"],
+          "properties": {
+            "value": false,
+            "path": false,
+            "extensions": false
+          }
+        },
+        {
+          "required": ["path"],
+          "properties": {
+            "value": false,
+            "file": false
+          }
+        }
+      ],
+      "description": "Three mutually-exclusive forms: literal { algorithm, value }, single file { algorithm, file }, or directory { algorithm, path, extensions? }. Only one of value/file/path may be set per entry."
+    },
+    "pedigree": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Vendored/patched code provenance. Mirrors the CycloneDX pedigree model. If a component has a pedigree block with ancestors, its own top-level purl MUST NOT equal any ancestor purl — the generator hard-errors on that collision even without --strict.",
+      "properties": {
+        "ancestors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pedigreeRef" },
+          "description": "Upstream components this was forked from. A component's top-level purl MUST NOT equal any ancestor purl."
+        },
+        "descendants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pedigreeRef" }
+        },
+        "variants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pedigreeRef" }
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "uid": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        },
+        "patches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/patch" }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form notes about the fork history, local modifications, or reasoning."
+        }
+      }
+    },
+    "pedigreeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "purl": { "type": "string" },
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["unofficial", "monkey", "backport", "cherry-pick"],
+          "description": "Patch type. Mirrors CycloneDX patch type."
+        },
+        "diff": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Patch contents. Either inline `text` or a `url` pointing at a local patch file or remote URL. Local relative paths are read at generate time and inlined as text.",
+          "properties": {
+            "text": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "resolves": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string" },
+              "name": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          },
+          "description": "Issues this patch resolves (e.g. CVEs, bug trackers)."
+        }
+      }
+    }
+  }
+}
