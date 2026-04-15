@@ -49,9 +49,12 @@ func FilterComponents(components []Component, includeTags, excludeTags []string)
 
 // hasAnyTag checks if there is any common tag between componentTags and filterTags.
 func hasAnyTag(componentTags, filterTags []string) bool {
+
 	for _, ct := range componentTags {
+		t := strings.TrimSpace(ct)
+
 		for _, ft := range filterTags {
-			if strings.EqualFold(ct, ft) {
+			if strings.EqualFold(t, ft) {
 				return true
 			}
 		}
