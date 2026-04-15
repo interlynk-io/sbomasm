@@ -77,6 +77,11 @@ func validateGenerateSBOMParams(params *gsbom.GenerateSBOMParams) error {
 	if hasOverlap(params.Tags, params.ExcludeTags) {
 		return fmt.Errorf("conflicting tags: same tag in include and exclude")
 	}
+
+	if params.Format != "cdx" && params.Format != "spdx" && params.Format != "cyclonedx" {
+		return fmt.Errorf("invalid format: must be 'cyclonedx', 'cdx', or 'spdx'")
+	}
+
 	return nil
 }
 
