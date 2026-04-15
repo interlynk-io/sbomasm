@@ -135,22 +135,33 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 		pkg.PackageLicenseConcluded = "NOASSERTION"
 	}
 
-	// // Supplier
-	// if a.Supplier != (Supplier{}) && a.Supplier.Name != "" {
-	// 	pkg.PackageSupplier.Supplier = a.Supplier.Name
-	// 	pkg.PackageSupplier.SupplierType = "Organization"
-	// } else {
-	// 	pkg.PackageSupplier.Supplier = "NOASSERTION"
-	// }
+	// Supplier
+	if a.Supplier.Name != "" {
+		pkg.PackageSupplier = &common.Supplier{
+			Supplier:     a.Supplier.Name,
+			SupplierType: "Organization",
+		}
+	} else {
+		pkg.PackageSupplier = &common.Supplier{
+			Supplier:     "NOASSERTION",
+			SupplierType: "NOASSERTION",
+		}
+	}
 
-	// // Authors -> use Originator (SPDX field)
-	// if len(a.Authors) > 0 {
-	// 	first := a.Authors[0]
-	// 	if first.Name != "" {
-	// 		pkg.PackageOriginator.Originator = first.Name
-	// 		pkg.PackageOriginator.OriginatorType = "Person"
-	// 	}
-	// }
+	// Authors -> use Originator (SPDX field), use first author if present
+	if len(a.Authors) > 0 {
+		first := a.Authors[0]
+		if first.Name != "" {
+			originator := first.Name
+			if first.Email != "" {
+				originator = fmt.Sprintf("%s (%s)", first.Name, first.Email)
+			}
+			pkg.PackageOriginator = &common.Originator{
+				Originator:     originator,
+				OriginatorType: "Person",
+			}
+		}
+	}
 
 	// Copyright
 	pkg.PackageCopyrightText = buildCopyright(a.Copyright)
