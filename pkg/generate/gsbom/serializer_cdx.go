@@ -38,7 +38,7 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 
 	for _, c := range bom.Components {
 		comp := cydx.Component{
-			Type:   cydx.ComponentTypeLibrary,
+			Type:   mapComponentType(c.Type),
 			BOMRef: getBomRef(c),
 		}
 
@@ -301,4 +301,27 @@ func buildSupplier(s Supplier) *cydx.OrganizationalEntity {
 	}
 
 	return entity
+}
+
+func mapComponentType(t string) cydx.ComponentType {
+	switch t {
+	case "library":
+		return cydx.ComponentTypeLibrary
+	case "application":
+		return cydx.ComponentTypeApplication
+	case "framework":
+		return cydx.ComponentTypeFramework
+	case "container":
+		return cydx.ComponentTypeContainer
+	case "operating-system":
+		return cydx.ComponentTypeOS
+	case "file":
+		return cydx.ComponentTypeFile
+	case "device":
+		return cydx.ComponentTypeDevice
+	case "firmware":
+		return cydx.ComponentTypeFirmware
+	default:
+		return cydx.ComponentType(cydx.ComponentDataTypeOther)
+	}
 }
