@@ -25,10 +25,22 @@ import (
 	"go.yaml.in/yaml/v2"
 )
 
+var allowedPrimaryPurpose = map[string]bool{
+	"application":      true,
+	"framework":        true,
+	"library":          true,
+	"container":        true,
+	"platform":         true,
+	"firmware":         true,
+	"operating-system": true,
+	"device":           true,
+	"file":             true,
+}
+
 // LoadArtifactConfig performs the following steps:
-// 1. Reads the YAML config file from the given path, by default ".artifact-metadata.yaml" in the current directory.
-// 2. Unmarshals the YAML data into an app.Config struct.
-// 3. Validates required fields and sanitizes optional fields (trims whitespace, converts "[optional]" to empty).
+// 1. Read ".artifact-metadata.yaml" from current directory
+// 2. Unmarshals the YAML data into an app.Config struct
+// 3. Validates required fields and sanitizes optional fields
 // 4. Maps the app.Config to an Artifact struct and returns it.
 func LoadArtifactConfig(path string) (*Artifact, error) {
 	data, err := os.ReadFile(path)
@@ -52,37 +64,6 @@ func LoadArtifactConfig(path string) (*Artifact, error) {
 	return artifact, nil
 }
 
-// mapToArtifact converts an app.Config to an Artifact struct.
-func mapToArtifact(cfg app.Config) *Artifact {
-	return &Artifact{
-		Name:           cfg.App.Name,
-		Version:        cfg.App.Version,
-		Description:    cfg.App.Description,
-		PrimaryPurpose: cfg.App.PrimaryPurpose,
-
-		Supplier: Supplier{
-			Name:  cfg.App.Supplier.Name,
-			Email: cfg.App.Supplier.Email,
-		},
-
-		Authors: func() []Author {
-			authors := make([]Author, len(cfg.App.Author))
-			for i, a := range cfg.App.Author {
-				authors[i] = Author{
-					Name:  a.Name,
-					Email: a.Email,
-				}
-			}
-			return authors
-		}(),
-
-		LicenseID: cfg.App.License.Id,
-		PURL:      cfg.App.Purl,
-		CPE:       cfg.App.CPE,
-		Copyright: cfg.App.Copyright,
-	}
-}
-
 // validateAndSanitize performs the following:
 // 1. Checks that required fields (Name, Version, PrimaryPurpose) are present.
 // 2. Trims whitespace from all string fields.
@@ -94,16 +75,16 @@ func validateAndSanitize(cfg *app.Config) error {
 
 	// --- sanitize helper ---
 	sanitize := func(v string) string {
-		v = strings.TrimSpace(v)
-		if strings.EqualFold(v, "[optional]") {
+		vs := strings.TrimSpace(v)
+		if strings.EqualFold(vs, "[optional]") {
 			return ""
 		}
 		return v
 	}
 
 	validValue := func(v string) bool {
-		vl := strings.ToLower(v)
-		if vl == "" || vl == "[required]" {
+		vl := strings.TrimSpace(v)
+		if vl == "" || strings.EqualFold(vl, "[required]") {
 			return false
 		}
 		return true
@@ -117,16 +98,29 @@ func validateAndSanitize(cfg *app.Config) error {
 	cfg.App.Purl = sanitize(cfg.App.Purl)
 	cfg.App.CPE = sanitize(cfg.App.CPE)
 	cfg.App.Copyright = sanitize(cfg.App.Copyright)
-
 	cfg.App.Supplier.Name = sanitize(cfg.App.Supplier.Name)
 	cfg.App.Supplier.Email = sanitize(cfg.App.Supplier.Email)
-
 	cfg.App.License.Id = sanitize(cfg.App.License.Id)
+	cfg.App.Supplier.URL = sanitize(cfg.App.Supplier.URL)
 
 	for i := range cfg.App.Author {
 		cfg.App.Author[i].Name = sanitize(cfg.App.Author[i].Name)
 		cfg.App.Author[i].Email = sanitize(cfg.App.Author[i].Email)
 	}
+
+	for i := range cfg.App.ExternalRefs {
+		cfg.App.ExternalRefs[i].Type = sanitize(cfg.App.ExternalRefs[i].Type)
+		cfg.App.ExternalRefs[i].URL = sanitize(cfg.App.ExternalRefs[i].URL)
+		cfg.App.ExternalRefs[i].Comment = sanitize(cfg.App.ExternalRefs[i].Comment)
+	}
+
+	for i := range cfg.App.Lifecycles {
+		cfg.App.Lifecycles[i].Phase = sanitize(cfg.App.Lifecycles[i].Phase)
+	}
+
+	cfg.Output.Spec = sanitize(cfg.Output.Spec)
+	cfg.Output.SpecVersion = sanitize(cfg.Output.SpecVersion)
+	cfg.Output.FileFormat = sanitize(cfg.Output.FileFormat)
 
 	// --- required validation ---
 	if !validValue(cfg.App.Name) {
@@ -135,25 +129,67 @@ func validateAndSanitize(cfg *app.Config) error {
 	if !validValue(cfg.App.Version) {
 		return fmt.Errorf("artifact version is required")
 	}
-	if validValue(cfg.App.PrimaryPurpose) {
-		if !allowedPrimaryPurpose[cfg.App.PrimaryPurpose] {
-			return fmt.Errorf("invalid primary_purpose: %s\nallowed values are: application, framework, library, container, platform, firmware, operating-system, device, file", cfg.App.PrimaryPurpose)
-		}
-	} else {
+	if !validValue(cfg.App.PrimaryPurpose) {
 		return fmt.Errorf("artifact primary_purpose is required")
+	}
+
+	if !allowedPrimaryPurpose[strings.ToLower(cfg.App.PrimaryPurpose)] {
+		return fmt.Errorf("invalid primary_purpose: %s\nallowed values are: application, framework, library, container, platform, firmware, operating-system, device, file", cfg.App.PrimaryPurpose)
 	}
 
 	return nil
 }
 
-var allowedPrimaryPurpose = map[string]bool{
-	"application":      true,
-	"framework":        true,
-	"library":          true,
-	"container":        true,
-	"platform":         true,
-	"firmware":         true,
-	"operating-system": true,
-	"device":           true,
-	"file":             true,
+// mapToArtifact converts an app.Config to an Artifact struct.
+func mapToArtifact(cfg app.Config) *Artifact {
+	return &Artifact{
+		Name:           cfg.App.Name,
+		Version:        cfg.App.Version,
+		PrimaryPurpose: cfg.App.PrimaryPurpose,
+		Description:    cfg.App.Description,
+
+		Supplier: Supplier{
+			Name:  cfg.App.Supplier.Name,
+			Email: cfg.App.Supplier.Email,
+			URL:   cfg.App.Supplier.URL,
+		},
+
+		Authors: func() []Author {
+			authors := make([]Author, len(cfg.App.Author))
+			for i, a := range cfg.App.Author {
+				authors[i] = Author{
+					Name:  a.Name,
+					Email: a.Email,
+				}
+			}
+			return authors
+		}(),
+
+		License:   cfg.App.License.Id,
+		PURL:      cfg.App.Purl,
+		CPE:       cfg.App.CPE,
+		Copyright: cfg.App.Copyright,
+
+		ExternalRefs: func() []ExternalRef {
+			refs := make([]ExternalRef, len(cfg.App.ExternalRefs))
+			for i, r := range cfg.App.ExternalRefs {
+				refs[i] = ExternalRef{
+					Type:    r.Type,
+					URL:     r.URL,
+					Comment: r.Comment,
+				}
+			}
+			return refs
+		}(),
+
+		Lifecycles: func() []Lifecycle {
+			lifecycles := make([]Lifecycle, len(cfg.App.Lifecycles))
+			for i, l := range cfg.App.Lifecycles {
+				lifecycles[i] = Lifecycle{
+					Phase: l.Phase,
+				}
+			}
+			return lifecycles
+		}(),
+	}
 }

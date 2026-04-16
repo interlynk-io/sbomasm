@@ -61,22 +61,19 @@ func NewGenerateSBOMParams() *GenerateSBOMParams {
 }
 
 // Artifact represents the primary component information of the SBOM,
-// which is typically the main application.
-// It includes metadata such as name, version, description, primary purpose,
-// supplier information, authors, license, and other relevant details.
 type Artifact struct {
-	Name           string // required
-	Version        string // required
-	Description    string // optional
-	PrimaryPurpose string // required, e.g., "application", "library", "container", etc.
-
-	Supplier Supplier
-	Authors  []Author
-
-	LicenseID string
-	PURL      string
-	CPE       string
-	Copyright string
+	Name           string
+	Version        string
+	PrimaryPurpose string
+	Description    string
+	Supplier       Supplier
+	Authors        []Author
+	License        string
+	PURL           string
+	CPE            string
+	Copyright      string
+	ExternalRefs   []ExternalRef
+	Lifecycles     []Lifecycle
 }
 
 type Author struct {
@@ -85,6 +82,23 @@ type Author struct {
 }
 
 type Supplier struct {
-	Name  string
-	Email string
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	URL   string `json:"url"`
+}
+
+type ExternalRef struct {
+	Type    string `json:"type"`
+	URL     string `json:"url"`
+	Comment string `json:"comment,omitempty"`
+}
+
+type Lifecycle struct {
+	Phase string `json:"phase"`
+}
+
+type OutputConfig struct {
+	Spec        string
+	SpecVersion string
+	FileFormat  string
 }

@@ -29,16 +29,22 @@ const (
 )
 
 type Component struct {
-	Name         string   `json:"name"`
-	Version      string   `json:"version"`
-	Type         string   `json:"type"`
-	Supplier     Supplier `json:"supplier"`
-	License      string   `json:"license"`
-	PURL         string   `json:"purl"`
-	CPE          string   `json:"cpe"`
-	Hashes       []Hash   `json:"hashes"`
-	DependencyOf []string `json:"dependency-of"`
-	Tags         []string `json:"tags"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Type    string `json:"type"`
+
+	Description string   `json:"description,omitempty"`
+	Supplier    Supplier `json:"supplier,omitempty"`
+	License     string   `json:"license,omitempty"`
+	PURL        string   `json:"purl,omitempty"`
+	CPE         string   `json:"cpe,omitempty"`
+
+	Hashes       []Hash   `json:"hashes,omitempty"`
+	DependencyOf []string `json:"dependency-of,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+
+	Scope        string        `json:"scope,omitempty"`
+	ExternalRefs []ExternalRef `json:"external_references,omitempty"`
 }
 
 type Hash struct {
@@ -55,7 +61,7 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 	var errors []error
 
 	for _, file := range files {
-		components, err := parseFile(file)
+		components, err := parseComponents(file)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("file %s: %v", file, err))
 			continue
@@ -74,15 +80,15 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 	return allComponentsFromFiles, errors
 }
 
-// parseFile determines the file format based on the extension
+// parseComponents determines the file format based on the extension
 // and calls the appropriate parser.
-func parseFile(path string) ([]Component, error) {
+func parseComponents(path string) ([]Component, error) {
 
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".json":
-		return parseJSON(path)
+		return parseJSONComponents(path)
 	case ".csv":
-		return parseCSV(path)
+		return parseCSVComponents(path)
 	default:
 		return nil, fmt.Errorf("unsupported file format: %s", path)
 	}
@@ -93,9 +99,9 @@ type componentJSON struct {
 	Components []Component `json:"components"`
 }
 
-// parseJSON reads a JSON file and
+// parseJSONComponents reads a JSON file and
 // unmarshals into a list of components.
-func parseJSON(path string) ([]Component, error) {
+func parseJSONComponents(path string) ([]Component, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -118,10 +124,10 @@ func parseJSON(path string) ([]Component, error) {
 	return doc.Components, nil
 }
 
-// parseCSV reads a CSV file and parses it into a list of components.
+// parseCSVComponents reads a CSV file and parses it into a list of components.
 // The first line must be the schema marker,
 // and the second line must be column headers.
-func parseCSV(path string) ([]Component, error) {
+func parseCSVComponents(path string) ([]Component, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -174,14 +180,16 @@ func parseCSV(path string) ([]Component, error) {
 		}
 
 		c := Component{
-			Name:     getValue("name", record, colIndex),
-			Version:  getValue("version", record, colIndex),
-			Type:     getValue("type", record, colIndex),
-			License:  getValue("license", record, colIndex),
-			PURL:     getValue("purl", record, colIndex),
-			CPE:      getValue("cpe", record, colIndex),
-			Supplier: parseSupplierFromCSV(record, colIndex),
-			Hashes:   parseHashesFromCSV(record, colIndex),
+			Name:        getValue("name", record, colIndex),
+			Version:     getValue("version", record, colIndex),
+			Type:        getValue("type", record, colIndex),
+			Description: getValue("description", record, colIndex),
+			License:     getValue("license", record, colIndex),
+			PURL:        getValue("purl", record, colIndex),
+			CPE:         getValue("cpe", record, colIndex),
+			Scope:       getValue("scope", record, colIndex),
+			Supplier:    parseSupplierFromCSV(record, colIndex),
+			Hashes:      parseHashesFromCSV(record, colIndex),
 		}
 
 		// Skip rows with no name/version (likely empty/malformed)
@@ -191,6 +199,7 @@ func parseCSV(path string) ([]Component, error) {
 
 		c.DependencyOf = parseDependencyOfFromCSV(record, colIndex)
 		c.Tags = parseTagsFromCSV(record, colIndex)
+		c.ExternalRefs = parseExternalRefsFromCSV(record, colIndex)
 
 		components = append(components, c)
 	}
@@ -203,7 +212,42 @@ func parseSupplierFromCSV(record []string, colIndex map[string]int) Supplier {
 	return Supplier{
 		Name:  getValue("supplier_name", record, colIndex),
 		Email: getValue("supplier_email", record, colIndex),
+		URL:   getValue("supplier_url", record, colIndex),
 	}
+}
+
+// parseExternalRefsFromCSV extracts external references from CSV record.
+// Format: "type:url:comment,type:url:comment"
+func parseExternalRefsFromCSV(record []string, colIndex map[string]int) []ExternalRef {
+	v := getValue("external_references", record, colIndex)
+	if v == "" {
+		return nil
+	}
+
+	var refs []ExternalRef
+	raw := strings.Split(v, "|")
+
+	for _, r := range raw {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+
+		// Format: type:url or type:url:comment
+		parts := strings.SplitN(r, ":", 3)
+		if len(parts) >= 2 {
+			ref := ExternalRef{
+				Type: parts[0],
+				URL:  parts[1],
+			}
+			if len(parts) >= 3 {
+				ref.Comment = parts[2]
+			}
+			refs = append(refs, ref)
+		}
+	}
+
+	return refs
 }
 
 // parseDependencyOfFromCSV extracts `dependency-of“ information from CSV record.

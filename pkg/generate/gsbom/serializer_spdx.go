@@ -129,8 +129,8 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 	if a.Version != "" {
 		pkg.PackageVersion = a.Version
 	}
-	if a.LicenseID != "" {
-		pkg.PackageLicenseConcluded = a.LicenseID
+	if a.License != "" {
+		pkg.PackageLicenseConcluded = a.License
 	} else {
 		pkg.PackageLicenseConcluded = "NOASSERTION"
 	}
@@ -143,8 +143,7 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 		}
 	} else {
 		pkg.PackageSupplier = &common.Supplier{
-			Supplier:     "NOASSERTION",
-			SupplierType: "NOASSERTION",
+			Supplier: "NOASSERTION",
 		}
 	}
 
@@ -166,8 +165,8 @@ func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {
 	// Copyright
 	pkg.PackageCopyrightText = buildCopyright(a.Copyright)
 
-	// PURL -> ExternalRef
-	pkg.PackageExternalReferences = buildExternalRefs(a.PURL)
+	// PURL and ExternalRefs
+	pkg.PackageExternalReferences = buildExternalRefsPrimary(a)
 
 	// (Optional but good) Description -> comment
 	if a.Description != "" {
@@ -195,8 +194,11 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	if c.License != "" {
 		pkg.PackageLicenseConcluded = c.License
 	}
+	if c.Description != "" {
+		pkg.PackageDescription = c.Description
+	}
 
-	pkg.PackageExternalReferences = buildExternalRefs(c.PURL)
+	pkg.PackageExternalReferences = buildExternalRefsSPDX(c)
 	pkg.PackageChecksums = buildChecksums(c.Hashes)
 
 	return pkg, spdxID
@@ -222,17 +224,65 @@ func buildCopyright(copyright string) string {
 	}
 }
 
-func buildExternalRefs(purl string) []*spdx.PackageExternalReference {
-	if purl == "" {
-		return nil
-	}
+func buildExternalRefsSPDX(c Component) []*spdx.PackageExternalReference {
+	var refs []*spdx.PackageExternalReference
 
-	return []*spdx.PackageExternalReference{
-		{
+	// Add PURL if present
+	if c.PURL != "" {
+		refs = append(refs, &spdx.PackageExternalReference{
 			Category: "PACKAGE-MANAGER",
 			RefType:  "purl",
-			Locator:  purl,
-		},
+			Locator:  c.PURL,
+		})
+	}
+
+	// Add external references
+	for _, r := range c.ExternalRefs {
+		refs = append(refs, &spdx.PackageExternalReference{
+			Category: mapExternalRefCategory(r.Type),
+			RefType:  r.Type,
+			Locator:  r.URL,
+		})
+	}
+
+	return refs
+}
+
+// buildExternalRefsPrimary builds external refs for primary package from PURL and external refs
+func buildExternalRefsPrimary(a Artifact) []*spdx.PackageExternalReference {
+	var refs []*spdx.PackageExternalReference
+
+	// Add PURL if present
+	if a.PURL != "" {
+		refs = append(refs, &spdx.PackageExternalReference{
+			Category: "PACKAGE-MANAGER",
+			RefType:  "purl",
+			Locator:  a.PURL,
+		})
+	}
+
+	// Add external references from artifact
+	for _, r := range a.ExternalRefs {
+		refs = append(refs, &spdx.PackageExternalReference{
+			Category: mapExternalRefCategory(r.Type),
+			RefType:  r.Type,
+			Locator:  r.URL,
+		})
+	}
+
+	return refs
+}
+
+func mapExternalRefCategory(refType string) string {
+	switch refType {
+	case "vcs", "issue-tracker":
+		return "VCS"
+	case "distribution":
+		return "PACKAGE-MANAGER"
+	case "website", "documentation", "support", "release-notes", "advisories":
+		return "OTHER"
+	default:
+		return "OTHER"
 	}
 }
 

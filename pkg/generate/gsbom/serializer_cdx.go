@@ -43,6 +43,7 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 	out.Metadata.Timestamp = assemble.UTCNowTime()
 	out.Metadata.Tools = buildToolMetadata()
 	out.Metadata.Component = buildPrimaryComponent(bom.Artifact)
+	out.Metadata.Lifecycles = buildLifecycles(bom.Artifact.Lifecycles)
 
 	// --- Components ---
 	var comps []cydx.Component
@@ -59,16 +60,23 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 		if c.Version != "" {
 			comp.Version = c.Version
 		}
+		if c.Description != "" {
+			comp.Description = c.Description
+		}
 		if c.PURL != "" {
 			comp.PackageURL = c.PURL
 		}
 		if c.CPE != "" {
 			comp.CPE = c.CPE
 		}
+		if c.Scope != "" {
+			comp.Scope = cydx.Scope(c.Scope)
+		}
 
-		comp.Licenses = buildLicenses(c.License)  // Liceses
-		comp.Supplier = buildSupplier(c.Supplier) // Supplier
-		comp.Hashes = buildHashes(c.Hashes)       // Hashes
+		comp.Licenses = buildLicenses(c.License)
+		comp.Supplier = buildSupplier(c.Supplier)
+		comp.Hashes = buildHashes(c.Hashes)
+		comp.ExternalReferences = buildExternalRefsCDX(c.ExternalRefs)
 
 		comps = append(comps, comp)
 	}
@@ -279,9 +287,12 @@ func buildPrimaryComponent(a Artifact) *cydx.Component {
 	}
 
 	// Supplier
-	if a.Supplier.Name != "" || a.Supplier.Email != "" {
+	if a.Supplier.Name != "" || a.Supplier.Email != "" || a.Supplier.URL != "" {
 		s := cydx.OrganizationalEntity{
 			Name: a.Supplier.Name,
+		}
+		if a.Supplier.URL != "" {
+			s.URL = &[]string{a.Supplier.URL}
 		}
 		if a.Supplier.Email != "" {
 			s.Contact = &[]cydx.OrganizationalContact{
@@ -292,9 +303,9 @@ func buildPrimaryComponent(a Artifact) *cydx.Component {
 	}
 
 	// License
-	if a.LicenseID != "" {
+	if a.License != "" {
 		comp.Licenses = &cydx.Licenses{
-			{License: &cydx.License{ID: a.LicenseID}},
+			{License: &cydx.License{ID: a.License}},
 		}
 	}
 
@@ -320,11 +331,14 @@ func buildPrimaryComponent(a Artifact) *cydx.Component {
 		comp.Copyright = a.Copyright
 	}
 
+	// ExternalRefs
+	comp.ExternalReferences = buildExternalRefsCDX(a.ExternalRefs)
+
 	return &comp
 }
 
 func buildSupplier(s Supplier) *cydx.OrganizationalEntity {
-	if s.Name == "" && s.Email == "" {
+	if s.Name == "" && s.Email == "" && s.URL == "" {
 		return nil
 	}
 
@@ -332,6 +346,10 @@ func buildSupplier(s Supplier) *cydx.OrganizationalEntity {
 
 	if s.Name != "" {
 		entity.Name = s.Name
+	}
+
+	if s.URL != "" {
+		entity.URL = &[]string{s.URL}
 	}
 
 	if s.Email != "" {
@@ -364,4 +382,44 @@ func mapComponentType(t string) cydx.ComponentType {
 	default:
 		return cydx.ComponentType(cydx.ComponentDataTypeOther)
 	}
+}
+
+func buildExternalRefsCDX(refs []ExternalRef) *[]cydx.ExternalReference {
+	if len(refs) == 0 {
+		return nil
+	}
+
+	var out []cydx.ExternalReference
+
+	for _, r := range refs {
+		out = append(out, cydx.ExternalReference{
+			Type:    cydx.ExternalReferenceType(r.Type),
+			URL:     r.URL,
+			Comment: r.Comment,
+		})
+	}
+
+	return &out
+}
+
+func buildLifecycles(lifecycles []Lifecycle) *[]cydx.Lifecycle {
+	if len(lifecycles) == 0 {
+		return nil
+	}
+
+	var out []cydx.Lifecycle
+	for _, l := range lifecycles {
+		if l.Phase == "" {
+			continue
+		}
+		out = append(out, cydx.Lifecycle{
+			Phase: cydx.LifecyclePhase(l.Phase),
+		})
+	}
+
+	if len(out) == 0 {
+		return nil
+	}
+
+	return &out
 }
