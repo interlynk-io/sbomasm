@@ -79,7 +79,7 @@ func DescribeSchema() string {
 	}{
 		{"name", "string", true, "Component name"},
 		{"version", "string", true, "Component version"},
-		{"type", "string", false, "library (default) | application | framework | file | firmware | operating-system | container | device"},
+		{"type", "string", false, "library (default) | application | framework | container | operating-system | device | firmware | file | platform | device-driver | machine-learning-model | data"},
 		{"description", "string", false, "Human-readable description"},
 		{"supplier", "object", false, "{ name, email, url }"},
 		{"license", "string|obj", false, "\"MIT\" | { id } | { id, text } | { id, file }"},

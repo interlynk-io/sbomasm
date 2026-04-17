@@ -34,7 +34,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["application", "library", "framework", "container", "operating-system", "device", "firmware", "file"],
+          "enum": ["library", "application", "framework", "container", "operating-system", "device", "firmware", "file", "platform", "device-driver", "machine-learning-model", "data"],
           "default": "library",
           "description": "Component type"
         },
