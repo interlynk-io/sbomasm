@@ -47,4 +47,5 @@ func init() {
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.AddCommand(generateConfigCmd)
 	generateCmd.AddCommand(generateSbomCmd)
+	generateCmd.AddCommand(generateComponentsCmd)
 }
