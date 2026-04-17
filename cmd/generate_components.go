@@ -109,9 +109,8 @@ func extractGenerateComponents(cmd *cobra.Command, args []string) (*gcomps.Gener
 	params.Describe, _ = cmd.Flags().GetBool("describe")
 	params.Schema, _ = cmd.Flags().GetBool("schema")
 
-	// Handle positional path argument
 	if len(args) > 0 {
-		// If --output is not set, use the positional arg as output
+		// if --output is not set, use the positional arg as output
 		if params.Output == "" {
 			params.Output = args[0]
 		}

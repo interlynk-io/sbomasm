@@ -43,6 +43,7 @@ func GetSchema() []byte {
 // DescribeSchema returns a human-readable description of all fields.
 func DescribeSchema() string {
 	var schema map[string]interface{}
+
 	if err := json.Unmarshal(schemaJSON, &schema); err != nil {
 		return fmt.Sprintf("Error parsing schema: %v", err)
 	}

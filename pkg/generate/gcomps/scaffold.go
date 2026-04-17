@@ -135,7 +135,7 @@ func generateJSONScaffold() ([]byte, error) {
 				Name:        "libexample",
 				Version:     "1.0.0",
 				Type:        "library",
-				Description: "Example component — replace with a real entry or delete",
+				Description: "Example component replace with a real entry or delete",
 				Supplier: &Supplier{
 					Name:  "Example Org",
 					Email: "security@example.com",
@@ -197,7 +197,7 @@ func generateCSVScaffold() ([]byte, error) {
 		"libexample",
 		"1.0.0",
 		"library",
-		"Example component — replace with a real entry or delete",
+		"Example component replace with a real entry or delete",
 		"Example Org",
 		"security@example.com",
 		"",
@@ -234,7 +234,6 @@ func WriteSchema(ctx context.Context, output string, force bool) error {
 		return err
 	}
 
-	// Check overwrite safety
 	if _, err := os.Stat(output); err == nil {
 		if !force {
 			log.Debugf("refusing to overwrite existing file: %s", output)
