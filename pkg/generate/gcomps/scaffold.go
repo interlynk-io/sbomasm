@@ -179,10 +179,9 @@ func generateCSVScaffold() ([]byte, error) {
 	// Write header row
 	headers := []string{
 		"name", "version", "type", "description",
-		"supplier_name", "supplier_email", "supplier_url",
+		"supplier_name", "supplier_email",
 		"license", "purl", "cpe",
-		"external_refs",
-		"hashes",
+		"hash_algorithm", "hash_value", "hash_file",
 		"scope", "depends_on", "tags",
 	}
 
@@ -197,15 +196,15 @@ func generateCSVScaffold() ([]byte, error) {
 		"libexample",
 		"1.0.0",
 		"library",
-		"Example component replace with a real entry or delete",
+		"Example component — replace with a real entry or delete",
 		"Example Org",
 		"security@example.com",
-		"",
 		"MIT",
 		"pkg:generic/example/libexample@1.0.0",
 		"",
-		"website:https://example.com/libexample,vcs:https://github.com/example/libexample",
-		"SHA-256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		"SHA-256",
+		"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		"",
 		"required",
 		"",
 		"core",
