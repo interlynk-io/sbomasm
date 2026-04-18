@@ -43,7 +43,7 @@ func validSpecVersion(specVersion string) bool {
 	return ok
 }
 
-func newSerialNumber() string {
+func NewSerialNumber() string {
 	u := uuid.New().String()
 
 	return fmt.Sprintf("urn:uuid:%s", u)
@@ -179,7 +179,7 @@ func loadBom(ctx context.Context, path string) (*cydx.BOM, error) {
 	return bom, nil
 }
 
-func utcNowTime() string {
+func UTCNowTime() string {
 	location, _ := time.LoadLocation("UTC")
 	locationTime := time.Now().In(location)
 	return locationTime.Format(time.RFC3339)
@@ -195,7 +195,7 @@ func buildToolList(in []*cydx.BOM) *cydx.ToolsChoice {
 		Type:        cydx.ComponentTypeApplication,
 		Name:        "sbomasm",
 		Version:     version.GetVersionInfo().GitVersion,
-		Description: "Assembler & Editor for your sboms",
+		Description: "sbomasm: The Complete SBOM Management Toolkit",
 		Supplier: &cydx.OrganizationalEntity{
 			Name:    "Interlynk",
 			URL:     &[]string{"https://interlynk.io"},

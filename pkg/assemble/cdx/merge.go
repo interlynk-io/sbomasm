@@ -181,10 +181,10 @@ func (m *merge) combinedMerge() error {
 
 func (m *merge) initOutBom() {
 	//log := logger.FromContext(*m.settings.Ctx)
-	m.out.SerialNumber = newSerialNumber()
+	m.out.SerialNumber = NewSerialNumber()
 
 	m.out.Metadata = &cydx.Metadata{}
-	m.out.Metadata.Timestamp = utcNowTime()
+	m.out.Metadata.Timestamp = UTCNowTime()
 
 	if m.settings.App.Supplier.Name != "" || m.settings.App.Supplier.Email != "" {
 		m.out.Metadata.Supplier = &cydx.OrganizationalEntity{}
