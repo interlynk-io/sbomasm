@@ -55,8 +55,8 @@ func DeduplicateComponents(components []Component) ([]Component, []error) {
 }
 
 func mergeComponent(dst *Component, src Component) {
-	// --- dependency-of (CRITICAL FIX) ---
-	dst.DependencyOf = unionStrings(dst.DependencyOf, src.DependencyOf)
+	// --- depends-on ---
+	dst.DependsOn = unionStrings(dst.DependsOn, src.DependsOn)
 
 	// --- tags ---
 	dst.Tags = unionStrings(dst.Tags, src.Tags)

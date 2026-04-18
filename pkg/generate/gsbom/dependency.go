@@ -43,7 +43,7 @@ type DependencyGraph struct {
 
 // BuildDependencyGraph performs the following functionality:
 // - takes a list of components and a component map (keyed by name@version) and
-// - builds a dependency graph based on the "dependency-of" field in components.
+// - builds a dependency graph based on the "depends-on" field in components.
 func BuildDependencyGraph(components []Component, compMap map[string]Component, artifact *Artifact) (*DependencyGraph, []error) {
 	graph := &DependencyGraph{
 		Edges: make(map[string][]string),
@@ -52,43 +52,43 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 	var warnings []error
 
 	for _, c := range components {
-		childKey := componentKey(c)
+		parentKey := componentKey(c)
 
 		seen := make(map[string]bool)
 
-		// Case 1: has dependency-of
-		if len(c.DependencyOf) > 0 {
-			for _, parentRef := range c.DependencyOf {
-				parentRef = strings.TrimSpace(parentRef)
+		// Case 1: has depends-on - component declares its dependencies (children)
+		if len(c.DependsOn) > 0 {
+			for _, childRef := range c.DependsOn {
+				childRef = strings.TrimSpace(childRef)
 
-				if seen[parentRef] {
-					continue // skip duplicate parent references
+				if seen[childRef] {
+					continue // skip duplicate child references
 				}
-				seen[parentRef] = true
+				seen[childRef] = true
 
-				// validate dependency-of reference format (name@version)
-				if !validDepRefRegex.MatchString(parentRef) {
-					warnings = append(warnings, fmt.Errorf("malformed dependency reference '%s' in component %s: expected format 'name@version'", parentRef, childKey))
+				// validate depends-on reference format (name@version)
+				if !validDepRefRegex.MatchString(childRef) {
+					warnings = append(warnings, fmt.Errorf("malformed dependency reference '%s' in component %s: expected format 'name@version'", childRef, parentKey))
 					continue
 				}
 
 				// Check for self-dependency
-				if parentRef == childKey {
-					warnings = append(warnings, fmt.Errorf("component %s cannot be a dependency of itself", childKey))
+				if childRef == parentKey {
+					warnings = append(warnings, fmt.Errorf("component %s cannot depend on itself", parentKey))
 					continue
 				}
 
-				// Check if parent exists
-				if _, ok := compMap[parentRef]; !ok {
-					warnings = append(warnings, fmt.Errorf("missing dependency reference: %s -> %s", childKey, parentRef))
+				// Check if child exists
+				if _, ok := compMap[childRef]; !ok {
+					warnings = append(warnings, fmt.Errorf("missing dependency reference: %s -> %s", parentKey, childRef))
 					continue
 				}
 
 				// parent -> child
-				graph.Edges[parentRef] = append(graph.Edges[parentRef], childKey)
+				graph.Edges[parentKey] = append(graph.Edges[parentKey], childRef)
 			}
 		} else {
-			// Case 2: top-level (handled later in SBOM builder)
+			// Case 2: top-level (no depends-on, will be attached to root later)
 			continue
 		}
 	}

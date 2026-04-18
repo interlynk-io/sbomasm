@@ -39,17 +39,72 @@ type Component struct {
 	PURL        string   `json:"purl,omitempty"`
 	CPE         string   `json:"cpe,omitempty"`
 
-	Hashes       []Hash   `json:"hashes,omitempty"`
-	DependencyOf []string `json:"dependency-of,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
+	Hashes   []Hash    `json:"hashes,omitempty"`
+	DependsOn []string `json:"depends-on,omitempty"`
+	Tags      []string  `json:"tags,omitempty"`
+	Pedigree *Pedigree  `json:"pedigree,omitempty"`
 
 	Scope        string        `json:"scope,omitempty"`
 	ExternalRefs []ExternalRef `json:"external_references,omitempty"`
 }
 
+// Pedigree represents the provenance of a component, especially for vendored/patched code
+type Pedigree struct {
+	Ancestors   []Ancestor   `json:"ancestors,omitempty"`
+	Descendants []Descendant `json:"descendants,omitempty"`
+	Variants    []Variant    `json:"variants,omitempty"`
+	Commits     []Commit     `json:"commits,omitempty"`
+	Patches     []Patch      `json:"patches,omitempty"`
+	Notes       string       `json:"notes,omitempty"`
+}
+
+// Ancestor represents an upstream component this was derived from
+type Ancestor struct {
+	PURL string `json:"purl,omitempty"`
+}
+
+// Descendant represents a downstream component derived from this
+type Descendant struct {
+	PURL string `json:"purl,omitempty"`
+}
+
+// Variant represents a variant of this component
+type Variant struct {
+	PURL string `json:"purl,omitempty"`
+}
+
+// Commit represents a specific commit in version control
+type Commit struct {
+	UID string `json:"uid,omitempty"`
+	URL string `json:"url,omitempty"`
+}
+
+// Patch represents a patch applied to the component
+type Patch struct {
+	Type     string     `json:"type,omitempty"`
+	Diff     Diff       `json:"diff,omitempty"`
+	Resolves []Resolves `json:"resolves,omitempty"`
+}
+
+// Diff represents patch diff information
+type Diff struct {
+	Text string `json:"text,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
+// Resolves represents what a patch resolves (e.g., security issue)
+type Resolves struct {
+	Type string `json:"type,omitempty"`
+	Name string `json:"name,omitempty"`
+	URL  string `json:"url,omitempty"`
+}
+
 type Hash struct {
-	Algorithm string `json:"algorithm"`
-	Value     string `json:"value"`
+	Algorithm  string   `json:"algorithm"`
+	Value      string   `json:"value"`
+	File       string   `json:"file,omitempty"`
+	Path       string   `json:"path,omitempty"`
+	Extensions []string `json:"extensions,omitempty"`
 }
 
 // ParseComponentFiles perform following fucntionality:
@@ -197,7 +252,7 @@ func parseCSVComponents(path string) ([]Component, error) {
 			continue
 		}
 
-		c.DependencyOf = parseDependencyOfFromCSV(record, colIndex)
+		c.DependsOn = parseDependsOnFromCSV(record, colIndex)
 		c.Tags = parseTagsFromCSV(record, colIndex)
 		c.ExternalRefs = parseExternalRefsFromCSV(record, colIndex)
 
@@ -250,9 +305,9 @@ func parseExternalRefsFromCSV(record []string, colIndex map[string]int) []Extern
 	return refs
 }
 
-// parseDependencyOfFromCSV extracts `dependency-of“ information from CSV record.
-func parseDependencyOfFromCSV(record []string, colIndex map[string]int) []string {
-	v := getValue("dependency_of", record, colIndex)
+// parseDependsOnFromCSV extracts `depends-on` information from CSV record.
+func parseDependsOnFromCSV(record []string, colIndex map[string]int) []string {
+	v := getValue("depends_on", record, colIndex)
 
 	if v == "" {
 		return nil

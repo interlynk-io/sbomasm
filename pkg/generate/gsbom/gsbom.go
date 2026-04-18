@@ -17,6 +17,7 @@ package gsbom
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // Generate is the main entry point for generating an SBOM. It does the following steps:
@@ -26,6 +27,7 @@ import (
 // - Merge all components into a single list
 // - Deduplicate components and collect warnings for duplicates
 // - Prepare final component list by Filtering components by tags
+// - Compute file/directory hashes for each component list (done per-file so relative paths resolve correctly)
 // - Build dependency graph based on "dependency-of" references
 // - Build BOM model from artifact, components, and dependency graph
 // - Serialize BOM to output file in specified format (CycloneDX or SPDX)
@@ -47,15 +49,35 @@ func Generate(params *GenerateSBOMParams) error {
 		return fmt.Errorf("no component files found in input paths")
 	}
 
-	// Parse component files into intrnal component model
+	// Parse component files into internal component model
 	// it returns list of components present in each files
 	componentLists, warn := ParseComponentFiles(files)
 	warnings = append(warnings, warn...)
+
+	// Compute file/directory hashes for each component list
+	// Hash computation is done per-file so relative paths resolve correctly
+	for i, file := range files {
+		if i < len(componentLists) {
+			manifestDir := filepath.Dir(file)
+			hashErrs := ComputeHashes(componentLists[i], manifestDir)
+			warnings = append(warnings, hashErrs...)
+		}
+	}
 
 	// Merge all components into a single list
 	componentMergedLists := MergeAll(componentLists)
 	if len(componentMergedLists) == 0 {
 		return fmt.Errorf("no components found in input files")
+	}
+
+	// Process pedigree information for all components
+	// This loads patch files and validates purl vs ancestor purl
+	for i, file := range files {
+		if i < len(componentLists) {
+			manifestDir := filepath.Dir(file)
+			pedigreeErrs := ProcessPedigrees(componentLists[i], manifestDir)
+			warnings = append(warnings, pedigreeErrs...)
+		}
 	}
 
 	// Dedup components and collect warnings for duplicates

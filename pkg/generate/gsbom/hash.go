@@ -103,7 +103,8 @@ func computeFileHash(path string, algorithm string) (string, error) {
 		return "", fmt.Errorf("failed to hash file: %w", err)
 	}
 
-	return hex.EncodeToString(hsh.Sum(nil)), nil
+	digest := hsh.Sum(nil)
+	return hex.EncodeToString(digest), nil
 }
 
 // computeDirectoryHash computes a deterministic hash of all matching files under a directory.
@@ -123,7 +124,7 @@ func computeDirectoryHash(rootPath string, extensions []string, algorithm string
 	// Normalize extensions (remove leading dots and wildcards)
 	extFilter := make(map[string]bool)
 	for _, ext := range extensions {
-		ext := strings.ToLower(strings.TrimPrefix(strings.TrimPrefix(ext, "*."), "."))
+		ext := normalizeExt(ext)
 		if ext != "" {
 			extFilter[ext] = true
 		}
@@ -137,9 +138,8 @@ func computeDirectoryHash(rootPath string, extensions []string, algorithm string
 			return nil
 		}
 
-		// Skip directories
+		// Skip hidden directories (starting with .)
 		if info.IsDir() {
-			// Skip hidden directories (starting with .)
 			// Validation Rules: (SKIP Silently)
 			if strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
 				return filepath.SkipDir
@@ -160,9 +160,16 @@ func computeDirectoryHash(rootPath string, extensions []string, algorithm string
 
 		// Apply extension filter if specified
 		if len(extFilter) > 0 {
-			ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(info.Name()), "."))
-			if !extFilter[ext] {
-				return nil
+			ext := normalizeExt(filepath.Ext(info.Name()))
+
+			// If filter exists, only include matching extensions
+			if len(extFilter) > 0 {
+				if ext == "" {
+					return nil
+				}
+				if !extFilter[ext] {
+					return nil
+				}
 			}
 		}
 
@@ -216,6 +223,20 @@ func computeDirectoryHash(rootPath string, extensions []string, algorithm string
 	h.Write([]byte(manifest.String()))
 
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// normalizeExt normalizes an extension by removing
+// leading dots and wildcards, and converting to lowercase.
+func normalizeExt(ext string) string {
+	ext = strings.TrimSpace(ext)
+
+	// Remove "*." first
+	ext = strings.TrimPrefix(ext, "*.")
+
+	// Then remove "." if still present
+	ext = strings.TrimPrefix(ext, ".")
+
+	return strings.ToLower(ext)
 }
 
 // fileEntry represents a file with its relative path and hash
