@@ -77,6 +77,7 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 		comp.Supplier = buildSupplier(c.Supplier)
 		comp.Hashes = buildHashes(c.Hashes)
 		comp.ExternalReferences = buildExternalRefsCDX(c.ExternalRefs)
+		comp.Pedigree = buildPedigree(c.Pedigree)
 
 		comps = append(comps, comp)
 	}
@@ -134,10 +135,10 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 		deps = append(deps, d)
 	}
 
-	// 2. Primary -? top-level components
+	// 2. Primary -> top-level components (components with no dependencies declared)
 	var topLevel []string
 	for _, c := range bom.Components {
-		if len(c.DependencyOf) == 0 {
+		if len(c.DependsOn) == 0 {
 			topLevel = append(topLevel, getBomRef(c))
 		}
 	}
@@ -422,4 +423,114 @@ func buildLifecycles(lifecycles []Lifecycle) *[]cydx.Lifecycle {
 	}
 
 	return &out
+}
+
+func buildPedigree(p *Pedigree) *cydx.Pedigree {
+	if p == nil {
+		return nil
+	}
+
+	ped := &cydx.Pedigree{}
+
+	// Ancestors
+	for _, a := range p.Ancestors {
+		if a.PURL != "" {
+			comp := cydx.Component{PackageURL: a.PURL}
+			if ped.Ancestors == nil {
+				ped.Ancestors = &[]cydx.Component{}
+			}
+			*ped.Ancestors = append(*ped.Ancestors, comp)
+		}
+	}
+
+	// Descendants
+	for _, d := range p.Descendants {
+		if d.PURL != "" {
+			comp := cydx.Component{PackageURL: d.PURL}
+			if ped.Descendants == nil {
+				ped.Descendants = &[]cydx.Component{}
+			}
+			*ped.Descendants = append(*ped.Descendants, comp)
+		}
+	}
+
+	// Variants
+	for _, v := range p.Variants {
+		if v.PURL != "" {
+			comp := cydx.Component{PackageURL: v.PURL}
+			if ped.Variants == nil {
+				ped.Variants = &[]cydx.Component{}
+			}
+			*ped.Variants = append(*ped.Variants, comp)
+		}
+	}
+
+	// Commits
+	for _, c := range p.Commits {
+		if c.UID != "" || c.URL != "" {
+			commit := &cydx.Commit{
+				UID: c.UID,
+				URL: c.URL,
+			}
+			if ped.Commits == nil {
+				ped.Commits = &[]cydx.Commit{}
+			}
+			*ped.Commits = append(*ped.Commits, *commit)
+		}
+	}
+
+	// Patches
+	for _, patch := range p.Patches {
+		p := cydx.Patch{
+			Type: cydx.PatchType(patch.Type),
+		}
+
+		// Diff
+		if patch.Diff.Text != "" || patch.Diff.URL != "" {
+			p.Diff = &cydx.Diff{
+				URL: patch.Diff.URL,
+			}
+			if patch.Diff.Text != "" {
+				p.Diff.Text = &cydx.AttachedText{
+					Content: patch.Diff.Text,
+				}
+			}
+		}
+
+		// Resolves
+		for _, r := range patch.Resolves {
+			if r.Type != "" || r.Name != "" {
+				issue := cydx.Issue{
+					Type: cydx.IssueType(r.Type),
+					Name: r.Name,
+				}
+				if p.Resolves == nil {
+					p.Resolves = &[]cydx.Issue{}
+				}
+				*p.Resolves = append(*p.Resolves, issue)
+			}
+		}
+
+		if ped.Patches == nil {
+			ped.Patches = &[]cydx.Patch{}
+		}
+		*ped.Patches = append(*ped.Patches, p)
+	}
+
+	// Notes
+	if p.Notes != "" {
+		ped.Notes = p.Notes
+	}
+
+	// Return nil if pedigree is empty
+	if (ped.Ancestors == nil || len(*ped.Ancestors) == 0) &&
+		(ped.Descendants == nil || len(*ped.Descendants) == 0) &&
+		(ped.Variants == nil || len(*ped.Variants) == 0) &&
+		(ped.Commits == nil || len(*ped.Commits) == 0) &&
+		(ped.Patches == nil || len(*ped.Patches) == 0) &&
+		ped.Notes == "" {
+		return nil
+	}
+
+	return ped
 }
