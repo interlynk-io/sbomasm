@@ -23,7 +23,7 @@ import (
 func TestBuildDependencyGraph_Valid(t *testing.T) {
 	comps := []Component{
 		{Name: "libmqtt", Version: "4.3.0", PURL: "pkg:generic/acme/libmqtt@4.3.0"},
-		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependencyOf: []string{"libmqtt@4.3.0"}},
+		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependsOn: []string{"libmqtt@4.3.0"}},
 	}
 
 	m := BuildComponentMap(comps)
@@ -31,12 +31,14 @@ func TestBuildDependencyGraph_Valid(t *testing.T) {
 	graph, warnings := BuildDependencyGraph(comps, m, nil)
 
 	require.Len(t, warnings, 0)
-	require.Equal(t, []string{"libtls@3.9.0"}, graph.Edges["libmqtt@4.3.0"])
+	// With depends-on semantics: libtls declares it depends on libmqtt
+	// So the edge is libtls@3.9.0 -> libmqtt@4.3.0
+	require.Equal(t, []string{"libmqtt@4.3.0"}, graph.Edges["libtls@3.9.0"])
 }
 
 func TestBuildDependencyGraph_MissingReference(t *testing.T) {
 	comps := []Component{
-		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependencyOf: []string{"missing@1.0"}},
+		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependsOn: []string{"missing@1.0"}},
 	}
 
 	m := BuildComponentMap(comps)

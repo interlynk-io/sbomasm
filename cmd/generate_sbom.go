@@ -70,6 +70,8 @@ func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) 
 	params.Format, _ = cmd.Flags().GetString("format")
 	params.RecursePath, _ = cmd.Flags().GetString("recurse")
 	params.Filename, _ = cmd.Flags().GetString("filename")
+	params.Strict, _ = cmd.Flags().GetBool("strict")
+	params.SpecVersion, _ = cmd.Flags().GetString("spec-version")
 
 	return params, nil
 }
@@ -80,6 +82,19 @@ func validateGenerateSBOMParams(params *gsbom.GenerateSBOMParams) error {
 
 	if params.Format != "cdx" && params.Format != "spdx" && params.Format != "cyclonedx" {
 		return fmt.Errorf("invalid format: must be 'cyclonedx', 'cdx', or 'spdx'")
+	}
+
+	// Validate spec version
+	if params.SpecVersion != "" {
+		if params.Format == "spdx" {
+			if params.SpecVersion != "2.2" && params.SpecVersion != "2.3" {
+				return fmt.Errorf("invalid spec-version for SPDX: must be '2.2' or '2.3'")
+			}
+		} else if params.Format == "cdx" || params.Format == "cyclonedx" {
+			if params.SpecVersion != "1.4" && params.SpecVersion != "1.5" && params.SpecVersion != "1.6" {
+				return fmt.Errorf("invalid spec-version for CycloneDX: must be '1.4', '1.5', or '1.6'")
+			}
+		}
 	}
 
 	return nil
@@ -113,6 +128,8 @@ func init() {
 	generateSbomCmd.Flags().StringP("recurse", "r", "", "recursively discover component manifest files under the given directory")
 	generateSbomCmd.Flags().String("filename", ".components.json", "filename to look for during recursive discovery (e.g. my-deps.json)")
 	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
+	generateSbomCmd.Flags().Bool("strict", false, "enable NTIA minimum element compliance validation")
+	generateSbomCmd.Flags().String("spec-version", "", "spec version to use (e.g., '1.5' for CycloneDX, '2.3' for SPDX)")
 }
 
 func hasOverlap(include, exclude []string) bool {

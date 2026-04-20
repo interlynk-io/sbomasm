@@ -14,7 +14,12 @@
 
 package gsbom
 
+import "fmt"
+
 func componentKey(c Component) string {
+	if c.PURL != "" {
+		return c.PURL
+	}
 	return c.Name + "@" + c.Version
 }
 
@@ -44,6 +49,7 @@ func DeduplicateComponents(components []Component) ([]Component, []error) {
 
 		if existing, ok := seen[key]; ok {
 			mergeComponent(existing, c)
+			warnings = append(warnings, fmt.Errorf("duplicate component %s@%s merged", c.Name, c.Version))
 			continue
 		}
 		copy := c

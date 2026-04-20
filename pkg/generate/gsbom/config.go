@@ -52,6 +52,16 @@ type GenerateSBOMParams struct {
 
 	// Filename is the filename of input component file (e.g., `.components.json`).
 	Filename string
+
+	// Strict enables NTIA minimum element compliance validation.
+	// When enabled, the generation will fail if the SBOM does not contain
+	// all required fields per NTIA standards.
+	Strict bool
+
+	// SpecVersion specifies the SBOM specification version to use for output.
+	// For CycloneDX: "1.4", "1.5", "1.6" (default: "1.5")
+	// For SPDX: "2.2", "2.3" (default: "2.3")
+	SpecVersion string
 }
 
 // NewGenerateSBOMParams creates a new instance of

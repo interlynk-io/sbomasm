@@ -19,7 +19,7 @@ import "testing"
 func TestFilterComponents(t *testing.T) {
 	input := []Component{
 		{Name: "libmqtt", Version: "4.3.0", PURL: "pkg:generic/acme/libmqtt@4.3.0", Tags: []string{"display"}},
-		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependencyOf: []string{"libmqtt@4.3.0"}, Tags: []string{"core", "networking"}},
+		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependsOn: []string{"libmqtt@4.3.0"}, Tags: []string{"core", "networking"}},
 	}
 
 	out := FilterComponents(input, []string{"core"}, nil)
@@ -32,7 +32,7 @@ func TestFilterComponents(t *testing.T) {
 func TestFilterComponents_ExcludeTag(t *testing.T) {
 	input := []Component{
 		{Name: "libmqtt", Version: "4.3.0", PURL: "pkg:generic/acme/libmqtt@4.3.0", Tags: []string{"display"}},
-		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependencyOf: []string{"libmqtt@4.3.0"}, Tags: []string{"core", "networking"}},
+		{Name: "libtls", Version: "3.9.0", PURL: "pkg:generic/openbsd/libtls@3.9.0", DependsOn: []string{"libmqtt@4.3.0"}, Tags: []string{"core", "networking"}},
 	}
 
 	out := FilterComponents(input, nil, []string{"core"})

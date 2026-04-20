@@ -47,7 +47,7 @@ func ComputeHashes(components []Component, manifestDir string) []error {
 		for j := range comp.Hashes {
 			h := &comp.Hashes[j]
 
-			// Skip if value is already provided (literal hash)
+			// 1. Literal method: Skip if value is already provided
 			if h.Value != "" {
 				continue
 			}
@@ -59,7 +59,7 @@ func ComputeHashes(components []Component, manifestDir string) []error {
 				continue
 			}
 
-			// Compute based on file or path
+			// 2. File hash: Compute based on file or path
 			if h.File != "" {
 				value, err := computeFileHash(filepath.Join(manifestDir, h.File), algo)
 				if err != nil {
@@ -68,6 +68,8 @@ func ComputeHashes(components []Component, manifestDir string) []error {
 				}
 				h.Value = value
 			} else if h.Path != "" {
+
+				// 3. Dir Hash: Compute based on directory (with optional extensions filter)
 				value, err := computeDirectoryHash(filepath.Join(manifestDir, h.Path), h.Extensions, algo)
 				if err != nil {
 					errors = append(errors, fmt.Errorf("component %s@%s: failed to hash directory '%s': %w", comp.Name, comp.Version, h.Path, err))

@@ -39,13 +39,17 @@ type Component struct {
 	PURL        string   `json:"purl,omitempty"`
 	CPE         string   `json:"cpe,omitempty"`
 
-	Hashes   []Hash    `json:"hashes,omitempty"`
-	DependsOn []string `json:"depends-on,omitempty"`
+	Hashes    []Hash    `json:"hashes,omitempty"`
+	DependsOn []string  `json:"depends-on,omitempty"`
 	Tags      []string  `json:"tags,omitempty"`
-	Pedigree *Pedigree  `json:"pedigree,omitempty"`
+	Pedigree  *Pedigree `json:"pedigree,omitempty"`
 
 	Scope        string        `json:"scope,omitempty"`
 	ExternalRefs []ExternalRef `json:"external_references,omitempty"`
+
+	// SourcePath tracks which manifest file this component came from
+	// Used for vendored path detection in strict checks
+	SourcePath string `json:"-"`
 }
 
 // Pedigree represents the provenance of a component, especially for vendored/patched code
@@ -121,6 +125,12 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 			errors = append(errors, fmt.Errorf("file %s: %v", file, err))
 			continue
 		}
+
+		// Set SourcePath on each component to track which file it came from
+		for i := range components {
+			components[i].SourcePath = file
+		}
+
 		allComponentsFromFiles = append(allComponentsFromFiles, components)
 	}
 

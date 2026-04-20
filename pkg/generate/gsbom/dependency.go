@@ -100,12 +100,13 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 	warnings = append(warnings, warn1...)
 
 	// 3. Attach orphans to root (artifact)
-	root := componentKey(Component{
-		Name:    artifact.Name,
-		Version: artifact.Version,
-	})
-
-	attachOrphansToRoot(graph.Edges, components, root)
+	if artifact != nil {
+		root := componentKey(Component{
+			Name:    artifact.Name,
+			Version: artifact.Version,
+		})
+		attachOrphansToRoot(graph.Edges, components, root)
+	}
 
 	return graph, warnings
 }
