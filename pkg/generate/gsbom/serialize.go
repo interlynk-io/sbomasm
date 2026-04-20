@@ -14,19 +14,28 @@
 
 package gsbom
 
-import "github.com/interlynk-io/sbomasm/v2/pkg/sbom"
+import (
+	"context"
+
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
+)
 
 // Serialize calls the appropriate serialization function
 // based on the specified format (CycloneDX or SPDX).
-func Serialize(format string, bom *BOM, output string, specVersion string) error {
+func Serialize(ctx context.Context, format string, bom *BOM, output string, specVersion string) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("serializing BOM: format=%s, output=%s, specVersion=%s", format, output, specVersion)
+
 	switch format {
 	case string(sbom.SBOMSpecSPDX):
-		return SerializeSPDX(bom, output, specVersion)
+		return SerializeSPDX(ctx, bom, output, specVersion)
 
 	case string(sbom.SBOMSpecCDX):
-		return SerializeCycloneDX(bom, output, specVersion)
+		return SerializeCycloneDX(ctx, bom, output, specVersion)
 
 	default:
-		return SerializeCycloneDX(bom, output, specVersion)
+		log.Debugf("unknown format '%s', defaulting to CycloneDX", format)
+		return SerializeCycloneDX(ctx, bom, output, specVersion)
 	}
 }

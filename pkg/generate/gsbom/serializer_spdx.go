@@ -15,6 +15,7 @@
 package gsbom
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	spdx_assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
 	"github.com/spdx/tools-golang/spdx/v2/v2_2"
@@ -31,19 +33,25 @@ import (
 	"sigs.k8s.io/release-utils/version"
 )
 
-func SerializeSPDX(bom *BOM, output string, specVersion string) error {
+func SerializeSPDX(ctx context.Context, bom *BOM, output string, specVersion string) error {
+	log := logger.FromContext(ctx)
+
 	// Default to 2.3 if not specified
 	if specVersion == "" {
 		specVersion = "2.3"
 	}
+	log.Debugf("serializing SPDX: version=%s, output=%s, components=%d, dependencies=%d", specVersion, output, len(bom.Components), len(bom.Dependencies))
 
 	if specVersion == "2.2" {
-		return serializeSPDX22(bom, output)
+		return serializeSPDX22(ctx, bom, output)
 	}
-	return serializeSPDX23(bom, output)
+	return serializeSPDX23(ctx, bom, output)
 }
 
-func serializeSPDX22(bom *BOM, output string) error {
+func serializeSPDX22(ctx context.Context, bom *BOM, output string) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("building SPDX 2.2 document: artifact=%s@%s", bom.Artifact.Name, bom.Artifact.Version)
+
 	doc := v2_2.Document{}
 
 	// --- Document ---
@@ -53,10 +61,12 @@ func serializeSPDX22(bom *BOM, output string) error {
 	doc.SPDXVersion = v2_2.Version
 	doc.DocumentNamespace = spdx_assemble.ComposeNamespace(bom.Artifact.Name)
 	doc.CreationInfo = buildCreatorInfoToolV22()
+	log.Debugf("document metadata: name=%s, namespace=%s", doc.DocumentName, doc.DocumentNamespace)
 
 	// --- Primary Package ---
 	primaryPkg, primarySPDXID := buildPrimaryPackageV22(bom.Artifact)
 	doc.Packages = append(doc.Packages, primaryPkg)
+	log.Debugf("primary package: spdxID=%s, name=%s", primarySPDXID, primaryPkg.PackageName)
 
 	// --- Components as Packages ---
 	compIDMap := make(map[string]string)
@@ -66,6 +76,7 @@ func serializeSPDX22(bom *BOM, output string) error {
 		doc.Packages = append(doc.Packages, pkg)
 		compIDMap[componentKey(c)] = spdxID
 	}
+	log.Debugf("added %d component packages", len(bom.Components))
 
 	// Add primary component to map for dependency resolution
 	rootKey := componentKey(Component{
@@ -84,17 +95,21 @@ func serializeSPDX22(bom *BOM, output string) error {
 		RefB:         common.MakeDocElementID("", primarySPDXID),
 		Relationship: common.TypeRelationshipDescribe,
 	})
+	log.Debugf("added DESCRIBES relationship: DOCUMENT -> %s", primarySPDXID)
 
 	// 2. Component -> dependencies (includes primary -> top-level via attachOrphansToRoot)
+	relCount := 0
 	for parent, children := range bom.Dependencies {
 		parentID := compIDMap[parent]
 		if parentID == "" {
+			log.Debugf("skipping dependency: parent '%s' not found in component map", parent)
 			continue
 		}
 
 		for _, child := range children {
 			childID := compIDMap[child]
 			if childID == "" {
+				log.Debugf("skipping dependency: child '%s' not found in component map", child)
 				continue
 			}
 
@@ -103,28 +118,37 @@ func serializeSPDX22(bom *BOM, output string) error {
 				RefB:         common.MakeDocElementID("", childID),
 				Relationship: common.TypeRelationshipDependsOn,
 			})
+			relCount++
 		}
 	}
-
 	doc.Relationships = rels
+	log.Debugf("added %d DEPENDS_ON relationships", relCount)
 
 	// --- Write ---
 	var writer io.Writer
 
 	if output == "" {
 		writer = os.Stdout
+		log.Debugf("writing SPDX 2.2 to stdout")
 	} else {
 		f, err := os.Create(output)
 		if err != nil {
+			log.Debugf("failed to create output file: %v", err)
 			return err
 		}
 		defer f.Close()
 		writer = f
+		log.Debugf("writing SPDX 2.2 to file: %s", output)
 	}
 
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(doc)
+	if err := encoder.Encode(doc); err != nil {
+		log.Debugf("failed to encode SPDX document: %v", err)
+		return err
+	}
+	log.Debugf("successfully serialized SPDX 2.2 document")
+	return nil
 }
 
 func buildPrimaryPackageV22(a Artifact) (*v2_2.Package, string) {
@@ -282,7 +306,10 @@ func buildChecksumsV22(hashes []Hash) []common.Checksum {
 	return out
 }
 
-func serializeSPDX23(bom *BOM, output string) error {
+func serializeSPDX23(ctx context.Context, bom *BOM, output string) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("building SPDX 2.3 document: artifact=%s@%s", bom.Artifact.Name, bom.Artifact.Version)
+
 	doc := v2_3.Document{}
 
 	// --- Document ---
@@ -292,10 +319,12 @@ func serializeSPDX23(bom *BOM, output string) error {
 	doc.SPDXVersion = v2_3.Version
 	doc.DocumentNamespace = spdx_assemble.ComposeNamespace(bom.Artifact.Name)
 	doc.CreationInfo = buildCreatorInfoToolV23()
+	log.Debugf("document metadata: name=%s, namespace=%s", doc.DocumentName, doc.DocumentNamespace)
 
 	// --- Primary Package ---
 	primaryPkg, primarySPDXID := buildPrimaryPackage(bom.Artifact)
 	doc.Packages = append(doc.Packages, primaryPkg)
+	log.Debugf("primary package: spdxID=%s, name=%s", primarySPDXID, primaryPkg.PackageName)
 
 	// --- Components as Packages ---
 	compIDMap := make(map[string]string)
@@ -305,6 +334,7 @@ func serializeSPDX23(bom *BOM, output string) error {
 		doc.Packages = append(doc.Packages, pkg)
 		compIDMap[componentKey(c)] = spdxID
 	}
+	log.Debugf("added %d component packages", len(bom.Components))
 
 	// Add primary component to map for dependency resolution
 	rootKey := componentKey(Component{
@@ -323,17 +353,21 @@ func serializeSPDX23(bom *BOM, output string) error {
 		RefB:         common.MakeDocElementID("", primarySPDXID),
 		Relationship: common.TypeRelationshipDescribe,
 	})
+	log.Debugf("added DESCRIBES relationship: DOCUMENT -> %s", primarySPDXID)
 
 	// 2. Component -> dependencies (includes primary -> top-level via attachOrphansToRoot)
+	relCount := 0
 	for parent, children := range bom.Dependencies {
 		parentID := compIDMap[parent]
 		if parentID == "" {
+			log.Debugf("skipping dependency: parent '%s' not found in component map", parent)
 			continue
 		}
 
 		for _, child := range children {
 			childID := compIDMap[child]
 			if childID == "" {
+				log.Debugf("skipping dependency: child '%s' not found in component map", child)
 				continue
 			}
 
@@ -342,28 +376,37 @@ func serializeSPDX23(bom *BOM, output string) error {
 				RefB:         common.MakeDocElementID("", childID),
 				Relationship: common.TypeRelationshipDependsOn,
 			})
+			relCount++
 		}
 	}
-
 	doc.Relationships = rels
+	log.Debugf("added %d DEPENDS_ON relationships", relCount)
 
 	// --- Write ---
 	var writer io.Writer
 
 	if output == "" {
 		writer = os.Stdout
+		log.Debugf("writing SPDX 2.3 to stdout")
 	} else {
 		f, err := os.Create(output)
 		if err != nil {
+			log.Debugf("failed to create output file: %v", err)
 			return err
 		}
 		defer f.Close()
 		writer = f
+		log.Debugf("writing SPDX 2.3 to file: %s", output)
 	}
 
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(doc)
+	if err := encoder.Encode(doc); err != nil {
+		log.Debugf("failed to encode SPDX document: %v", err)
+		return err
+	}
+	log.Debugf("successfully serialized SPDX 2.3 document")
+	return nil
 }
 
 func buildPrimaryPackage(a Artifact) (*spdx.Package, string) {

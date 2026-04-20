@@ -145,7 +145,7 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Serialize BOM to output file in specified format (CycloneDX or SPDX)
 	log.Debugf("serializing BOM: format=%s, output=%s, specVersion=%s", params.Format, params.Output, params.SpecVersion)
-	err = Serialize(params.Format, bom, params.Output, params.SpecVersion)
+	err = Serialize(*params.Ctx, params.Format, bom, params.Output, params.SpecVersion)
 
 	// Print warnings
 	defer func() {

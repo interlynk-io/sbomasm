@@ -15,15 +15,16 @@
 package gsbom
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"sigs.k8s.io/release-utils/version"
-
-	"io"
-	"os"
 )
 
 var allowedHashes = map[string]bool{
@@ -34,9 +35,13 @@ var allowedHashes = map[string]bool{
 	"MD5":     true,
 }
 
-func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
+func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersion string) error {
+	log := logger.FromContext(ctx)
+	log.Debugf("serializing CycloneDX: output=%s, specVersion=%s, components=%d, dependencies=%d", output, specVersion, len(bom.Components), len(bom.Dependencies))
+
 	out := cydx.NewBOM()
 	out.SerialNumber = assemble.NewSerialNumber()
+	log.Debugf("generated serial number: %s", out.SerialNumber)
 
 	// Build at latest version (1.6), then use EncodeVersion for conversion
 	// This ensures proper field stripping for lower versions
@@ -48,11 +53,18 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 		switch specVersion {
 		case "1.4":
 			targetVersion = cydx.SpecVersion1_4
+			log.Debugf("targeting CycloneDX 1.4")
 		case "1.5":
 			targetVersion = cydx.SpecVersion1_5
+			log.Debugf("targeting CycloneDX 1.5")
 		case "1.6":
 			targetVersion = cydx.SpecVersion1_6
+			log.Debugf("targeting CycloneDX 1.6")
+		default:
+			log.Debugf("unknown spec version '%s', defaulting to 1.6", specVersion)
 		}
+	} else {
+		log.Debugf("no spec version specified, defaulting to 1.6")
 	}
 
 	// --- Metadata ---
@@ -61,6 +73,7 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 	out.Metadata.Tools = buildToolMetadata()
 	out.Metadata.Component = buildPrimaryComponent(bom.Artifact)
 	out.Metadata.Lifecycles = buildLifecycles(bom.Artifact.Lifecycles)
+	log.Debugf("metadata: artifact=%s@%s, primaryComponent=%s", bom.Artifact.Name, bom.Artifact.Version, out.Metadata.Component.BOMRef)
 
 	// --- Components ---
 	var comps []cydx.Component
@@ -97,9 +110,11 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 		comp.Pedigree = buildPedigree(c.Pedigree)
 
 		comps = append(comps, comp)
+		log.Debugf("added component: name=%s, version=%s, bomRef=%s", comp.Name, comp.Version, comp.BOMRef)
 	}
 
 	out.Components = &comps
+	log.Debugf("total components: %d", len(comps))
 
 	// --- Dependencies ---
 	var deps []cydx.Dependency
@@ -122,11 +137,14 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 	})
 
 	compRefMap[rootKey] = rootRef
+	log.Debugf("root component mapped: key=%s, ref=%s", rootKey, rootRef)
 
 	// 1. Parent -> children
+	depCount := 0
 	for parent, children := range bom.Dependencies {
 		parentRef := compRefMap[parent]
 		if parentRef == "" {
+			log.Debugf("parent not found in ref map, using fallback: %s", parent)
 			parentRef = parent // fallback
 		}
 
@@ -134,6 +152,7 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 		for _, c := range children {
 			ref := compRefMap[c]
 			if ref == "" {
+				log.Debugf("child not found in ref map, using fallback: %s", c)
 				ref = c // fallback
 			}
 			childRefs = append(childRefs, ref)
@@ -148,8 +167,9 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 			Dependencies: &childRefs,
 		}
 
-		// d.Dependencies = &childRefs
 		deps = append(deps, d)
+		depCount += len(childRefs)
+		log.Debugf("dependency: %s -> %v", parentRef, childRefs)
 	}
 
 	// 2. Primary -> top-level components (components with no parent in dependency graph)
@@ -179,22 +199,27 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 			Dependencies: &topLevel,
 		}
 		deps = append(deps, d)
+		log.Debugf("added primary top-level dependencies: %s -> %d components", rootRef, len(topLevel))
 	}
 
 	out.Dependencies = &deps
+	log.Debugf("total dependency entries: %d, total dependsOn relationships: %d", len(deps), depCount)
 
 	// --- Write ---
 	var writer io.Writer
 
 	if output == "" {
 		writer = os.Stdout
+		log.Debugf("writing CycloneDX to stdout")
 	} else {
 		f, err := os.Create(output)
 		if err != nil {
+			log.Debugf("failed to create output file: %v", err)
 			return err
 		}
 		defer f.Close()
 		writer = f
+		log.Debugf("writing CycloneDX to file: %s", output)
 	}
 
 	encoder := cydx.NewBOMEncoder(writer, cydx.BOMFileFormatJSON)
@@ -202,7 +227,12 @@ func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 
 	// Use EncodeVersion to properly convert between spec versions
 	// This strips fields not supported in the target version
-	return encoder.EncodeVersion(out, targetVersion)
+	if err := encoder.EncodeVersion(out, targetVersion); err != nil {
+		log.Debugf("failed to encode CycloneDX document: %v", err)
+		return err
+	}
+	log.Debugf("successfully serialized CycloneDX document")
+	return nil
 }
 
 func getBomRef(c Component) string {
