@@ -1,0 +1,49 @@
+# Spec: generate-sbom.md §Input: JSON Format (external_references types)
+# Allowed types (CycloneDX):
+#   website, vcs, documentation, issue-tracker, distribution, support,
+#   release-notes, advisories, other
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.6 -o out.json
+
+# Confirm every declared type round-trips
+exec jq -e '[.components[0].externalReferences[].type] | contains(["website","vcs","documentation","issue-tracker","distribution","support","release-notes","advisories","other"])' out.json
+
+# --- Artifact-level external refs ---
+exec jq -e '[.metadata.component.externalReferences[].type] | contains(["vcs","release-notes","advisories"])' out.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+  external_refs:
+    - type: vcs
+      url: https://github.com/acme/app
+    - type: release-notes
+      url: https://acme.example/releases
+    - type: advisories
+      url: https://acme.example/advisories
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "lib", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}],
+      "external_references": [
+        { "type": "website", "url": "https://x.example/lib" },
+        { "type": "vcs", "url": "https://github.com/x/lib" },
+        { "type": "documentation", "url": "https://x.example/docs" },
+        { "type": "issue-tracker", "url": "https://github.com/x/lib/issues" },
+        { "type": "distribution", "url": "https://x.example/dl/lib.tar.gz" },
+        { "type": "support", "url": "https://x.example/support" },
+        { "type": "release-notes", "url": "https://x.example/changelog" },
+        { "type": "advisories", "url": "https://x.example/cves" },
+        { "type": "other", "url": "https://x.example/other" }
+      ] }
+  ]
+}

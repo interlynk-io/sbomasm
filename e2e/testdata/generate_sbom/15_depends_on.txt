@@ -1,0 +1,96 @@
+# Spec: generate-sbom.md §Depends-on
+# Rules:
+#   - References can be "name@version" OR full purl
+#   - Cross-file resolution
+#   - Missing reference -> warning, drop edge
+#   - No depends-on -> top-level (child of primary)
+#   - Only "depends-on" direction supported (no dependency-of)
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+# --- All 5 components present ---
+exec jq -e '[.components[].name] | sort == ["libmqtt","libssl","libtls","lolcat","withpurldep"]' out.json
+
+# --- app (primary) top-level orphans: lolcat (no depends-on) + withpurldep
+#     libmqtt is NOT top-level because withpurldep depends on it via purl. ---
+exec jq -re '.dependencies[] | select(.ref == "app@1.0.0") | .dependsOn | sort | .[]' out.json
+stdout 'lolcat@1.0.0'
+stdout 'withpurldep@1.0.0'
+
+# --- libmqtt -> libtls + libssl (name@version form) ---
+exec jq -re '.dependencies[] | select(.ref == "pkg:generic/acme/libmqtt@4.3.0") | .dependsOn | sort | .[]' out.json
+stdout 'libssl@3.0.0'
+stdout 'libtls@3.9.0'
+
+# --- withpurldep -> libmqtt (purl form works, regex happens to accept pkg:...@...) ---
+exec jq -re '.dependencies[] | select(.ref == "withpurldep@1.0.0") | .dependsOn[]' out.json
+stdout 'pkg:generic/acme/libmqtt@4.3.0'
+
+# --- Missing reference (typo) -> warning, no crash ---
+exec sbomasm generate sbom -c meta.yaml -i missing_ref.json -o out_mr.json
+stderr 'missing dependency reference'
+
+# --- Self-dependency -> warning ---
+exec sbomasm generate sbom -c meta.yaml -i self_dep.json -o out_sd.json
+stderr 'cannot depend on itself'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libmqtt", "version": "4.3.0", "type": "library", "license": "EPL-2.0",
+      "purl": "pkg:generic/acme/libmqtt@4.3.0",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}],
+      "depends-on": ["libtls@3.9.0", "libssl@3.0.0"] },
+    { "name": "libtls", "version": "3.9.0", "type": "library", "license": "ISC",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"2222222222222222222222222222222222222222222222222222222222222222"}] },
+    { "name": "libssl", "version": "3.0.0", "type": "library", "license": "Apache-2.0",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"3333333333333333333333333333333333333333333333333333333333333333"}] },
+    { "name": "lolcat", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"4444444444444444444444444444444444444444444444444444444444444444"}] },
+    { "name": "withpurldep", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"5555555555555555555555555555555555555555555555555555555555555555"}],
+      "depends-on": ["pkg:generic/acme/libmqtt@4.3.0"] }
+  ]
+}
+-- missing_ref.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "a", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}],
+      "depends-on": ["not-in-list@9.9.9"] }
+  ]
+}
+-- self_dep.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "a", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}],
+      "depends-on": ["a@1.0.0"] }
+  ]
+}

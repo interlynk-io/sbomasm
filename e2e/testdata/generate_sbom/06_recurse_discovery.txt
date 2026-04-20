@@ -1,0 +1,69 @@
+# Spec: generate-sbom.md §Recursive Discovery, §Distributed Component Metadata
+# Covers: --recurse walks the tree, picks up .components.json at multiple depths,
+# combines with --input, applies --filename override.
+
+mkdir libs
+mkdir libs/libmqtt
+mkdir src
+mkdir src/cjson
+mv root.json .components.json
+mv libmqtt.json libs/libmqtt/.components.json
+mv cjson.json src/cjson/.components.json
+
+exec sbomasm generate sbom -c meta.yaml -r . -o out.json
+
+# All 3 components present
+exec jq -e '[.components[].name] | sort == ["cjson","libmqtt","libtls"]' out.json
+
+# --filename override: discover only files named my-deps.json
+mv libs/libmqtt/.components.json libs/libmqtt/my-deps.json
+exec sbomasm generate sbom -c meta.yaml -r . --filename my-deps.json -o out_custom.json
+exec jq -e '[.components[].name] == ["libmqtt"]' out_custom.json
+
+# --input + --recurse combined: explicit file + discovered files
+mv libs/libmqtt/my-deps.json libs/libmqtt/.components.json
+exec sbomasm generate sbom -c meta.yaml -i src/cjson/.components.json -r libs -o out_combo.json
+exec jq -e '[.components[].name] | sort == ["cjson","libmqtt"]' out_combo.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- root.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libtls", "version": "3.9.0", "type": "library", "license": "ISC",
+      "supplier": {"name": "OpenBSD"},
+      "hashes": [{"algorithm": "SHA-256", "value": "1111111111111111111111111111111111111111111111111111111111111111"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}
+-- libmqtt.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libmqtt", "version": "4.3.0", "type": "library", "license": "EPL-2.0",
+      "supplier": {"name": "Acme"},
+      "hashes": [{"algorithm": "SHA-256", "value": "2222222222222222222222222222222222222222222222222222222222222222"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}
+-- cjson.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "cjson", "version": "1.7.17", "type": "library", "license": "MIT",
+      "supplier": {"name": "Dave Gamble"},
+      "hashes": [{"algorithm": "SHA-256", "value": "3333333333333333333333333333333333333333333333333333333333333333"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}

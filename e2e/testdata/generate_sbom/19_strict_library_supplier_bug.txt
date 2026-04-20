@@ -1,0 +1,45 @@
+# Spec: generate-sbom.md §Strict mode checks
+# "Component with type: library has no supplier -> warn"
+#
+# EXPECTED GAP: strict.go:118 reads
+#     c.Type == "library" && name == "" || email == ""
+# Go operator precedence makes this
+#     (c.Type == "library" && name == "") || email == ""
+# so any component (library OR NOT) missing .supplier.email is flagged, even
+# when the supplier has a name but no email.
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+# NON-LIBRARY with supplier name but no email -> should NOT be flagged per spec
+# (the check is scoped to type: library). But it IS flagged today (gap):
+stderr 'app-comp@1.0.0 has no supplier'
+
+# LIBRARY with supplier name AND email -> should NOT be flagged. Today the bug
+# causes it to be flagged *only* if email is missing, not when both are set.
+! stderr 'has-both@1.0.0 has no supplier'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "app-comp", "version": "1.0.0", "type": "application",
+      "license": "MIT",
+      "supplier": {"name": "Acme"},
+      "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}] },
+    { "name": "has-both", "version": "1.0.0", "type": "library",
+      "license": "MIT",
+      "supplier": {"name": "Acme", "email": "sec@acme.example"},
+      "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"2222222222222222222222222222222222222222222222222222222222222222"}] }
+  ]
+}

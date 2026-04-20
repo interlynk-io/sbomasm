@@ -1,0 +1,67 @@
+# Spec: generate-sbom.md §Input: JSON Format (type field)
+# Allowed types per spec:
+#   library, application, framework, container, operating-system, device,
+#   firmware, file, platform, device-driver, machine-learning-model, data
+#
+# EXPECTED GAPS:
+#   - mapComponentType in serializer_cdx.go only maps a subset; others fall
+#     through to "other" (via ComponentDataTypeOther).
+#   - "platform", "device-driver", "machine-learning-model", "data" are silently
+#     downgraded to "other".
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+exec jq -re '.components[] | select(.name=="t-library") | .type' out.json
+stdout 'library'
+exec jq -re '.components[] | select(.name=="t-application") | .type' out.json
+stdout 'application'
+exec jq -re '.components[] | select(.name=="t-framework") | .type' out.json
+stdout 'framework'
+exec jq -re '.components[] | select(.name=="t-container") | .type' out.json
+stdout 'container'
+exec jq -re '.components[] | select(.name=="t-os") | .type' out.json
+stdout 'operating-system'
+exec jq -re '.components[] | select(.name=="t-device") | .type' out.json
+stdout 'device'
+exec jq -re '.components[] | select(.name=="t-firmware") | .type' out.json
+stdout 'firmware'
+exec jq -re '.components[] | select(.name=="t-file") | .type' out.json
+stdout 'file'
+
+# Spec says these are all valid; current impl emits "other":
+exec jq -re '.components[] | select(.name=="t-platform") | .type' out.json
+! stdout '^platform$'
+exec jq -re '.components[] | select(.name=="t-device-driver") | .type' out.json
+! stdout '^device-driver$'
+exec jq -re '.components[] | select(.name=="t-ml") | .type' out.json
+! stdout '^machine-learning-model$'
+exec jq -re '.components[] | select(.name=="t-data") | .type' out.json
+! stdout '^data$'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "t-library", "version": "1.0.0", "type": "library", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0100000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-application", "version": "1.0.0", "type": "application", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0200000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-framework", "version": "1.0.0", "type": "framework", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0300000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-container", "version": "1.0.0", "type": "container", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0400000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-os", "version": "1.0.0", "type": "operating-system", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0500000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-device", "version": "1.0.0", "type": "device", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0600000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-firmware", "version": "1.0.0", "type": "firmware", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0700000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-file", "version": "1.0.0", "type": "file", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0800000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-platform", "version": "1.0.0", "type": "platform", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0900000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-device-driver", "version": "1.0.0", "type": "device-driver", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0a00000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-ml", "version": "1.0.0", "type": "machine-learning-model", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0b00000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "t-data", "version": "1.0.0", "type": "data", "license": "MIT", "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}], "hashes":[{"algorithm":"SHA-256","value":"0c00000000000000000000000000000000000000000000000000000000000000"}] }
+  ]
+}

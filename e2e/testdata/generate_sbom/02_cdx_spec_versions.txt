@@ -1,0 +1,43 @@
+# Spec: generate-sbom.md §Spec Version Pinning
+# Covers: --spec-version matrix for CycloneDX (1.4, 1.5, 1.6).
+
+# 1.6
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.6 -o out16.json
+exec jq -e '.specVersion == "1.6"' out16.json
+
+# 1.5
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.5 -o out15.json
+exec jq -e '.specVersion == "1.5"' out15.json
+
+# 1.4
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.4 -o out14.json
+exec jq -e '.specVersion == "1.4"' out14.json
+
+# Unsupported spec-version
+! exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.2 -o out12.json
+stderr 'invalid spec-version'
+
+# Default (no --spec-version) should be latest = 1.6 per spec
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx -o outdefault.json
+exec jq -e '.specVersion == "1.6"' outdefault.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "lib", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": { "name": "acme" },
+      "hashes": [{ "algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+# Spec: generate-sbom.md §Per-Build Filtering
+# Rules:
+#   - --tags: include components with at least one matching tag
+#   - --exclude-tags: remove components with any matching tag (applied after --tags)
+#   - Components with no tags: included when --tags empty; excluded when --tags set
+#   - Conflicting (same tag in include+exclude) -> CLI error
+#   - scope: excluded components are ALWAYS dropped before any tag filtering
+#
+# EXPECTED GAP: scope: excluded is NOT dropped (FilterComponents does not filter by scope).
+
+# --- Include filter ---
+exec sbomasm generate sbom -c meta.yaml -i .components.json --tags core -o out_core.json
+exec jq -e '[.components[].name] | sort == ["libmqtt","libtls"]' out_core.json
+
+# --- Include multiple ---
+exec sbomasm generate sbom -c meta.yaml -i .components.json --tags core,display -o out_cd.json
+exec jq -e '[.components[].name] | sort == ["libgui","libmqtt","libtls"]' out_cd.json
+
+# --- Exclude filter ---
+exec sbomasm generate sbom -c meta.yaml -i .components.json --exclude-tags debug -o out_nodebug.json
+exec jq -e '[.components[].name] | contains(["trace-tool"]) | not' out_nodebug.json
+
+# --- Conflict detection ---
+! exec sbomasm generate sbom -c meta.yaml -i .components.json --tags core --exclude-tags core -o out_conflict.json
+stderr 'conflicting tags'
+
+# --- scope: excluded dropping (SPEC GAP) ---
+# No --tags: untagged "build-only" (scope=excluded) should be dropped; but it
+# currently appears. Capture the gap.
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out_all.json
+# Spec-correct: contains build-only == false
+# Current gap: contains build-only == true
+exec jq -e '[.components[].name] | contains(["build-only"])' out_all.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libmqtt", "version": "4.3.0", "type": "library", "license": "EPL-2.0",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}],
+      "tags": ["core","networking"] },
+    { "name": "libtls", "version": "3.9.0", "type": "library", "license": "ISC",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"2222222222222222222222222222222222222222222222222222222222222222"}],
+      "tags": ["core","networking"] },
+    { "name": "libgui", "version": "2.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"3333333333333333333333333333333333333333333333333333333333333333"}],
+      "tags": ["display"] },
+    { "name": "trace-tool", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"4444444444444444444444444444444444444444444444444444444444444444"}],
+      "tags": ["debug"] },
+    { "name": "build-only", "version": "1.0.0", "type": "library", "license": "MIT",
+      "scope": "excluded",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"5555555555555555555555555555555555555555555555555555555555555555"}] }
+  ]
+}

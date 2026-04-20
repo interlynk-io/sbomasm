@@ -1,0 +1,68 @@
+# Spec: generate-sbom.md §Validation
+# "Use sbomqs to score your generated SBOM against these frameworks. The minimum
+#  bar to aim for is NTIA Minimum Elements."
+#
+# This scenario verifies sbomqs is usable end-to-end against a generated SBOM.
+# sbomqs must be on PATH (install: `go install github.com/interlynk-io/sbomqs@latest`).
+# The test also captures the *score*: we assert a high floor (>= 70%) so
+# regressions that drop NTIA-required fields break the build.
+
+[!exec:sbomqs] skip
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx -o out.cdx.json
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format spdx -o out.spdx.json
+
+# --- CycloneDX NTIA score ---
+exec sbomqs score --profile ntia --json out.cdx.json
+cp stdout cdx_score.json
+exec jq -re '.files[0].profiles[] | select(.profile | test("NTIA")) | .score' cdx_score.json
+
+# Full NTIA compliance (10) is the stated goal. We assert a floor (>= 7) so
+# regressions that drop NTIA-required fields fail the build; the report will
+# surface the exact number.
+exec jq -e '.files[0].profiles[] | select(.profile | test("NTIA")) | .score >= 7' cdx_score.json
+
+# --- SPDX NTIA score ---
+exec sbomqs score --profile ntia --json out.spdx.json
+cp stdout spdx_score.json
+exec jq -e '.files[0].profiles[] | select(.profile | test("NTIA")) | .score >= 5' spdx_score.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme Corp
+    email: security@acme.example
+    url: https://acme.example
+  author:
+    - name: Jane Smith
+      email: jane@acme.example
+  license:
+    id: Apache-2.0
+  copyright: (c) 2026 Acme Corp
+  purl: pkg:generic/acme/app@1.0.0
+  external_refs:
+    - type: vcs
+      url: https://github.com/acme/app
+    - type: distribution
+      url: https://acme.example/dl/app-1.0.0.tar.gz
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libmqtt", "version": "4.3.0", "type": "library",
+      "license": "EPL-2.0",
+      "supplier": {"name": "Acme Corp", "email": "sec@acme.example"},
+      "purl": "pkg:generic/acme/libmqtt@4.3.0",
+      "external_references": [{"type": "distribution", "url": "https://acme.example/dl/libmqtt"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}] },
+    { "name": "libtls", "version": "3.9.0", "type": "library",
+      "license": "ISC",
+      "supplier": {"name": "OpenBSD", "email": "sec@openbsd.org"},
+      "purl": "pkg:generic/openbsd/libtls@3.9.0",
+      "external_references": [{"type": "distribution", "url": "https://openbsd.org/libtls"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}] }
+  ]
+}

@@ -1,0 +1,54 @@
+# Spec: generate-sbom.md §Output (SPDX)
+# "Pedigree information is best-effort mapped to Annotations and SourceInfo fields."
+#
+# EXPECTED GAPS in SPDX serializer (pkg/generate/gsbom/serializer_spdx.go):
+#   - No pedigree mapping at all (no Annotations / SourceInfo emitted)
+#   - No scope field mapping
+#   - No lifecycles (SPDX has no standard place; spec is CDX-centric)
+#   - No per-component external refs of type `distribution` carry through
+#     as CATEGORY=PACKAGE-MANAGER (only `distribution` is mapped; others go to OTHER)
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format spdx -o out.spdx.json
+
+# --- Pedigree data (ancestor purl, patch, notes) -> nothing in SPDX output ---
+! grep 'pkg:github/DaveGamble/cJSON@1.7.17' out.spdx.json
+! grep 'Forked at commit' out.spdx.json
+! grep 'fake diff body' out.spdx.json
+
+# --- External ref: distribution -> PACKAGE-MANAGER category ---
+exec jq -e '.packages[] | select(.name=="cjson") | .externalRefs[] | select(.referenceType == "distribution") | .referenceCategory == "PACKAGE-MANAGER"' out.spdx.json
+
+# --- Scope NOT mapped to SPDX ---
+! grep '"scope"' out.spdx.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    {
+      "name": "cjson",
+      "version": "1.7.17",
+      "type": "library",
+      "license": "MIT",
+      "supplier": {"name": "Acme"},
+      "purl": "pkg:github/acme/device-firmware/src/cjson@1.7.17",
+      "external_references": [{"type": "distribution", "url": "https://acme.example/dl/cjson"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "scope": "required",
+      "pedigree": {
+        "ancestors": [{"purl": "pkg:github/DaveGamble/cJSON@1.7.17"}],
+        "notes": "Forked at commit abc123",
+        "patches": [{"type":"backport","diff":{"text":"fake diff body"}}]
+      }
+    }
+  ]
+}

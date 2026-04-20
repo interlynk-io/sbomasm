@@ -1,0 +1,82 @@
+# Spec: generate-sbom.md §License forms
+# Four supported forms per spec:
+#   "MIT"                                -> string
+#   { "id": "MIT" }                      -> object
+#   { "id": "MIT", "text": "..." }       -> object with inline text
+#   { "id": "MIT", "file": "./LICENSE" } -> object with file reference
+# Also: license expressions ("Apache-2.0 OR MIT")
+#
+# EXPECTED GAP: Component.License is a plain `string` in the Go model
+# (pkg/generate/gsbom/parser.go). Object forms CRASH JSON unmarshal — they don't
+# even parse. That is a harder failure than "silently ignored": the file with
+# an object-form license rejects the whole input.
+
+# --- String and expression forms (supported) ---
+exec sbomasm generate sbom -c meta.yaml -i str_expr.json -o out.json
+exec jq -re '.components[] | select(.name=="str") | .licenses[0].license.id' out.json
+stdout 'MIT'
+exec jq -re '.components[] | select(.name=="expr") | .licenses[0].expression' out.json
+stdout 'Apache-2.0 OR MIT'
+
+# --- Object form fails to parse (SPEC GAP) ---
+# parseJSONComponents records the unmarshal failure as a warning; the result is
+# an empty component list, so Generate exits with "no components found".
+! exec sbomasm generate sbom -c meta.yaml -i obj.json -o out_obj.json
+stderr 'no components found|cannot unmarshal'
+
+! exec sbomasm generate sbom -c meta.yaml -i obj_text.json -o out_obj_text.json
+stderr 'no components found|cannot unmarshal'
+
+! exec sbomasm generate sbom -c meta.yaml -i obj_file.json -o out_obj_file.json
+stderr 'no components found|cannot unmarshal'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- str_expr.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "str", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"0100000000000000000000000000000000000000000000000000000000000000"}] },
+    { "name": "expr", "version": "1.0.0", "type": "library", "license": "Apache-2.0 OR MIT",
+      "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"0200000000000000000000000000000000000000000000000000000000000000"}] }
+  ]
+}
+-- obj.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "obj", "version": "1.0.0", "type": "library", "license": {"id": "BSD-3-Clause"},
+      "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"0100000000000000000000000000000000000000000000000000000000000000"}] }
+  ]
+}
+-- obj_text.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "obj_text", "version": "1.0.0", "type": "library",
+      "license": {"id": "MIT", "text": "custom license text"},
+      "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"0100000000000000000000000000000000000000000000000000000000000000"}] }
+  ]
+}
+-- obj_file.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "obj_file", "version": "1.0.0", "type": "library",
+      "license": {"id": "MIT", "file": "./LICENSE"},
+      "supplier": {"name":"a"}, "external_references":[{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"0100000000000000000000000000000000000000000000000000000000000000"}] }
+  ]
+}

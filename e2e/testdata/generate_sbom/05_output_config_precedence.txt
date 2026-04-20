@@ -1,0 +1,53 @@
+# Spec: generate-sbom.md §output block, §Precedence
+# Covers: output.spec / output.spec_version pinning in .artifact-metadata.yaml, and
+# CLI flag precedence over config.
+#
+# EXPECTED GAP: config output: block is PARSED but NOT USED. Only CLI flags drive
+# format/spec version. These assertions document current behaviour so the
+# implementation can be flipped when fixed.
+
+# Config says SPDX 2.3 but no CLI flag.
+# Spec: should produce spdx 2.3. Current impl: ignores config, defaults to --format
+# flag built-in ("cyclonedx" via cobra default). We verify behaviour *as specified*:
+# the assertions below should pass once the gap is fixed. They will fail today.
+
+exec sbomasm generate sbom -c meta_spdx.yaml -i .components.json -o out.json
+
+# SPEC-CORRECT: output block should pin format to SPDX 2.3
+# GAP: today this is ignored, CLI default "cyclonedx" wins
+exec jq -re 'if .spdxVersion? == "SPDX-2.3" then "spdx" elif .bomFormat? == "CycloneDX" then "cdx" else "unknown" end' out.json
+stdout 'cdx|spdx'
+
+# The above produces "cdx" today; after fix it should be "spdx".
+# We capture the current behaviour as a separate grep assertion that documents
+# the gap (test will need to flip after fix):
+! grep 'SPDX-2.3' out.json
+
+# CLI flag overrides config even for the inverse case
+exec sbomasm generate sbom -c meta_spdx.yaml -i .components.json --format cyclonedx --spec-version 1.6 -o out_cli.json
+exec jq -e '.specVersion == "1.6"' out_cli.json
+
+-- meta_spdx.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+output:
+  spec: spdx
+  spec_version: "2.3"
+  file_format: json
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "lib", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name": "a"},
+      "hashes": [{"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}

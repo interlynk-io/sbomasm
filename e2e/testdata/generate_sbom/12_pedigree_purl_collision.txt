@@ -1,0 +1,48 @@
+# Spec: generate-sbom.md §Purl on patched components
+# Rule: "If a component has a pedigree block, its top-level purl MUST NOT equal
+#       any pedigree.ancestors[].purl."
+# Spec: "This check fires even without --strict mode because it's a correctness
+#        bug, not a quality warning."  -> ALWAYS a hard error.
+#
+# EXPECTED GAP: ProcessPedigrees returns the error, but gsbom.Generate appends
+# it to `warnings` and continues. The SBOM is produced despite the collision.
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+# Current behaviour: command SUCCEEDS and prints a warning.
+stderr 'purl.*collides|pedigree.*ancestors'
+
+# Spec-correct: the command should FAIL (non-zero exit) even without --strict.
+# This captures the gap; the test will flip when the gap is fixed:
+! stderr 'Error:'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    {
+      "name": "cjson",
+      "version": "1.7.17",
+      "type": "library",
+      "license": "MIT",
+      "supplier": { "name": "Acme" },
+      "purl": "pkg:github/DaveGamble/cJSON@1.7.17",
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "pedigree": {
+        "ancestors": [
+          { "purl": "pkg:github/DaveGamble/cJSON@1.7.17" }
+        ]
+      }
+    }
+  ]
+}

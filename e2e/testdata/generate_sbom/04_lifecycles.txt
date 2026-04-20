@@ -1,0 +1,45 @@
+# Spec: generate-sbom.md §Artifact Metadata (lifecycles)
+# Covers: custom lifecycles list, invalid phase rejection.
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+exec jq -e '.metadata.lifecycles[] | select(.phase == "post-build")' out.json
+exec jq -e '.metadata.lifecycles[] | select(.phase == "operations")' out.json
+
+# Invalid phase rejected
+! exec sbomasm generate sbom -c bad.yaml -i .components.json -o out_bad.json
+stderr 'invalid lifecycle phase'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+  lifecycles:
+    - phase: post-build
+    - phase: operations
+-- bad.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+  lifecycles:
+    - phase: not-a-real-phase
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "lib", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name": "a"},
+      "hashes": [{"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}

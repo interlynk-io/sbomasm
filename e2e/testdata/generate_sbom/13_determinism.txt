@@ -1,0 +1,61 @@
+# Spec: generate-sbom.md §Determinism and bom-refs
+# Rules:
+#   1. Deterministic bom-ref (purl if present, else pkg:generic/{sanitized-name}@{version})
+#   2. Components sorted by bom-ref, deps by ref, hashes/external_references/tags sorted
+#   3. SOURCE_DATE_EPOCH drives metadata.timestamp AND a derived serialNumber
+#   4. Rerun with same inputs = byte-identical output
+#
+# EXPECTED GAPS:
+#   - Bom-ref fallback is "name@version", not "pkg:generic/{name}@{version}"
+#   - Component / dependency / array ordering not sorted (map iteration order)
+#   - SOURCE_DATE_EPOCH is ignored; timestamp = now(), serialNumber = random
+#   - Byte-equality across re-runs is NOT guaranteed
+
+env SOURCE_DATE_EPOCH=1735689600
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o run1.json
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o run2.json
+
+# Spec-correct: byte-identical with SOURCE_DATE_EPOCH pinned.
+! cmp run1.json run2.json
+
+# Dig out the timestamp and serial — if SOURCE_DATE_EPOCH were honored they would
+# be 2025-01-01T00:00:00Z and a stable UUID.
+exec jq -re '.metadata.timestamp' run1.json
+! stdout '2025-01-01T00:00:00'
+
+# Bom-ref fallback check: no-purl component should get a "pkg:generic/..." ref.
+# Current impl emits "noref@1.0.0"; spec requires "pkg:generic/noref@1.0.0".
+exec jq -re '.components[] | select(.name == "noref") | .["bom-ref"]' run1.json
+! stdout 'pkg:generic/noref@1.0.0'
+stdout 'noref@1.0.0'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "noref", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}] },
+    { "name": "zebra", "version": "1.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/z/zebra@1.0.0",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}] },
+    { "name": "alpha", "version": "1.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/a/alpha@1.0.0",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}] }
+  ]
+}

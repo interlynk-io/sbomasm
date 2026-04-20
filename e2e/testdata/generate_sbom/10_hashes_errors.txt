@@ -1,0 +1,82 @@
+# Spec: generate-sbom.md §File-based hashes
+# Error conditions (per spec):
+#   - missing file -> hard error
+#   - 'file' pointed at directory -> hard error
+#   - unsupported algorithm in file/path form -> error (only SHA-256, SHA-512)
+#   - empty-match directory (filter excludes everything) -> hard error
+#
+# EXPECTED GAP: today these surface only as WARNINGS via gsbom.Generate's
+# `warnings` slice; the command still writes a partial SBOM and exits 0.
+
+mkdir src
+
+# --- Missing file ---
+exec sbomasm generate sbom -c meta.yaml -i missing_file.json -o out_missing.json
+# Warning printed, but run succeeds (gap):
+stderr 'failed to hash file'
+# Spec-correct would be: exit != 0. This is NOT true today, documenting the gap.
+
+# --- file points at a directory ---
+exec sbomasm generate sbom -c meta.yaml -i dir_as_file.json -o out_dir.json
+stderr 'use .path. for directories|is a directory'
+
+# --- Unsupported algo (SHA-1) with file reference ---
+cp hello src/hello.txt
+exec sbomasm generate sbom -c meta.yaml -i bad_algo.json -o out_algo.json
+stderr 'unsupported hash algorithm'
+
+# --- Empty-match directory (no .xx files present) ---
+exec sbomasm generate sbom -c meta.yaml -i empty_dir.json -o out_empty.json
+stderr 'no matching files|failed to hash directory'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- missing_file.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "x", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "file": "./does-not-exist.c"}] }
+  ]
+}
+-- dir_as_file.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "x", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "file": "./src"}] }
+  ]
+}
+-- bad_algo.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "x", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-1", "file": "./src/hello.txt"}] }
+  ]
+}
+-- empty_dir.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "x", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "path": "./src/", "extensions": ["xx"]}] }
+  ]
+}
+-- hello --
+hello
