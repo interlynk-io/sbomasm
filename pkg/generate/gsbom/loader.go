@@ -37,6 +37,16 @@ var allowedPrimaryPurpose = map[string]bool{
 	"file":             true,
 }
 
+var allowedLifecyclePhases = map[string]bool{
+	"design":        true,
+	"pre-build":     true,
+	"build":         true,
+	"post-build":    true,
+	"operations":    true,
+	"discovery":     true,
+	"decommission":  true,
+}
+
 // LoadArtifactConfig performs the following steps:
 // 1. Read ".artifact-metadata.yaml" from current directory
 // 2. Unmarshals the YAML data into an app.Config struct
@@ -61,6 +71,12 @@ func LoadArtifactConfig(path string) (*Artifact, error) {
 	}
 
 	artifact := mapToArtifact(cfg)
+
+	// Set default lifecycle if none provided
+	if len(artifact.Lifecycles) == 0 {
+		artifact.Lifecycles = []Lifecycle{{Phase: "build"}}
+	}
+
 	return artifact, nil
 }
 
@@ -135,6 +151,14 @@ func validateAndSanitize(cfg *app.Config) error {
 
 	if !allowedPrimaryPurpose[strings.ToLower(cfg.App.PrimaryPurpose)] {
 		return fmt.Errorf("invalid primary_purpose: %s\nallowed values are: application, framework, library, container, platform, firmware, operating-system, device, file", cfg.App.PrimaryPurpose)
+	}
+
+	// Validate lifecycle phases
+	for _, lc := range cfg.App.Lifecycles {
+		phase := strings.ToLower(lc.Phase)
+		if phase != "" && !allowedLifecyclePhases[phase] {
+			return fmt.Errorf("invalid lifecycle phase: %s\nallowed values are: design, pre-build, build, post-build, operations, discovery, decommission", lc.Phase)
+		}
 	}
 
 	return nil
