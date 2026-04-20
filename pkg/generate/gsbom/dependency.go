@@ -29,8 +29,14 @@ func BuildComponentMap(components []Component) map[string]Component {
 	for _, c := range components {
 		key := componentKey(c)
 
-		// "libmqtt@4.3.0" -> Component{...}
+		// Store by primary key (PURL or name@version)
 		m[key] = c
+
+		// Also store by name@version for depends-on lookup
+		nameVersionKey := c.Name + "@" + c.Version
+		if nameVersionKey != key {
+			m[nameVersionKey] = c
+		}
 	}
 
 	return m
@@ -79,13 +85,15 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 				}
 
 				// Check if child exists
-				if _, ok := compMap[childRef]; !ok {
+				childComponent, ok := compMap[childRef]
+				if !ok {
 					warnings = append(warnings, fmt.Errorf("missing dependency reference: %s -> %s", parentKey, childRef))
 					continue
 				}
 
-				// parent -> child
-				graph.Edges[parentKey] = append(graph.Edges[parentKey], childRef)
+				// parent -> child (use componentKey for consistent PURL-based keys)
+				childKey := componentKey(childComponent)
+				graph.Edges[parentKey] = append(graph.Edges[parentKey], childKey)
 			}
 		} else {
 			// Case 2: top-level (no depends-on, will be attached to root later)

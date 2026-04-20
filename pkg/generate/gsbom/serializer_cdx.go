@@ -34,9 +34,26 @@ var allowedHashes = map[string]bool{
 	"MD5":     true,
 }
 
-func SerializeCycloneDX(bom *BOM, output string) error {
+func SerializeCycloneDX(bom *BOM, output string, specVersion string) error {
 	out := cydx.NewBOM()
 	out.SerialNumber = assemble.NewSerialNumber()
+
+	// Build at latest version (1.6), then use EncodeVersion for conversion
+	// This ensures proper field stripping for lower versions
+	out.SpecVersion = cydx.SpecVersion1_6
+
+	// Determine target version for encoding
+	targetVersion := cydx.SpecVersion1_6
+	if specVersion != "" {
+		switch specVersion {
+		case "1.4":
+			targetVersion = cydx.SpecVersion1_4
+		case "1.5":
+			targetVersion = cydx.SpecVersion1_5
+		case "1.6":
+			targetVersion = cydx.SpecVersion1_6
+		}
+	}
 
 	// --- Metadata ---
 	out.Metadata = &cydx.Metadata{}
@@ -135,12 +152,33 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 		deps = append(deps, d)
 	}
 
-	// 2. Primary -> top-level components (components with no dependencies declared)
+	// 2. Primary -> top-level components (components with no parent in dependency graph)
+	// These are components not referenced by any other component and have no depends-on
 	var topLevel []string
+	referenced := make(map[string]bool)
+
+	// Find all components that are children of someone
+	for _, children := range bom.Dependencies {
+		for _, child := range children {
+			referenced[child] = true
+		}
+	}
+
+	// Add components that are not referenced by anyone and have no depends-on
 	for _, c := range bom.Components {
-		if len(c.DependsOn) == 0 {
+		key := componentKey(c)
+		if len(c.DependsOn) == 0 && !referenced[key] {
 			topLevel = append(topLevel, getBomRef(c))
 		}
+	}
+
+	// Add primary -> top-level dependencies if root doesn't already have dependencies
+	if len(topLevel) > 0 && len(bom.Dependencies[rootKey]) == 0 {
+		d := cydx.Dependency{
+			Ref:          rootRef,
+			Dependencies: &topLevel,
+		}
+		deps = append(deps, d)
 	}
 
 	out.Dependencies = &deps
@@ -162,7 +200,9 @@ func SerializeCycloneDX(bom *BOM, output string) error {
 	encoder := cydx.NewBOMEncoder(writer, cydx.BOMFileFormatJSON)
 	encoder.SetPretty(true)
 
-	return encoder.Encode(out)
+	// Use EncodeVersion to properly convert between spec versions
+	// This strips fields not supported in the target version
+	return encoder.EncodeVersion(out, targetVersion)
 }
 
 func getBomRef(c Component) string {

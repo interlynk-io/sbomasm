@@ -18,15 +18,15 @@ import "github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 
 // Serialize calls the appropriate serialization function
 // based on the specified format (CycloneDX or SPDX).
-func Serialize(format string, bom *BOM, output string) error {
+func Serialize(format string, bom *BOM, output string, specVersion string) error {
 	switch format {
 	case string(sbom.SBOMSpecSPDX):
-		return SerializeSPDX(bom, output)
+		return SerializeSPDX(bom, output, specVersion)
 
 	case string(sbom.SBOMSpecCDX):
-		return SerializeCycloneDX(bom, output)
+		return SerializeCycloneDX(bom, output, specVersion)
 
 	default:
-		return SerializeCycloneDX(bom, output)
+		return SerializeCycloneDX(bom, output, specVersion)
 	}
 }
