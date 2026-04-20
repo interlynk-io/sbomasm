@@ -1,0 +1,72 @@
+# Spec: generate-sbom.md §Composition Rules (identity = purl-if-present else name@version)
+# Covers:
+#   - same purl across files -> one component
+#   - same name@version but different purls -> treated as distinct
+#   - no purl -> fallback to name@version
+
+exec sbomasm generate sbom -c meta.yaml -i a.json -i b.json -i c.json -o out.json
+
+# samepurl appears exactly once (duplicate by purl)
+exec jq -e '[.components[] | select(.name == "samepurl")] | length == 1' out.json
+
+# different-purl pair (same name@version) -> kept distinct = 2 entries
+exec jq -e '[.components[] | select(.name == "splitpurl")] | length == 2' out.json
+
+# no-purl same name@version -> deduplicated by name@version
+exec jq -e '[.components[] | select(.name == "nopurl")] | length == 1' out.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- a.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "samepurl", "version": "1.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/a/samepurl@1.0.0",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] },
+    { "name": "splitpurl", "version": "2.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/upstream-a/splitpurl@2.0.0",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] },
+    { "name": "nopurl", "version": "3.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] }
+  ]
+}
+-- b.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "samepurl", "version": "1.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/a/samepurl@1.0.0",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] },
+    { "name": "splitpurl", "version": "2.0.0", "type": "library", "license": "MIT",
+      "purl": "pkg:generic/upstream-b/splitpurl@2.0.0",
+      "supplier": {"name":"b"},
+      "hashes":[{"algorithm":"SHA-256","value":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] }
+  ]
+}
+-- c.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "nopurl", "version": "3.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "hashes":[{"algorithm":"SHA-256","value":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}] }
+  ]
+}

@@ -1,0 +1,76 @@
+# Spec: generate-sbom.md §File-based hashes
+# Covers: literal value, file-based, path-based with extensions filter.
+# Directory hash determinism (sorted manifest).
+
+mkdir src
+mkdir src/cjson
+mv hello.c src/cjson/cJSON.c
+mv hello.h src/cjson/cJSON.h
+mv readme.md src/cjson/README.md
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+# Literal hash passes through untouched.
+exec jq -e '.components[] | select(.name=="literal") | .hashes[0].content == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"' out.json
+
+# File-based hash (known SHA-256 of "hello\n" = 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03)
+exec jq -e '.components[] | select(.name=="singlefile") | .hashes[0].content == "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"' out.json
+
+# Directory-based hash with extensions filter (c, h only)
+exec jq -re '.components[] | select(.name=="dirhash") | .hashes[0].content | length' out.json
+stdout 64
+
+# Directory-based hash should be different if README.md is included (no ext filter)
+exec jq -re '.components[] | select(.name=="dirhash-nofilter") | .hashes[0].content | length' out.json
+stdout 64
+
+# Hashes for dirhash and dirhash-nofilter should differ
+exec jq -re '.components[] | select(.name=="dirhash") | .hashes[0].content' out.json
+cp stdout h1.txt
+exec jq -re '.components[] | select(.name=="dirhash-nofilter") | .hashes[0].content' out.json
+cp stdout h2.txt
+! cmp h1.txt h2.txt
+
+# Rerun should produce byte-identical file/dir hashes (determinism)
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out2.json
+exec jq -re '.components[] | select(.name=="dirhash") | .hashes[0].content' out2.json
+cp stdout h1b.txt
+cmp h1.txt h1b.txt
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "literal", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}] },
+    { "name": "singlefile", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "file": "./src/cjson/cJSON.c"}] },
+    { "name": "dirhash", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "path": "./src/cjson/", "extensions": ["c", "h"]}] },
+    { "name": "dirhash-nofilter", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "path": "./src/cjson/"}] }
+  ]
+}
+-- hello.c --
+hello
+-- hello.h --
+#pragma once
+-- readme.md --
+this is the readme

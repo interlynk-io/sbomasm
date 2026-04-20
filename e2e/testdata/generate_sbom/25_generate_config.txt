@@ -1,0 +1,40 @@
+# Spec: generate-sbom.md §Command Structure, §Artifact Metadata
+# Covers: `sbomasm generate config` produces a loadable template YAML.
+
+exec sbomasm generate config
+cp stdout .artifact-metadata.yaml
+
+# Sanity: YAML contains the two top-level blocks mentioned in the spec.
+grep 'app:' .artifact-metadata.yaml
+grep 'output:' .artifact-metadata.yaml
+grep 'primary_purpose' .artifact-metadata.yaml
+
+# The template has [REQUIRED]/[OPTIONAL] tokens per the implementation. The
+# generator should REJECT a config with unresolved [REQUIRED] tokens.
+! exec sbomasm generate sbom -c .artifact-metadata.yaml -i .components.json -o out.json
+stderr 'required|invalid'
+
+# Replace tokens with real values and try again
+cp good.yaml .artifact-metadata.yaml
+exec sbomasm generate sbom -c .artifact-metadata.yaml -i .components.json -o out.json
+exec jq -e '.metadata.component.name == "foo"' out.json
+
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "x", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name":"a"},
+      "external_references": [{"type":"distribution","url":"https://x"}],
+      "hashes":[{"algorithm":"SHA-256","value":"1111111111111111111111111111111111111111111111111111111111111111"}] }
+  ]
+}
+-- good.yaml --
+app:
+  name: foo
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT

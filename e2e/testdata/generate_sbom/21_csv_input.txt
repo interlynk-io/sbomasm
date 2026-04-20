@@ -1,0 +1,61 @@
+# Spec: generate-sbom.md §Input: CSV Format
+# Covers: CSV parsing round-trip, schema marker, multi-tag/multi-depends-on fields,
+# hash from literal and from file.
+
+mkdir src
+mkdir src/cjson
+mv cjson.c src/cjson/cJSON.c
+
+exec sbomasm generate sbom -c meta.yaml -i .components.csv -o out.json
+
+# --- All 3 components parsed ---
+exec jq -e '[.components[].name] | sort == ["cjson","libmqtt","libtls"]' out.json
+
+# --- purl round-trip ---
+exec jq -e '.components[] | select(.name == "libmqtt") | .purl == "pkg:generic/acme/libmqtt@4.3.0"' out.json
+
+# --- multi-value tags (quoted) parsed ---
+# (tags are an internal concept not emitted in CDX output; verify via filter)
+exec sbomasm generate sbom -c meta.yaml -i .components.csv --tags networking -o out_net.json
+exec jq -e '[.components[].name] | sort == ["libmqtt","libtls"]' out_net.json
+
+# --- multi-value depends_on (quoted comma-separated) ---
+exec jq -e '.dependencies[] | select(.ref | test("libmqtt")) | .dependsOn | contains(["libtls@3.9.0"])' out.json
+
+# --- hash_file column (SPEC GAP) ---
+# Spec's CSV schema includes "hash_file" for file-based hashes. The JSON form
+# supports `{"algorithm": "...", "file": "..."}` and that round-trips, but
+# parseHashesFromCSV (pkg/generate/gsbom/parser.go) only reads `hash_value`,
+# ignoring `hash_file`. cjson has hash_file set and hash_value empty, so no
+# hash is emitted. Known SHA-256 of "hello\n" is
+#   5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
+exec jq -re '.components[] | select(.name == "cjson") | (.hashes // []) | length' out.json
+stdout '0'
+! stderr '5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03'
+
+# --- Missing schema marker: CSV parser records the mismatch ---
+# The CSV parser treats the first line as the schema marker and rejects anything
+# else. The single-file scenario fails because nothing parses.
+! exec sbomasm generate sbom -c meta.yaml -i noheader.csv -o out_nh.json
+stderr 'invalid schema marker|no components'
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.csv --
+#interlynk/component-manifest/v1
+name,version,type,description,supplier_name,supplier_email,license,purl,cpe,hash_algorithm,hash_value,hash_file,scope,depends_on,tags
+libmqtt,4.3.0,library,Acme MQTT,Acme Corp,sec@acme.example,EPL-2.0,pkg:generic/acme/libmqtt@4.3.0,,SHA-256,9f86d08199999999999999999999999999999999999999999999999999999999,,required,libtls@3.9.0,"core,networking"
+libtls,3.9.0,library,OpenBSD TLS,OpenBSD,,ISC,pkg:generic/openbsd/libtls@3.9.0,,SHA-256,e3b0c44222222222222222222222222222222222222222222222222222222222,,required,,"core,networking"
+cjson,1.7.17,library,JSON parser (vendored),Dave Gamble,,MIT,pkg:github/acme/device-firmware/src/cjson@1.7.17,,SHA-256,,./src/cjson/cJSON.c,required,,core
+-- noheader.csv --
+name,version,type,license
+foo,1.0,library,MIT
+-- cjson.c --
+hello

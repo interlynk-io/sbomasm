@@ -1,0 +1,77 @@
+# Spec: generate-sbom.md §Proposal, §Artifact Metadata, §Input: JSON Format
+# Covers: primary component metadata, single .components.json, CycloneDX 1.6 output,
+# component fields round-trip (name, version, type, description, license, purl,
+# supplier, external_references, scope, hashes).
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.6 -o out.cdx.json
+exists out.cdx.json
+
+# --- Primary component (from meta.yaml) ---
+exec jq -e '.bomFormat == "CycloneDX"' out.cdx.json
+exec jq -e '.specVersion == "1.6"' out.cdx.json
+exec jq -e '.metadata.component.name == "device-firmware"' out.cdx.json
+exec jq -e '.metadata.component.version == "2.1.0"' out.cdx.json
+exec jq -e '.metadata.component.type == "firmware"' out.cdx.json
+exec jq -e '.metadata.component.supplier.name == "Acme Corp"' out.cdx.json
+exec jq -e '.metadata.component.licenses[0].license.id == "Apache-2.0"' out.cdx.json
+
+# Spec §Output: sbomasm registered as a tool
+exec jq -e '.metadata.tools.components[] | select(.name == "sbomasm")' out.cdx.json
+
+# Spec §Artifact Metadata: lifecycles default = [{phase: "build"}]
+exec jq -e '.metadata.lifecycles[0].phase == "build"' out.cdx.json
+
+# --- Component ---
+exec jq -e '.components | length == 1' out.cdx.json
+exec jq -e '.components[0].name == "libmqtt"' out.cdx.json
+exec jq -e '.components[0].version == "4.3.0"' out.cdx.json
+exec jq -e '.components[0].type == "library"' out.cdx.json
+exec jq -e '.components[0].description == "MQTT client"' out.cdx.json
+exec jq -e '.components[0].purl == "pkg:generic/acme/libmqtt@4.3.0"' out.cdx.json
+exec jq -e '.components[0].supplier.name == "Acme Corp"' out.cdx.json
+exec jq -e '.components[0].licenses[0].license.id == "EPL-2.0"' out.cdx.json
+exec jq -e '.components[0].scope == "required"' out.cdx.json
+exec jq -e '.components[0].hashes[0].alg == "SHA-256"' out.cdx.json
+exec jq -e '.components[0].hashes[0].content == "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"' out.cdx.json
+exec jq -e '[.components[0].externalReferences[].type] | contains(["website","vcs","distribution"])' out.cdx.json
+
+# --- Dependency graph ---
+# Primary -> libmqtt (top-level attach since libmqtt has no depends-on)
+exec jq -e '.dependencies | length >= 1' out.cdx.json
+
+-- meta.yaml --
+app:
+  name: device-firmware
+  version: 2.1.0
+  primary_purpose: firmware
+  description: Acme IoT firmware
+  supplier:
+    name: Acme Corp
+    email: security@acme.example
+  license:
+    id: Apache-2.0
+  copyright: (c) 2026 Acme Corp
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    {
+      "name": "libmqtt",
+      "version": "4.3.0",
+      "type": "library",
+      "description": "MQTT client",
+      "supplier": { "name": "Acme Corp", "email": "support@acme.example" },
+      "license": "EPL-2.0",
+      "purl": "pkg:generic/acme/libmqtt@4.3.0",
+      "external_references": [
+        { "type": "website", "url": "https://acme.example/libmqtt" },
+        { "type": "vcs", "url": "https://github.com/acme/libmqtt" },
+        { "type": "distribution", "url": "https://acme.example/dl/libmqtt-4.3.0.tar.gz" }
+      ],
+      "hashes": [
+        { "algorithm": "SHA-256", "value": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" }
+      ],
+      "scope": "required"
+    }
+  ]
+}

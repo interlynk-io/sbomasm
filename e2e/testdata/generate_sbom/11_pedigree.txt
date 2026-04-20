@@ -1,0 +1,71 @@
+# Spec: generate-sbom.md §Pedigree, §Purl on patched components
+# Covers: ancestors, patches with inline diff loaded from disk, resolves, notes.
+
+mkdir patches
+mv overflow.patch patches/overflow.patch
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json -o out.json
+
+# --- Ancestors ---
+exec jq -e '.components[0].pedigree.ancestors[0].purl == "pkg:github/DaveGamble/cJSON@1.7.17"' out.json
+
+# --- Patches: type, resolves, inline diff text from file ---
+exec jq -e '.components[0].pedigree.patches[0].type == "backport"' out.json
+exec jq -e '.components[0].pedigree.patches[0].resolves[0].name == "CVE-2024-XXXXX"' out.json
+exec jq -e '.components[0].pedigree.patches[0].resolves[0].type == "security"' out.json
+# diff.text should be loaded from patches/overflow.patch
+exec jq -e '.components[0].pedigree.patches[0].diff.text.content | test("this is a fake diff")' out.json
+
+# Notes round-trip
+exec jq -e '.components[0].pedigree.notes | test("Forked at commit")' out.json
+
+# Commits
+exec jq -e '.components[0].pedigree.commits[0].uid == "abc123"' out.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    {
+      "name": "cjson",
+      "version": "1.7.17",
+      "type": "library",
+      "license": "MIT",
+      "supplier": { "name": "Acme (patched fork)" },
+      "purl": "pkg:github/acme/device-firmware/src/cjson@1.7.17",
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{ "algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }],
+      "pedigree": {
+        "ancestors": [
+          { "purl": "pkg:github/DaveGamble/cJSON@1.7.17" }
+        ],
+        "commits": [
+          { "uid": "abc123", "url": "https://github.com/acme/device-firmware/commit/abc123" }
+        ],
+        "patches": [
+          {
+            "type": "backport",
+            "diff": { "url": "./patches/overflow.patch" },
+            "resolves": [
+              { "type": "security", "name": "CVE-2024-XXXXX", "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-XXXXX" }
+            ]
+          }
+        ],
+        "notes": "Forked at commit abc123; local fix for int overflow in parser."
+      }
+    }
+  ]
+}
+-- overflow.patch --
+--- a/cJSON.c
++++ b/cJSON.c
+this is a fake diff body for testing

@@ -1,0 +1,57 @@
+# Spec: generate-sbom.md §Strict mode checks
+# Table of checks:
+#   - no license                               -> warn
+#   - vendored path without pedigree            -> warn
+#   - purl == ancestor purl                     -> ALWAYS hard error
+#   - no hashes                                 -> warn
+#   - no distribution URL                       -> warn
+#   - type: library without supplier            -> warn
+# Under --strict, the warns become errors.
+#
+# EXPECTED GAPS:
+#   - strict.go:118 precedence bug:
+#       `c.Type == "library" && name == "" || email == ""`
+#     misses parens: any missing email (library or not) is flagged.
+
+# Baseline (no --strict): completes with warnings
+exec sbomasm generate sbom -c meta.yaml -i gappy.json -o out.json
+stderr 'has no license'
+stderr 'has no hash'
+stderr 'has no distribution URL'
+stderr 'has no supplier'
+
+# --strict: should fail loudly
+! exec sbomasm generate sbom -c meta.yaml -i gappy.json --strict -o out_strict.json
+stderr 'strict mode validation failed'
+
+# --strict with clean input: passes
+exec sbomasm generate sbom -c meta.yaml -i clean.json --strict -o out_clean.json
+exists out_clean.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- gappy.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "gappy", "version": "1.0.0", "type": "library" }
+  ]
+}
+-- clean.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "clean", "version": "1.0.0", "type": "library",
+      "license": "MIT",
+      "supplier": {"name": "Acme", "email": "sec@acme.example"},
+      "external_references": [{"type":"distribution","url":"https://acme.example/dl/clean"}],
+      "hashes":[{"algorithm":"SHA-256","value":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}] }
+  ]
+}

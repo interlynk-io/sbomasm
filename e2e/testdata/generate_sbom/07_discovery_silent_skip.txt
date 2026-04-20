@@ -1,0 +1,66 @@
+# Spec: generate-sbom.md §Recursive Discovery, error handling rules
+# Rules (per spec):
+#   - File without `schema` marker -> SILENT SKIP.
+#   - File with `schema: interlynk/...` but malformed -> HARD ERROR.
+#   - Unknown schema version -> HARD ERROR.
+#
+# EXPECTED GAP: pkg/generate/gsbom/parser.go emits errors that are appended to
+# gsbom.Generate's `warnings` slice rather than aborting. Actual behaviour:
+# schema-less, malformed, and unknown-version files all produce warnings and the
+# run completes successfully. This is *wrong on both sides*:
+#   - "silent skip" is not silent (warning is printed), and
+#   - "hard error" is not an error.
+
+mkdir a
+mkdir b
+mkdir c
+mv real.json .components.json
+mv noschema.json a/.components.json
+mv malformed.json b/.components.json
+mv badver.json c/.components.json
+
+# Current behaviour: succeeds, prints warnings for all 3 problems.
+exec sbomasm generate sbom -c meta.yaml -r . -o out.json
+# stderr pattern applies to the most recent exec
+stderr 'missing schema marker'
+stderr 'unexpected end of JSON'
+stderr 'invalid schema'
+
+exec jq -e '[.components[].name] == ["real"]' out.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme
+  license:
+    id: MIT
+-- real.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "real", "version": "1.0.0", "type": "library", "license": "MIT",
+      "supplier": {"name": "a"},
+      "hashes": [{"algorithm": "SHA-256", "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],
+      "external_references": [{"type": "distribution", "url": "https://x"}]
+    }
+  ]
+}
+-- noschema.json --
+{
+  "components": [
+    { "name": "notours", "version": "1.0.0", "type": "library" }
+  ]
+}
+-- malformed.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "oops"
+-- badver.json --
+{
+  "schema": "interlynk/component-manifest/v99",
+  "components": []
+}

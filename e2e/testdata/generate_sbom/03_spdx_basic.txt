@@ -1,0 +1,61 @@
+# Spec: generate-sbom.md §Output (SPDX)
+# Covers: SPDX 2.3 output, primary package, DESCRIBES relationship, DEPENDS_ON,
+# package checksums, purl external ref, supplier.
+
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format spdx --spec-version 2.3 -o out.spdx.json
+exists out.spdx.json
+
+# --- Document ---
+exec jq -e '.spdxVersion == "SPDX-2.3"' out.spdx.json
+exec jq -e '.dataLicense == "CC0-1.0"' out.spdx.json
+exec jq -e '.name == "app"' out.spdx.json
+exec jq -e '.creationInfo.creators[0] | test("Tool")' out.spdx.json
+
+# --- Primary package ---
+exec jq -e '[.packages[].name] | contains(["app"])' out.spdx.json
+exec jq -e '.packages[] | select(.name == "app") | .versionInfo == "1.0.0"' out.spdx.json
+
+# --- Component package ---
+exec jq -e '[.packages[].name] | contains(["libmqtt"])' out.spdx.json
+exec jq -e '.packages[] | select(.name == "libmqtt") | .versionInfo == "4.3.0"' out.spdx.json
+exec jq -e '.packages[] | select(.name == "libmqtt") | .licenseConcluded == "MIT"' out.spdx.json
+exec jq -e '.packages[] | select(.name == "libmqtt") | .checksums[0].algorithm == "SHA256"' out.spdx.json
+exec jq -e '.packages[] | select(.name == "libmqtt") | .externalRefs[] | select(.referenceType == "purl")' out.spdx.json
+
+# --- Relationships ---
+exec jq -e '[.relationships[].relationshipType] | contains(["DESCRIBES"])' out.spdx.json
+exec jq -e '[.relationships[].relationshipType] | contains(["DEPENDS_ON"])' out.spdx.json
+
+# SPDX 2.2 backward compat
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format spdx --spec-version 2.2 -o out22.spdx.json
+exec jq -e '.spdxVersion == "SPDX-2.2"' out22.spdx.json
+
+-- meta.yaml --
+app:
+  name: app
+  version: 1.0.0
+  primary_purpose: application
+  supplier:
+    name: Acme Corp
+  license:
+    id: Apache-2.0
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    {
+      "name": "libmqtt",
+      "version": "4.3.0",
+      "type": "library",
+      "license": "MIT",
+      "supplier": { "name": "acme" },
+      "purl": "pkg:generic/acme/libmqtt@4.3.0",
+      "hashes": [
+        { "algorithm": "SHA-256", "value": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" }
+      ],
+      "external_references": [
+        { "type": "distribution", "url": "https://acme.example/dl/libmqtt" }
+      ]
+    }
+  ]
+}

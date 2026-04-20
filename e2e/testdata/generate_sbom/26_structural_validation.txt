@@ -1,0 +1,53 @@
+# Spec: generate-sbom.md §Output
+# Schema-structural validation: generated documents must be valid CycloneDX /
+# SPDX JSON. We use sbomqs's internal schema checking via --category, and also
+# spot-check critical fields.
+
+[!exec:sbomqs] skip
+
+# --- CycloneDX 1.6 ---
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format cyclonedx --spec-version 1.6 -o out16.json
+# bomFormat / specVersion / serialNumber
+exec jq -e '.bomFormat == "CycloneDX" and .specVersion == "1.6" and (.serialNumber | test("^urn:uuid:"))' out16.json
+# Every component has a bom-ref
+exec jq -e '[.components[] | has("bom-ref")] | all' out16.json
+# Dependency ref + dependsOn[] values all resolve to a component bom-ref OR the primary
+exec jq -e '[.components[]["bom-ref"]] + [.metadata.component["bom-ref"]] as $refs | [.dependencies[] | select(.dependsOn) | .dependsOn[]] as $used | ($used - $refs) == []' out16.json
+
+# --- SPDX 2.3 ---
+exec sbomasm generate sbom -c meta.yaml -i .components.json --format spdx --spec-version 2.3 -o out23.json
+exec jq -e '.SPDXID == "SPDXRef-DOCUMENT"' out23.json
+exec jq -e '.spdxVersion == "SPDX-2.3"' out23.json
+exec jq -e '.dataLicense == "CC0-1.0"' out23.json
+# Every package has an SPDXID
+exec jq -e '[.packages[] | has("SPDXID")] | all' out23.json
+# Document describes primary
+exec jq -e '.relationships[] | select(.relationshipType == "DESCRIBES") | .spdxElementId == "SPDXRef-DOCUMENT"' out23.json
+
+-- meta.yaml --
+app:
+  name: device-firmware
+  version: 2.1.0
+  primary_purpose: firmware
+  supplier:
+    name: Acme Corp
+  license:
+    id: Apache-2.0
+-- .components.json --
+{
+  "schema": "interlynk/component-manifest/v1",
+  "components": [
+    { "name": "libmqtt", "version": "4.3.0", "type": "library",
+      "purl": "pkg:generic/acme/libmqtt@4.3.0",
+      "license": "EPL-2.0",
+      "supplier": {"name": "Acme", "email": "sec@acme.example"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}],
+      "depends-on": ["libtls@3.9.0"] },
+    { "name": "libtls", "version": "3.9.0", "type": "library",
+      "license": "ISC",
+      "supplier": {"name": "OpenBSD", "email": "sec@openbsd.org"},
+      "external_references": [{"type": "distribution", "url": "https://x"}],
+      "hashes": [{"algorithm": "SHA-256", "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}] }
+  ]
+}

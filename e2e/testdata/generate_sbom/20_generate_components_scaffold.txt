@@ -1,0 +1,58 @@
+# Spec: generate-sbom.md §`generate components` Command
+# Covers: JSON scaffold, CSV scaffold, positional path, -o, --force, overwrite refusal,
+# --describe, --schema.
+
+# --- Default JSON scaffold in cwd ---
+exec sbomasm generate components
+exists .components.json
+exec jq -e '.schema == "interlynk/component-manifest/v1"' .components.json
+exec jq -e '.components | length == 1' .components.json
+exec jq -e '.components[0].name == "libexample"' .components.json
+
+# --- Refuse to overwrite ---
+! exec sbomasm generate components
+stderr 'refusing to overwrite'
+
+# --- --force overwrite ---
+exec sbomasm generate components --force
+exists .components.json
+
+# --- CSV scaffold ---
+rm .components.json
+exec sbomasm generate components --csv
+exists .components.csv
+grep 'interlynk/component-manifest/v1' .components.csv
+grep 'libexample' .components.csv
+
+# --- Positional path as directory ---
+mkdir sub
+exec sbomasm generate components sub
+exists sub/.components.json
+
+# --- Positional path as explicit file ---
+exec sbomasm generate components my-deps.json
+exists my-deps.json
+exec jq -e '.schema == "interlynk/component-manifest/v1"' my-deps.json
+
+# --- --describe prints field reference ---
+exec sbomasm generate components --describe
+stdout 'Component manifest'
+stdout 'schema: interlynk/component-manifest/v1'
+stdout 'name '
+stdout 'version'
+stdout 'hashes'
+stdout 'pedigree'
+
+# --- --schema to stdout ---
+exec sbomasm generate components --schema
+stdout '\$schema'
+stdout 'interlynk/component-manifest'
+
+# --- --schema to file ---
+exec sbomasm generate components --schema -o schema.json
+exists schema.json
+exec jq -e 'has("$schema")' schema.json
+
+# --- --describe and --schema mutually exclusive ---
+! exec sbomasm generate components --describe --schema
+stderr 'mutually exclusive'
