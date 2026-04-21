@@ -78,6 +78,16 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 	// --- Components ---
 	var comps []cydx.Component
 
+	// Check for bom-ref collisions before building components
+	bomRefSet := make(map[string]bool)
+	for _, c := range bom.Components {
+		bomRef := getBomRef(c)
+		if bomRefSet[bomRef] {
+			return fmt.Errorf("bom-ref collision: multiple components resolve to '%s'", bomRef)
+		}
+		bomRefSet[bomRef] = true
+	}
+
 	for _, c := range bom.Components {
 		comp := cydx.Component{
 			Type:   mapComponentType(c.Type),
@@ -239,7 +249,24 @@ func getBomRef(c Component) string {
 	if c.PURL != "" {
 		return c.PURL
 	}
-	return c.Name + "@" + c.Version
+	return "pkg:generic/" + sanitizeName(c.Name) + "@" + c.Version
+}
+
+// sanitizeName sanitizes a component name for use in a bom-ref.
+// Replaces spaces and special characters with hyphens.
+func sanitizeName(name string) string {
+	// Simple sanitization: replace spaces with hyphens
+	// and remove any characters that aren't alphanumeric, hyphen, or dot
+	result := strings.ReplaceAll(name, " ", "-")
+	var sanitized []rune
+	for _, r := range result {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '.' || r == '_' {
+			sanitized = append(sanitized, r)
+		} else {
+			sanitized = append(sanitized, '-')
+		}
+	}
+	return string(sanitized)
 }
 
 func buildToolMetadata() *cydx.ToolsChoice {
