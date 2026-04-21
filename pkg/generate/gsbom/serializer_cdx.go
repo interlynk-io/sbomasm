@@ -504,6 +504,14 @@ func mapComponentType(t string) cydx.ComponentType {
 		return cydx.ComponentTypeDevice
 	case "firmware":
 		return cydx.ComponentTypeFirmware
+	case "platform":
+		return cydx.ComponentTypePlatform
+	case "device-driver":
+		return cydx.ComponentTypeDeviceDriver
+	case "machine-learning-model":
+		return cydx.ComponentTypeMachineLearningModel
+	case "data":
+		return cydx.ComponentTypeData
 	default:
 		return cydx.ComponentType(cydx.ComponentDataTypeOther)
 	}
