@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	spdx_assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
@@ -59,7 +58,7 @@ func serializeSPDX22(ctx context.Context, bom *BOM, output string) error {
 	doc.DocumentName = bom.Artifact.Name
 	doc.DataLicense = v2_2.DataLicense
 	doc.SPDXVersion = v2_2.Version
-	doc.DocumentNamespace = spdx_assemble.ComposeNamespace(bom.Artifact.Name)
+	doc.DocumentNamespace = getDocumentNamespace(bom.Artifact.Name, bom.Components)
 	doc.CreationInfo = buildCreatorInfoToolV22()
 	log.Debugf("document metadata: name=%s, namespace=%s", doc.DocumentName, doc.DocumentNamespace)
 
@@ -317,7 +316,7 @@ func serializeSPDX23(ctx context.Context, bom *BOM, output string) error {
 	doc.DocumentName = bom.Artifact.Name
 	doc.DataLicense = v2_3.DataLicense
 	doc.SPDXVersion = v2_3.Version
-	doc.DocumentNamespace = spdx_assemble.ComposeNamespace(bom.Artifact.Name)
+	doc.DocumentNamespace = getDocumentNamespace(bom.Artifact.Name, bom.Components)
 	doc.CreationInfo = buildCreatorInfoToolV23()
 	log.Debugf("document metadata: name=%s, namespace=%s", doc.DocumentName, doc.DocumentNamespace)
 
@@ -501,7 +500,7 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 
 func buildCreatorInfoToolV23() *v2_3.CreationInfo {
 	ci := v2_3.CreationInfo{}
-	ci.Created = time.Now().UTC().Format(time.RFC3339)
+	ci.Created = getTimestamp().Format(time.RFC3339)
 	ci.Creators = []common.Creator{
 		{
 			CreatorType: "Tool",
@@ -513,7 +512,7 @@ func buildCreatorInfoToolV23() *v2_3.CreationInfo {
 
 func buildCreatorInfoToolV22() *v2_2.CreationInfo {
 	ci := v2_2.CreationInfo{}
-	ci.Created = time.Now().UTC().Format(time.RFC3339)
+	ci.Created = getTimestamp().Format(time.RFC3339)
 	ci.Creators = []common.Creator{
 		{
 			CreatorType: "Tool",

@@ -20,9 +20,9 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
-	assemble "github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"sigs.k8s.io/release-utils/version"
 )
@@ -40,7 +40,7 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 	log.Debugf("serializing CycloneDX: output=%s, specVersion=%s, components=%d, dependencies=%d", output, specVersion, len(bom.Components), len(bom.Dependencies))
 
 	out := cydx.NewBOM()
-	out.SerialNumber = assemble.NewSerialNumber()
+	out.SerialNumber = getSerialNumber(bom.Components)
 	log.Debugf("generated serial number: %s", out.SerialNumber)
 
 	// Build at latest version (1.6), then use EncodeVersion for conversion
@@ -69,7 +69,7 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 
 	// --- Metadata ---
 	out.Metadata = &cydx.Metadata{}
-	out.Metadata.Timestamp = assemble.UTCNowTime()
+	out.Metadata.Timestamp = getTimestamp().Format(time.RFC3339)
 	out.Metadata.Tools = buildToolMetadata()
 	out.Metadata.Component = buildPrimaryComponent(bom.Artifact)
 	out.Metadata.Lifecycles = buildLifecycles(bom.Artifact.Lifecycles)
