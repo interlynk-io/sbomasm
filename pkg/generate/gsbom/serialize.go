@@ -97,9 +97,9 @@ func getDeterministicUUID(components []Component) string {
 // Otherwise, returns a random UUID.
 func getSerialNumber(components []Component) string {
 	if os.Getenv("SOURCE_DATE_EPOCH") != "" {
-		return getDeterministicUUID(components)
+		return "urn:uuid:" + getDeterministicUUID(components)
 	}
-	return uuid.New().String()
+	return "urn:uuid:" + uuid.New().String()
 }
 
 // getDocumentNamespace returns a document namespace for SPDX.
