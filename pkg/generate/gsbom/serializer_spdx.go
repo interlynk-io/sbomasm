@@ -227,8 +227,8 @@ func buildSPDXPackageV22(c Component) (*v2_2.Package, string) {
 	if c.Version != "" {
 		pkg.PackageVersion = c.Version
 	}
-	if c.License != "" {
-		pkg.PackageLicenseConcluded = c.License
+	if !c.License.IsEmpty() {
+		pkg.PackageLicenseConcluded = c.License.String()
 	}
 	if c.Description != "" {
 		pkg.PackageDescription = c.Description
@@ -485,8 +485,8 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	if c.Version != "" {
 		pkg.PackageVersion = c.Version
 	}
-	if c.License != "" {
-		pkg.PackageLicenseConcluded = c.License
+	if !c.License.IsEmpty() {
+		pkg.PackageLicenseConcluded = c.License.String()
 	}
 	if c.Description != "" {
 		pkg.PackageDescription = c.Description

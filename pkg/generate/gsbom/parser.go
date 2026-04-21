@@ -33,11 +33,11 @@ type Component struct {
 	Version string `json:"version"`
 	Type    string `json:"type"`
 
-	Description string   `json:"description,omitempty"`
-	Supplier    Supplier `json:"supplier,omitempty"`
-	License     string   `json:"license,omitempty"`
-	PURL        string   `json:"purl,omitempty"`
-	CPE         string   `json:"cpe,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Supplier    Supplier     `json:"supplier,omitempty"`
+	License     LicenseField `json:"license,omitempty"`
+	PURL        string       `json:"purl,omitempty"`
+	CPE         string       `json:"cpe,omitempty"`
 
 	Hashes    []Hash    `json:"hashes,omitempty"`
 	DependsOn []string  `json:"depends-on,omitempty"`
@@ -50,6 +50,64 @@ type Component struct {
 	// SourcePath tracks which manifest file this component came from
 	// Used for vendored path detection in strict checks
 	SourcePath string `json:"-"`
+}
+
+// LicenseField represents a license that can be either a string or an object.
+// It supports four forms:
+//   - "license": "MIT" (string/expression)
+//   - "license": { "id": "MIT" } (structured)
+//   - "license": { "id": "MIT", "text": "..." } (inline text)
+//   - "license": { "id": "MIT", "file": "./LICENSE" } (file reference)
+type LicenseField struct {
+	ID   string `json:"id,omitempty"`
+	Text string `json:"text,omitempty"`
+	File string `json:"file,omitempty"`
+
+	// Expression is set when license is a simple string
+	Expression string `json:"-"`
+}
+
+// UnmarshalJSON implements custom unmarshaling for LicenseField.
+// It handles both string and object forms.
+func (l *LicenseField) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		l.Expression = str
+		l.ID = ""
+		l.Text = ""
+		l.File = ""
+		return nil
+	}
+
+	// Try to unmarshal as object
+	var obj struct {
+		ID   string `json:"id"`
+		Text string `json:"text"`
+		File string `json:"file"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+
+	l.ID = obj.ID
+	l.Text = obj.Text
+	l.File = obj.File
+	l.Expression = ""
+	return nil
+}
+
+// IsEmpty returns true if the license field is empty
+func (l LicenseField) IsEmpty() bool {
+	return l.Expression == "" && l.ID == "" && l.Text == "" && l.File == ""
+}
+
+// String returns a string representation of the license
+func (l LicenseField) String() string {
+	if l.Expression != "" {
+		return l.Expression
+	}
+	return l.ID
 }
 
 // Pedigree represents the provenance of a component, especially for vendored/patched code
@@ -231,7 +289,7 @@ func parseCSVComponents(path string) ([]Component, error) {
 			Version:     getValue("version", record, colIndex),
 			Type:        getValue("type", record, colIndex),
 			Description: getValue("description", record, colIndex),
-			License:     getValue("license", record, colIndex),
+			License:     LicenseField{Expression: getValue("license", record, colIndex)},
 			PURL:        getValue("purl", record, colIndex),
 			CPE:         getValue("cpe", record, colIndex),
 			Scope:       getValue("scope", record, colIndex),

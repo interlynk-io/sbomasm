@@ -52,7 +52,8 @@ func (s *StrictChecker) Check(component Component, sourcePath string) {
 // checkMissingLicense validates component has a license field.
 // NTIA minimum requirement.
 func (s *StrictChecker) checkMissingLicense(c Component) {
-	if strings.TrimSpace(c.License) == "" || strings.TrimSpace(c.License) == "NOASSERTION" || strings.TrimSpace(c.License) == "NONE" {
+	licenseStr := c.License.String()
+	if strings.TrimSpace(licenseStr) == "" || strings.TrimSpace(licenseStr) == "NOASSERTION" || strings.TrimSpace(licenseStr) == "NONE" {
 		s.log.Debugf("component %s@%s has no license field", c.Name, c.Version)
 		s.Warnings = append(s.Warnings,
 			fmt.Errorf("component %s@%s has no license field", c.Name, c.Version))

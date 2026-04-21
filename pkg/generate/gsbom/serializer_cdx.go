@@ -318,28 +318,50 @@ func buildToolMetadata() *cydx.ToolsChoice {
 	}
 }
 
-func buildLicenses(license string) *cydx.Licenses {
-	if license == "" {
+func buildLicenses(license LicenseField) *cydx.Licenses {
+	if license.IsEmpty() {
 		return nil
 	}
 
-	license = strings.TrimSpace(license)
-
-	// detect expressions (e.g. "MIT OR Apache-2.0")
-	if isLicenseExpression(license) {
+	// Handle string expression form: "license": "MIT" or "MIT OR Apache-2.0"
+	if license.Expression != "" {
+		expr := strings.TrimSpace(license.Expression)
+		if isLicenseExpression(expr) {
+			return &cydx.Licenses{
+				{
+					Expression: expr,
+				},
+			}
+		}
+		// Simple license ID from string form
 		return &cydx.Licenses{
 			{
-				Expression: license,
+				License: &cydx.License{ID: expr},
 			},
 		}
 	}
 
-	// simple license ID
-	return &cydx.Licenses{
-		{
-			License: &cydx.License{ID: license},
-		},
+	// Handle object forms: {id: "..."}, {id: "...", text: "..."}, {id: "...", file: "..."}
+	if license.ID != "" {
+		lic := &cydx.License{ID: license.ID}
+
+		// Handle inline text
+		if license.Text != "" {
+			lic.Text = &cydx.AttachedText{Content: license.Text}
+		}
+
+		// Handle file reference - load contents if available
+		// Note: file contents loading would need to be handled at a higher level
+		// where the manifest directory is known. For now, we just set the ID.
+
+		return &cydx.Licenses{
+			{
+				License: lic,
+			},
+		}
 	}
+
+	return nil
 }
 
 func isLicenseExpression(l string) bool {
