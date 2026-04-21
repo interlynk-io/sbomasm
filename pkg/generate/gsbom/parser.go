@@ -111,10 +111,9 @@ type Hash struct {
 	Extensions []string `json:"extensions,omitempty"`
 }
 
-// ParseComponentFiles perform following fucntionality:
-// - takes a list of file paths,
-// - parses each file and extract components and
-// - returns a list of components from all files.
+// ParseComponentFiles takes a list of file paths, parses each file and extracts components.
+// Schema validation is assumed to have been done at file collection time.
+// Returns a list of component lists (one per file) and any parsing errors.
 func ParseComponentFiles(files []string) ([][]Component, []error) {
 	var allComponentsFromFiles [][]Component
 	var errors []error
@@ -177,15 +176,6 @@ func parseJSONComponents(path string) ([]Component, error) {
 		return nil, err
 	}
 
-	if strings.TrimSpace(doc.Schema) == "" {
-		return nil, fmt.Errorf("missing schema marker in JSON file")
-	}
-
-	// Validate schema marker
-	if doc.Schema != ComponentFileSchema {
-		return nil, fmt.Errorf("invalid schema: expected %s, got %s", ComponentFileSchema, doc.Schema)
-	}
-
 	return doc.Components, nil
 }
 
@@ -202,19 +192,11 @@ func parseCSVComponents(path string) ([]Component, error) {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = -1 // Allow variable-length rows for optional fields
 
-	// First line = schema marker
-	header, err := reader.Read()
+	// First line = schema marker (already validated at collection time)
+	// Skip it and move to column headers
+	_, err = reader.Read()
 	if err != nil {
 		return nil, err
-	}
-
-	// let's remove "#" from header[0]
-	if len(header) > 0 {
-		header[0] = strings.TrimPrefix(header[0], "#")
-	}
-
-	if len(header) == 0 || header[0] != ComponentFileSchema {
-		return nil, fmt.Errorf("invalid schema marker: expected %s, got %s", ComponentFileSchema, header[0])
 	}
 
 	// Next line = column headers

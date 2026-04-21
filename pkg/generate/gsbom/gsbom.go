@@ -34,7 +34,7 @@ import (
 // - Build BOM model from artifact, components, and dependency graph
 // - Serialize BOM to output file in specified format (CycloneDX or SPDX)
 func Generate(params *GenerateSBOMParams) error {
-	var warnings []error
+	var errors []error
 
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("starting SBOM generation: format=%s, output=%s", params.Format, params.Output)
@@ -61,19 +61,30 @@ func Generate(params *GenerateSBOMParams) error {
 	// Collect input files: `.components.json` (explicit/recursive)
 	// `.components.json` files contain component information
 	log.Debugf("collecting input files: input=%v, recurse=%s", params.InputFiles, params.RecursePath)
-	files, warn := CollectInputFiles(params)
-	warnings = append(warnings, warn...)
-	log.Debugf("found %d component files", len(files))
 
-	if len(files) == 0 {
+	explicitFiles, discoveredFiles, fErr := CollectInputFiles(params)
+	// Check for errors from collection (e.g., explicit file without schema)
+	if len(fErr) > 0 {
+		return fmt.Errorf("error during file collection: %v", fErr[0])
+	}
+
+	allFiles := append(explicitFiles, discoveredFiles...)
+	log.Debugf("found %d component files (%d explicit, %d discovered)", len(allFiles), len(explicitFiles), len(discoveredFiles))
+
+	if len(allFiles) == 0 {
 		return fmt.Errorf("no component files found in input paths")
 	}
 
 	// Parse component files into internal component model
 	// it returns list of components present in each files
-	log.Debugf("parsing %d component files", len(files))
-	componentLists, warn := ParseComponentFiles(files)
-	warnings = append(warnings, warn...)
+	log.Debugf("parsing %d component files", len(allFiles))
+	var componentLists [][]Component
+
+	// Parse component files into internal model
+	// Schema already validated at collection time, so just parse
+	componentLists, warn := ParseComponentFiles(allFiles)
+	errors = append(errors, warn...)
+
 	totalComponents := 0
 	for _, list := range componentLists {
 		totalComponents += len(list)
@@ -83,11 +94,11 @@ func Generate(params *GenerateSBOMParams) error {
 	// Compute file/directory hashes for each component list
 	// Hash computation is done per-file so relative paths resolve correctly
 	log.Debugf("computing hashes for components")
-	for i, file := range files {
-		if i < len(componentLists) {
-			manifestDir := filepath.Dir(file)
+	for i, list := range componentLists {
+		if len(list) > 0 && list[0].SourcePath != "" {
+			manifestDir := filepath.Dir(list[0].SourcePath)
 			hashErrs := ComputeHashes(componentLists[i], manifestDir)
-			warnings = append(warnings, hashErrs...)
+			errors = append(errors, hashErrs...)
 		}
 	}
 
@@ -102,18 +113,18 @@ func Generate(params *GenerateSBOMParams) error {
 	// Process pedigree information for all components
 	// This loads patch files and validates purl vs ancestor purl
 	log.Debugf("processing pedigree information")
-	for i, file := range files {
-		if i < len(componentLists) {
-			manifestDir := filepath.Dir(file)
+	for i, list := range componentLists {
+		if len(list) > 0 && list[0].SourcePath != "" {
+			manifestDir := filepath.Dir(list[0].SourcePath)
 			pedigreeErrs := ProcessPedigrees(componentLists[i], manifestDir)
-			warnings = append(warnings, pedigreeErrs...)
+			errors = append(errors, pedigreeErrs...)
 		}
 	}
 
 	// Dedup components and collect warnings for duplicates
 	log.Debugf("deduplicating components")
 	componentUniqueLists, warn := DeduplicateComponents(componentMergedLists)
-	warnings = append(warnings, warn...)
+	errors = append(errors, warn...)
 	log.Debugf("deduplicated to %d unique components", len(componentUniqueLists))
 
 	// 2. Final component list(post filtering components by tags)
@@ -132,7 +143,7 @@ func Generate(params *GenerateSBOMParams) error {
 	// 3. Dependency graph to build parent-child relationships
 	log.Debugf("building dependency graph")
 	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap, artifact)
-	warnings = append(warnings, warn...)
+	errors = append(errors, warn...)
 	log.Debugf("built dependency graph: %d dependencies", len(graph.Edges))
 
 	// Build BOM model from artifact, components, and dependency graph
@@ -151,7 +162,7 @@ func Generate(params *GenerateSBOMParams) error {
 		return fmt.Errorf("strict mode validation failed: %v", err)
 	}
 	log.Debugf("strict checks completed: %d warnings", len(strictWarnings))
-	warnings = append(warnings, strictWarnings...)
+	errors = append(errors, strictWarnings...)
 
 	// Serialize BOM to output file in specified format (CycloneDX or SPDX)
 	log.Debugf("serializing BOM: format=%s, output=%s, specVersion=%s", params.Format, params.Output, params.SpecVersion)
@@ -159,7 +170,7 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Print warnings
 	defer func() {
-		for _, w := range warnings {
+		for _, w := range errors {
 			fmt.Fprintf(os.Stderr, "warning: %v\n", w)
 		}
 	}()
