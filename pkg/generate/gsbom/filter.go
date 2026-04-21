@@ -19,6 +19,7 @@ import (
 )
 
 // FilterComponents takes a list of components and applies include and exclude tag filters.
+// - Components with scope: "excluded" are always dropped first (before tag filtering).
 // - If includeTags is provided, only components that have at least one of the specified tags will be included.
 // - If excludeTags is provided, any component that has at least one of the specified exclude tags will be excluded.
 // And finally returns a list of components that match the filtering criteria.
@@ -26,6 +27,10 @@ func FilterComponents(components []Component, includeTags, excludeTags []string)
 	var filteredComponentsList []Component
 
 	for _, comp := range components {
+		// Step 0: Always drop components with scope: "excluded"
+		if strings.TrimSpace(strings.ToLower(comp.Scope)) == "excluded" {
+			continue
+		}
 
 		// Step 1: include filter
 		if len(includeTags) > 0 {
