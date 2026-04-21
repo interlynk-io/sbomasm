@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -88,7 +89,14 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 		bomRefSet[bomRef] = true
 	}
 
-	for _, c := range bom.Components {
+	// Sort components by bom-ref for stable output
+	sortedComponents := make([]Component, len(bom.Components))
+	copy(sortedComponents, bom.Components)
+	sort.Slice(sortedComponents, func(i, j int) bool {
+		return getBomRef(sortedComponents[i]) < getBomRef(sortedComponents[j])
+	})
+
+	for _, c := range sortedComponents {
 		comp := cydx.Component{
 			Type:   mapComponentType(c.Type),
 			BOMRef: getBomRef(c),
@@ -150,8 +158,16 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 	log.Debugf("root component mapped: key=%s, ref=%s", rootKey, rootRef)
 
 	// 1. Parent -> children
+	// Sort parents by ref for stable output
+	var parents []string
+	for parent := range bom.Dependencies {
+		parents = append(parents, parent)
+	}
+	sort.Strings(parents)
+
 	depCount := 0
-	for parent, children := range bom.Dependencies {
+	for _, parent := range parents {
+		children := bom.Dependencies[parent]
 		parentRef := compRefMap[parent]
 		if parentRef == "" {
 			log.Debugf("parent not found in ref map, using fallback: %s", parent)
@@ -167,6 +183,9 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 			}
 			childRefs = append(childRefs, ref)
 		}
+
+		// Sort child refs for stable output
+		sort.Strings(childRefs)
 
 		if len(childRefs) == 0 {
 			childRefs = []string{}
@@ -201,6 +220,9 @@ func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersio
 			topLevel = append(topLevel, getBomRef(c))
 		}
 	}
+
+	// Sort top-level refs for stable output
+	sort.Strings(topLevel)
 
 	// Add primary -> top-level dependencies if root doesn't already have dependencies
 	if len(topLevel) > 0 && len(bom.Dependencies[rootKey]) == 0 {
@@ -359,6 +381,11 @@ func buildHashes(hashes []Hash) *[]cydx.Hash {
 		return nil
 	}
 
+	// Sort by algorithm for stable output
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Algorithm < out[j].Algorithm
+	})
+
 	return &out
 }
 
@@ -496,6 +523,14 @@ func buildExternalRefsCDX(refs []ExternalRef) *[]cydx.ExternalReference {
 			Comment: r.Comment,
 		})
 	}
+
+	// Sort by type then URL for stable output
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Type != out[j].Type {
+			return out[i].Type < out[j].Type
+		}
+		return out[i].URL < out[j].URL
+	})
 
 	return &out
 }
