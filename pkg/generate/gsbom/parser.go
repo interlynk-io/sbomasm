@@ -396,17 +396,30 @@ func parseTagsFromCSV(record []string, colIndex map[string]int) []string {
 }
 
 // parseHashesFromCSV extracts hash information from CSV record.
+// Supports both explicit hash_value and hash_file for computed hashes.
 func parseHashesFromCSV(record []string, colIndex map[string]int) []Hash {
 	v := getValue("hash_value", record, colIndex)
+	file := getValue("hash_file", record, colIndex)
+	algo := getValue("hash_algorithm", record, colIndex)
 
 	if v != "" {
 		return []Hash{
 			{
-				Algorithm: getValue("hash_algorithm", record, colIndex),
+				Algorithm: algo,
 				Value:     v,
 			},
 		}
 	}
+
+	if file != "" {
+		return []Hash{
+			{
+				Algorithm: algo,
+				File:      file,
+			},
+		}
+	}
+
 	return nil
 }
 

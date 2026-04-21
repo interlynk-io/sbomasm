@@ -116,7 +116,7 @@ func (s *StrictChecker) checkMissingDistributionRef(c Component) {
 // checkLibraryWithoutSupplier validates library components have a supplier.
 // NTIA minimum element.
 func (s *StrictChecker) checkLibraryWithoutSupplier(c Component) {
-	if c.Type == "library" && strings.TrimSpace(c.Supplier.Name) == "" || strings.TrimSpace(c.Supplier.Email) == "" {
+	if c.Type == "library" && strings.TrimSpace(c.Supplier.Name) == "" && strings.TrimSpace(c.Supplier.Email) == "" {
 		s.log.Debugf("component %s@%s has no supplier", c.Name, c.Version)
 		s.Warnings = append(s.Warnings,
 			fmt.Errorf("component %s@%s has no supplier", c.Name, c.Version))
