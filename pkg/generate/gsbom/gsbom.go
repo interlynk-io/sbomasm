@@ -93,12 +93,15 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Compute file/directory hashes for each component list
 	// Hash computation is done per-file so relative paths resolve correctly
+	// Hash errors are hard failures per spec
 	log.Debugf("computing hashes for components")
 	for i, list := range componentLists {
 		if len(list) > 0 && list[0].SourcePath != "" {
 			manifestDir := filepath.Dir(list[0].SourcePath)
 			hashErrs := ComputeHashes(componentLists[i], manifestDir)
-			errors = append(errors, hashErrs...)
+			if len(hashErrs) > 0 {
+				return fmt.Errorf("hash computation failed: %v", hashErrs[0])
+			}
 		}
 	}
 
@@ -112,12 +115,15 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Process pedigree information for all components
 	// This loads patch files and validates purl vs ancestor purl
+	// Pedigree errors are hard failures
 	log.Debugf("processing pedigree information")
 	for i, list := range componentLists {
 		if len(list) > 0 && list[0].SourcePath != "" {
 			manifestDir := filepath.Dir(list[0].SourcePath)
 			pedigreeErrs := ProcessPedigrees(componentLists[i], manifestDir)
-			errors = append(errors, pedigreeErrs...)
+			if len(pedigreeErrs) > 0 {
+				return fmt.Errorf("pedigree processing failed: %v", pedigreeErrs[0])
+			}
 		}
 	}
 
