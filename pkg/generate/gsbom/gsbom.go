@@ -48,6 +48,16 @@ func Generate(params *GenerateSBOMParams) error {
 	}
 	log.Debugf("loaded artifact: %s@%s", artifact.Name, artifact.Version)
 
+	// Apply artifact output config if CLI flags weren't explicitly set
+	if !params.FormatSet && artifact.OutputConfig.Spec != "" {
+		params.Format = artifact.OutputConfig.Spec
+		log.Debugf("using format from artifact config: %s", params.Format)
+	}
+	if !params.SpecVersionSet && artifact.OutputConfig.SpecVersion != "" {
+		params.SpecVersion = artifact.OutputConfig.SpecVersion
+		log.Debugf("using spec version from artifact config: %s", params.SpecVersion)
+	}
+
 	// Collect input files: `.components.json` (explicit/recursive)
 	// `.components.json` files contain component information
 	log.Debugf("collecting input files: input=%v, recurse=%s", params.InputFiles, params.RecursePath)

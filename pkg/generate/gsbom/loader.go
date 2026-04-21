@@ -38,13 +38,13 @@ var allowedPrimaryPurpose = map[string]bool{
 }
 
 var allowedLifecyclePhases = map[string]bool{
-	"design":        true,
-	"pre-build":     true,
-	"build":         true,
-	"post-build":    true,
-	"operations":    true,
-	"discovery":     true,
-	"decommission":  true,
+	"design":       true,
+	"pre-build":    true,
+	"build":        true,
+	"post-build":   true,
+	"operations":   true,
+	"discovery":    true,
+	"decommission": true,
 }
 
 // LoadArtifactConfig performs the following steps:
@@ -215,5 +215,11 @@ func mapToArtifact(cfg app.Config) *Artifact {
 			}
 			return lifecycles
 		}(),
+
+		OutputConfig: OutputConfig{
+			Spec:        cfg.Output.Spec,
+			SpecVersion: cfg.Output.SpecVersion,
+			FileFormat:  cfg.Output.FileFormat,
+		},
 	}
 }

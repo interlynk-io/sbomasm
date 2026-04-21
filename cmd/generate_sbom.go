@@ -72,6 +72,8 @@ func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) 
 	params.Filename, _ = cmd.Flags().GetString("filename")
 	params.Strict, _ = cmd.Flags().GetBool("strict")
 	params.SpecVersion, _ = cmd.Flags().GetString("spec-version")
+	params.FormatSet = cmd.Flags().Changed("format")
+	params.SpecVersionSet = cmd.Flags().Changed("spec-version")
 
 	return params, nil
 }

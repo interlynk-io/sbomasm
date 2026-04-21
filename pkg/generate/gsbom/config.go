@@ -62,6 +62,14 @@ type GenerateSBOMParams struct {
 	// For CycloneDX: "1.4", "1.5", "1.6" (default: "1.5")
 	// For SPDX: "2.2", "2.3" (default: "2.3")
 	SpecVersion string
+
+	// FormatSet indicates if the format flag was explicitly set by the user.
+	// Used to determine whether to use CLI value or config file value.
+	FormatSet bool
+
+	// SpecVersionSet indicates if the spec-version flag was explicitly set by the user.
+	// Used to determine whether to use CLI value or config file value.
+	SpecVersionSet bool
 }
 
 // NewGenerateSBOMParams creates a new instance of
@@ -84,6 +92,7 @@ type Artifact struct {
 	Copyright      string
 	ExternalRefs   []ExternalRef
 	Lifecycles     []Lifecycle
+	OutputConfig   OutputConfig
 }
 
 type Author struct {
