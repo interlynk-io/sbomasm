@@ -47,8 +47,35 @@
           "description": "Component supplier"
         },
         "license": {
-          "type": "string",
-          "description": "SPDX license expression"
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "SPDX license expression (e.g., 'MIT', 'Apache-2.0 OR MIT')"
+            },
+            {
+              "type": "object",
+              "description": "Structured license with optional text or file reference",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "SPDX license identifier"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Inline license text"
+                },
+                "file": {
+                  "type": "string",
+                  "description": "Path to license file"
+                }
+              },
+              "anyOf": [
+                { "required": ["id"] },
+                { "required": ["text"] },
+                { "required": ["file"] }
+              ]
+            }
+          ]
         },
         "purl": {
           "type": "string",

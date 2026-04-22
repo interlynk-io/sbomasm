@@ -48,7 +48,7 @@ var allowedLifecyclePhases = map[string]bool{
 }
 
 // LoadArtifactConfig performs the following steps:
-// 1. Read ".artifact-metadata.yaml" from current directory
+// 1. Read ".artifact-metadata.yaml" bydefault from current directory
 // 2. Unmarshals the YAML data into an app.Config struct
 // 3. Validates required fields and sanitizes optional fields
 // 4. Maps the app.Config to an Artifact struct and returns it.
