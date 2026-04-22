@@ -78,12 +78,14 @@ func Generate(params *GenerateSBOMParams) error {
 	// Parse component files into internal component model
 	// it returns list of components present in each files
 	log.Debugf("parsing %d component files", len(allFiles))
-	var componentLists [][]Component
 
 	// Parse component files into internal model
 	// Schema already validated at collection time, so just parse
-	componentLists, warn := ParseComponentFiles(allFiles)
-	errors = append(errors, warn...)
+	componentLists, parseErrs := ParseComponentFiles(allFiles)
+	if len(parseErrs) > 0 {
+		// Parse/validation errors are hard failures
+		return fmt.Errorf("component validation failed: %v", parseErrs[0])
+	}
 
 	totalComponents := 0
 	for _, list := range componentLists {

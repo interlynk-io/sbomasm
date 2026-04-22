@@ -223,6 +223,7 @@ type componentJSON struct {
 
 // parseJSONComponents reads a JSON file and
 // unmarshals into a list of components.
+// Validates each component has required fields.
 func parseJSONComponents(path string) ([]Component, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -234,12 +235,14 @@ func parseJSONComponents(path string) ([]Component, error) {
 		return nil, err
 	}
 
-	return doc.Components, nil
+	// Validate and sanitize components
+	return SanitizeAndValidateComponents(doc.Components, path)
 }
 
 // parseCSVComponents reads a CSV file and parses it into a list of components.
 // The first line must be the schema marker,
 // and the second line must be column headers.
+// Validates each component has required fields.
 func parseCSVComponents(path string) ([]Component, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -269,6 +272,7 @@ func parseCSVComponents(path string) ([]Component, error) {
 	}
 
 	var components []Component
+	rowNum := 2 // Start at 2 (after schema line and header)
 
 	for {
 		record, err := reader.Read()
@@ -278,6 +282,7 @@ func parseCSVComponents(path string) ([]Component, error) {
 		if err != nil {
 			return nil, err
 		}
+		rowNum++
 
 		// Skip empty rows
 		if len(record) == 0 || (len(record) == 1 && strings.TrimSpace(record[0]) == "") {
@@ -297,14 +302,15 @@ func parseCSVComponents(path string) ([]Component, error) {
 			Hashes:      parseHashesFromCSV(record, colIndex),
 		}
 
-		// Skip rows with no name/version (likely empty/malformed)
-		if c.Name == "" && c.Version == "" {
-			continue
-		}
-
 		c.DependsOn = parseDependsOnFromCSV(record, colIndex)
 		c.Tags = parseTagsFromCSV(record, colIndex)
 		c.ExternalRefs = parseExternalRefsFromCSV(record, colIndex)
+
+		// Validate component (sanitization happens in ValidateComponent)
+		if err := ValidateComponent(c, rowNum-3, path); err != nil {
+			// Adjust index to reflect data row (subtract schema + header rows)
+			return nil, fmt.Errorf("row %d: %w", rowNum, err)
+		}
 
 		components = append(components, c)
 	}
