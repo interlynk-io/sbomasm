@@ -234,6 +234,26 @@ func buildSPDXPackageV22(c Component) (*v2_2.Package, string) {
 		pkg.PackageDescription = c.Description
 	}
 
+	// Supplier
+	if c.Supplier.Name != "" {
+		pkg.PackageSupplier = &common.Supplier{
+			Supplier:     c.Supplier.Name,
+			SupplierType: "Organization",
+		}
+	}
+
+	// Originator (from Supplier email if present)
+	if c.Supplier.Email != "" {
+		originator := c.Supplier.Email
+		if c.Supplier.Name != "" {
+			originator = fmt.Sprintf("%s (%s)", c.Supplier.Name, c.Supplier.Email)
+		}
+		pkg.PackageOriginator = &common.Originator{
+			Originator:     originator,
+			OriginatorType: "Organization",
+		}
+	}
+
 	pkg.PackageExternalReferences = buildExternalRefsSPDXV22(c)
 	pkg.PackageChecksums = buildChecksumsV22(c.Hashes)
 
@@ -490,6 +510,26 @@ func buildSPDXPackage(c Component) (*spdx.Package, string) {
 	}
 	if c.Description != "" {
 		pkg.PackageDescription = c.Description
+	}
+
+	// Supplier
+	if c.Supplier.Name != "" {
+		pkg.PackageSupplier = &common.Supplier{
+			Supplier:     c.Supplier.Name,
+			SupplierType: "Organization",
+		}
+	}
+
+	// Originator (from Supplier email if present)
+	if c.Supplier.Email != "" {
+		originator := c.Supplier.Email
+		if c.Supplier.Name != "" {
+			originator = fmt.Sprintf("%s (%s)", c.Supplier.Name, c.Supplier.Email)
+		}
+		pkg.PackageOriginator = &common.Originator{
+			Originator:     originator,
+			OriginatorType: "Organization",
+		}
 	}
 
 	pkg.PackageExternalReferences = buildExternalRefsSPDX(c)
