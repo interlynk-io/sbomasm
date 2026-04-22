@@ -88,12 +88,18 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 			}
 
 			if shouldDiscoverFile(info.Name(), params.Filename) {
-				// For discovered files, silently skip if the file doesn't have our schema marker
-				// This prevents "not our files" from being processed
-				if validateSchema(path) == nil {
-					addFile(path, true)
+				// For discovered files, apply spec-compliant handling:
+				// - File without schema marker: SILENT SKIP (not our file)
+				// - File with our schema but malformed/unknown version: HARD ERROR
+				if err := validateSchema(path); err != nil {
+					if err == ErrMissingSchema {
+						// Silently skip files without our schema marker
+						return nil
+					}
+					// Hard error for malformed files or unknown schema versions
+					return fmt.Errorf("file %s: %w", path, err)
 				}
-				// silently skip (don't add to discovered files), if no schema marker,
+				addFile(path, true)
 			}
 
 			return nil
