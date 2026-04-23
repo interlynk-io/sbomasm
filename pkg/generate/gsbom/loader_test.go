@@ -21,41 +21,25 @@ import (
 	"testing"
 )
 
-// Common YAML templates used across tests
-var (
-	validMinimalArtifact = `
-app:
-  name: myapp
-  version: 1.0.0
-  primary_purpose: application
-`
-	validMinimalExpected = &Artifact{
-		Name:           "myapp",
-		Version:        "1.0.0",
-		PrimaryPurpose: "application",
-		Lifecycles:     []Lifecycle{{Phase: "build"}},
-	}
-
-	// Helper to build YAML with custom primary_purpose
-	yamlWithPurpose = func(purpose string) string {
-		return `
+// Helper to build YAML with custom primary_purpose
+var yamlWithPurpose = func(purpose string) string {
+	return `
 app:
   name: myapp
   version: 1.0.0
   primary_purpose: ` + purpose + `
 `
-	}
+}
 
-	// Helper to build expected artifact with custom primary_purpose
-	expectedWithPurpose = func(purpose string) *Artifact {
-		return &Artifact{
-			Name:           "myapp",
-			Version:        "1.0.0",
-			PrimaryPurpose: purpose,
-			Lifecycles:     []Lifecycle{{Phase: "build"}},
-		}
+// Helper to build expected artifact with custom primary_purpose
+var expectedWithPurpose = func(purpose string) *Artifact {
+	return &Artifact{
+		Name:           "myapp",
+		Version:        "1.0.0",
+		PrimaryPurpose: purpose,
+		Lifecycles:     []Lifecycle{{Phase: "build"}},
 	}
-)
+}
 
 func TestLoadArtifactConfig(t *testing.T) {
 	tests := []struct {
@@ -67,10 +51,20 @@ func TestLoadArtifactConfig(t *testing.T) {
 	}{
 		// ============ REQUIRED FIELDS TESTS ============
 		{
-			name:        "valid minimal artifact",
-			yamlContent: validMinimalArtifact,
-			wantError:   false,
-			expected:    validMinimalExpected,
+			name: "valid minimal artifact",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+`,
+			wantError: false,
+			expected: &Artifact{
+				Name:           "myapp",
+				Version:        "1.0.0",
+				PrimaryPurpose: "application",
+				Lifecycles:     []Lifecycle{{Phase: "build"}},
+			},
 		},
 		{
 			name: "missing name field",
@@ -216,10 +210,15 @@ app:
 			},
 		},
 		{
-			name:        "placeholder [OPTIONAL] becomes empty",
-			yamlContent: validMinimalArtifact + `  description: "[OPTIONAL]"
+			name: "placeholder [OPTIONAL] becomes empty",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  description: "[OPTIONAL]"
 `,
-			wantError:   false,
+			wantError: false,
 			expected: &Artifact{
 				Name:           "myapp",
 				Version:        "1.0.0",
@@ -229,10 +228,15 @@ app:
 			},
 		},
 		{
-			name:        "case-insensitive placeholder [optional]",
-			yamlContent: validMinimalArtifact + `  description: "[optional]"
+			name: "case-insensitive placeholder [optional]",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  description: "[optional]"
 `,
-			wantError:   false,
+			wantError: false,
 			expected: &Artifact{
 				Name:           "myapp",
 				Version:        "1.0.0",
@@ -244,8 +248,13 @@ app:
 
 		// ============ LIFECYCLE TESTS ============
 		{
-			name:        "valid lifecycle - design",
-			yamlContent: validMinimalArtifact + `  lifecycles:
+			name: "valid lifecycle - design",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  lifecycles:
     - phase: design
 `,
 			wantError: false,
@@ -257,14 +266,29 @@ app:
 			},
 		},
 		{
-			name:        "valid lifecycle - build (default)",
-			yamlContent: validMinimalArtifact,
-			wantError:   false,
-			expected:    validMinimalExpected,
+			name: "valid lifecycle - build (default)",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+`,
+			wantError: false,
+			expected: &Artifact{
+				Name:           "myapp",
+				Version:        "1.0.0",
+				PrimaryPurpose: "application",
+				Lifecycles:     []Lifecycle{{Phase: "build"}},
+			},
 		},
 		{
-			name:        "valid multiple lifecycles",
-			yamlContent: validMinimalArtifact + `  lifecycles:
+			name: "valid multiple lifecycles",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  lifecycles:
     - phase: design
     - phase: pre-build
     - phase: build
@@ -283,18 +307,33 @@ app:
 		},
 		{
 			name: "invalid lifecycle phase",
-			yamlContent: validMinimalArtifact + `  lifecycles:
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  lifecycles:
     - phase: invalid-phase
 `,
 			wantError:     true,
 			errorContains: "invalid lifecycle phase",
 		},
 		{
-			name:        "empty lifecycles array gets default",
-			yamlContent: validMinimalArtifact + `  lifecycles: []
+			name: "empty lifecycles array gets default",
+			yamlContent: `
+app:
+  name: myapp
+  version: 1.0.0
+  primary_purpose: application
+  lifecycles: []
 `,
-			wantError:   false,
-			expected:    validMinimalExpected,
+			wantError: false,
+			expected: &Artifact{
+				Name:           "myapp",
+				Version:        "1.0.0",
+				PrimaryPurpose: "application",
+				Lifecycles:     []Lifecycle{{Phase: "build"}},
+			},
 		},
 
 		// ============ OPTIONAL FIELDS TESTS ============
@@ -343,10 +382,10 @@ output:
 				Authors: []Author{
 					{Name: "John Doe", Email: "john@example.com"},
 				},
-				License:        "MIT",
-				PURL:           "pkg:generic/acme/myapp@1.0.0",
-				CPE:            "cpe:2.3:a:acme:myapp:1.0.0",
-				Copyright:      "Copyright 2026 Acme Corp",
+				License:   "MIT",
+				PURL:      "pkg:generic/acme/myapp@1.0.0",
+				CPE:       "cpe:2.3:a:acme:myapp:1.0.0",
+				Copyright: "Copyright 2026 Acme Corp",
 				ExternalRefs: []ExternalRef{
 					{Type: "website", URL: "https://myapp.example", Comment: "Project website"},
 				},
