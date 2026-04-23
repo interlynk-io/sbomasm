@@ -316,6 +316,12 @@ func buildChecksumsV22(hashes []Hash) []common.Checksum {
 			continue
 		}
 
+		// Validate algorithm is allowed by SPDX spec
+		if !isValidSPDXAlgorithm(h.Algorithm) {
+			fmt.Printf("Warning: skipping unsupported hash algorithm for SPDX: %s\n", h.Algorithm)
+			continue
+		}
+
 		out = append(out, common.Checksum{
 			Algorithm: common.ChecksumAlgorithm(normalizeHashAlgorithm(h.Algorithm)),
 			Value:     h.Value,
@@ -634,6 +640,27 @@ func mapExternalRefCategory(refType string) string {
 	}
 }
 
+// allowedSPDXAlgorithms are the hash algorithms defined in SPDX spec
+var allowedSPDXAlgorithms = map[string]bool{
+	"SHA1":        true,
+	"SHA224":      true,
+	"SHA256":      true,
+	"SHA384":      true,
+	"SHA512":      true,
+	"MD2":         true,
+	"MD4":         true,
+	"MD5":         true,
+	"MD6":         true,
+	"SHA3-256":    true,
+	"SHA3-384":    true,
+	"SHA3-512":    true,
+	"BLAKE2B-256": true,
+	"BLAKE2B-384": true,
+	"BLAKE2B-512": true,
+	"BLAKE3":      true,
+	"ADLER32":     true,
+}
+
 // normalizeHashAlgorithm converts hash algorithm names to SPDX-compliant format
 // e.g., "SHA-256" -> "SHA256", "SHA-1" -> "SHA1"
 func normalizeHashAlgorithm(algo string) string {
@@ -641,11 +668,23 @@ func normalizeHashAlgorithm(algo string) string {
 	return strings.ReplaceAll(algo, "-", "")
 }
 
+// isValidSPDXAlgorithm checks if the algorithm is valid for SPDX
+func isValidSPDXAlgorithm(algo string) bool {
+	normalized := strings.ToUpper(strings.ReplaceAll(algo, "-", ""))
+	return allowedSPDXAlgorithms[normalized]
+}
+
 func buildChecksums(hashes []Hash) []spdx.Checksum {
 	var out []spdx.Checksum
 
 	for _, h := range hashes {
 		if h.Value == "" {
+			continue
+		}
+
+		// Validate algorithm is allowed by SPDX spec
+		if !isValidSPDXAlgorithm(h.Algorithm) {
+			fmt.Printf("Warning: skipping unsupported hash algorithm for SPDX: %s\n", h.Algorithm)
 			continue
 		}
 
