@@ -625,6 +625,18 @@ func buildExternalRefsPrimary(a Artifact) []*spdx.PackageExternalReference {
 	return refs
 }
 
+// knownSPDXExternalRefTypes are the types we recognize for proper categorization
+var knownSPDXExternalRefTypes = map[string]bool{
+	"vcs":           true,
+	"issue-tracker": true,
+	"distribution":  true,
+	"website":       true,
+	"documentation": true,
+	"support":       true,
+	"release-notes": true,
+	"advisories":    true,
+}
+
 func mapExternalRefCategory(refType string) string {
 	switch refType {
 	case "vcs":
@@ -636,6 +648,10 @@ func mapExternalRefCategory(refType string) string {
 	case "website", "documentation", "support", "release-notes", "advisories":
 		return "OTHER"
 	default:
+		// Unknown types are allowed by SPDX spec but will be categorized as OTHER
+		if refType != "" {
+			fmt.Printf("Warning: unknown external reference type '%s' will be categorized as OTHER\n", refType)
+		}
 		return "OTHER"
 	}
 }

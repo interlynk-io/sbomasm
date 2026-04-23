@@ -36,6 +36,53 @@ var allowedHashes = map[string]bool{
 	"MD5":     true,
 }
 
+// allowedExternalRefTypes are the valid CycloneDX external reference types
+var allowedExternalRefTypes = map[string]bool{
+	"vcs":                        true,
+	"issue-tracker":              true,
+	"website":                    true,
+	"advisories":                 true,
+	"bom":                        true,
+	"mailing-list":               true,
+	"social":                     true,
+	"chat":                       true,
+	"documentation":              true,
+	"support":                    true,
+	"source-distribution":        true,
+	"distribution":               true,
+	"distribution-intake":        true,
+	"license":                    true,
+	"build-meta":                 true,
+	"build-system":               true,
+	"release-notes":              true,
+	"security-contact":           true,
+	"model-card":                 true,
+	"log":                        true,
+	"configuration":              true,
+	"evidence":                   true,
+	"formulation":                true,
+	"attestation":                true,
+	"threat-model":               true,
+	"adversary-model":            true,
+	"risk-assessment":            true,
+	"vulnerability-assertion":    true,
+	"exploitability-statement":   true,
+	"pentest-report":            true,
+	"static-analysis-report":     true,
+	"dynamic-analysis-report":    true,
+	"runtime-analysis-report":    true,
+	"component-analysis-report":  true,
+	"maturity-report":            true,
+	"certification-report":       true,
+	"codified-infrastructure":    true,
+	"quality-metrics":            true,
+	"poam":                       true,
+	"electronic-signature":       true,
+	"digital-signature":          true,
+	"rfc-9116":                   true,
+	"other":                      true,
+}
+
 func SerializeCycloneDX(ctx context.Context, bom *BOM, output string, specVersion string) error {
 	log := logger.FromContext(ctx)
 	log.Debugf("serializing CycloneDX: output=%s, specVersion=%s, components=%d, dependencies=%d", output, specVersion, len(bom.Components), len(bom.Dependencies))
@@ -547,6 +594,12 @@ func buildExternalRefsCDX(refs []ExternalRef) *[]cydx.ExternalReference {
 	var out []cydx.ExternalReference
 
 	for _, r := range refs {
+		// Validate external reference type
+		if !allowedExternalRefTypes[r.Type] {
+			fmt.Printf("Warning: skipping invalid CycloneDX external reference type: %s\n", r.Type)
+			continue
+		}
+
 		out = append(out, cydx.ExternalReference{
 			Type:    cydx.ExternalReferenceType(r.Type),
 			URL:     r.URL,
