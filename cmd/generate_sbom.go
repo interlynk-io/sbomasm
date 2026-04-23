@@ -60,7 +60,7 @@ var generateSbomCmd = &cobra.Command{
 // extractGenerateSBOM extracts the parameters for the
 // generate sbom command from the command flags
 func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) {
-	params := gsbom.NewGenerateSBOMParams()
+	params := new(gsbom.GenerateSBOMParams)
 
 	params.ConfigPath, _ = cmd.Flags().GetString("config")
 	params.InputFiles, _ = cmd.Flags().GetStringSlice("input")
@@ -74,6 +74,7 @@ func extractGenerateSBOM(cmd *cobra.Command) (*gsbom.GenerateSBOMParams, error) 
 	params.SpecVersion, _ = cmd.Flags().GetString("spec-version")
 	params.FormatSet = cmd.Flags().Changed("format")
 	params.SpecVersionSet = cmd.Flags().Changed("spec-version")
+	params.ValidateSchema, _ = cmd.Flags().GetBool("validate")
 
 	return params, nil
 }
@@ -132,6 +133,7 @@ func init() {
 	generateSbomCmd.Flags().Bool("debug", false, "enable debug logging")
 	generateSbomCmd.Flags().Bool("strict", false, "enable NTIA minimum element compliance validation")
 	generateSbomCmd.Flags().String("spec-version", "", "spec version to use (e.g., '1.5' for CycloneDX, '2.3' for SPDX)")
+	generateSbomCmd.Flags().Bool("validate", false, "validate component manifest files against JSON schema")
 }
 
 func hasOverlap(include, exclude []string) bool {

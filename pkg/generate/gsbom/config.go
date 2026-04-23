@@ -70,6 +70,10 @@ type GenerateSBOMParams struct {
 	// SpecVersionSet indicates if the spec-version flag was explicitly set by the user.
 	// Used to determine whether to use CLI value or config file value.
 	SpecVersionSet bool
+
+	// ValidateSchema enables JSON schema validation for component manifest files.
+	// When enabled, component files are validated against the official schema.
+	ValidateSchema bool
 }
 
 // NewGenerateSBOMParams creates a new instance of

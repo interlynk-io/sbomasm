@@ -40,6 +40,7 @@ var (
 // Files without a schema marker are handled differently:
 //   - Explicit files: missing schema = error
 //   - Discovered files: missing schema = silently skipped
+// If ValidateSchema is enabled, JSON files are validated against the schema.
 func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error) {
 	var explicitFiles []string
 	var discoveredFiles []string
@@ -65,6 +66,12 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 	for _, f := range params.InputFiles {
 		if err := validateSchema(f); err != nil {
 			return nil, nil, []error{fmt.Errorf("explicit file %s: %v", f, err)}
+		}
+		// Optional JSON schema validation
+		if params.ValidateSchema && strings.ToLower(filepath.Ext(f)) == ".json" {
+			if err := ValidateJSONSchema(f); err != nil {
+				return nil, nil, []error{err}
+			}
 		}
 		addFile(f, false)
 	}
@@ -98,6 +105,12 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 					}
 					// Hard error for malformed files or unknown schema versions
 					return fmt.Errorf("file %s: %w", path, err)
+				}
+				// Optional JSON schema validation for discovered files
+				if params.ValidateSchema && strings.ToLower(filepath.Ext(path)) == ".json" {
+					if err := ValidateJSONSchema(path); err != nil {
+						return err
+					}
 				}
 				addFile(path, true)
 			}
