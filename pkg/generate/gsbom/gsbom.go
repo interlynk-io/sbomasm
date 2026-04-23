@@ -41,11 +41,13 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// 1. Load artifact from config: `.artifact-metadata.yaml`
 	log.Debugf("loading artifact metadata from: %s", params.ConfigPath)
+
 	artifact, err := LoadArtifactConfig(params.ConfigPath)
 	if err != nil {
 		log.Debugf("failed to load artifact config: %v", err)
 		return err
 	}
+
 	log.Debugf("loaded artifact: %s@%s", artifact.Name, artifact.Version)
 
 	// Apply artifact output config if CLI flags weren't explicitly set
@@ -53,6 +55,7 @@ func Generate(params *GenerateSBOMParams) error {
 		params.Format = artifact.OutputConfig.Spec
 		log.Debugf("using format from artifact config: %s", params.Format)
 	}
+
 	if !params.SpecVersionSet && artifact.OutputConfig.SpecVersion != "" {
 		params.SpecVersion = artifact.OutputConfig.SpecVersion
 		log.Debugf("using spec version from artifact config: %s", params.SpecVersion)
@@ -75,15 +78,11 @@ func Generate(params *GenerateSBOMParams) error {
 		return fmt.Errorf("no component files found in input paths")
 	}
 
-	// Parse component files into internal component model
-	// it returns list of components present in each files
 	log.Debugf("parsing %d component files", len(allFiles))
 
-	// Parse component files into internal model
-	// Schema already validated at collection time, so just parse
+	// Parse component files into internal component model
 	componentLists, parseErrs := ParseComponentFiles(allFiles)
 	if len(parseErrs) > 0 {
-		// Parse/validation errors are hard failures
 		return fmt.Errorf("component validation failed: %v", parseErrs[0])
 	}
 
@@ -94,12 +93,13 @@ func Generate(params *GenerateSBOMParams) error {
 	log.Debugf("parsed %d components from %d files", totalComponents, len(componentLists))
 
 	// Compute file/directory hashes for each component list
-	// Hash computation is done per-file so relative paths resolve correctly
 	// Hash errors are hard failures per spec
 	log.Debugf("computing hashes for components")
+
 	for i, list := range componentLists {
 		if len(list) > 0 && list[0].SourcePath != "" {
 			manifestDir := filepath.Dir(list[0].SourcePath)
+
 			hashErrs := ComputeHashes(componentLists[i], manifestDir)
 			if len(hashErrs) > 0 {
 				return fmt.Errorf("hash computation failed: %v", hashErrs[0])
@@ -109,19 +109,22 @@ func Generate(params *GenerateSBOMParams) error {
 
 	// Merge all components into a single list
 	log.Debugf("merging %d component lists", len(componentLists))
+
 	componentMergedLists := MergeAll(componentLists)
 	log.Debugf("merged into %d total components", len(componentMergedLists))
+
 	if len(componentMergedLists) == 0 {
 		return fmt.Errorf("no components found in input files")
 	}
 
 	// Process pedigree information for all components
-	// This loads patch files and validates purl vs ancestor purl
 	// Pedigree errors are hard failures
 	log.Debugf("processing pedigree information")
+
 	for i, list := range componentLists {
 		if len(list) > 0 && list[0].SourcePath != "" {
 			manifestDir := filepath.Dir(list[0].SourcePath)
+
 			pedigreeErrs := ProcessPedigrees(componentLists[i], manifestDir)
 			if len(pedigreeErrs) > 0 {
 				return fmt.Errorf("pedigree processing failed: %v", pedigreeErrs[0])
@@ -130,45 +133,43 @@ func Generate(params *GenerateSBOMParams) error {
 	}
 
 	// Dedup components and collect warnings for duplicates
-	log.Debugf("deduplicating components")
 	componentUniqueLists, warn := DeduplicateComponents(componentMergedLists)
 	errors = append(errors, warn...)
+
 	log.Debugf("deduplicated to %d unique components", len(componentUniqueLists))
 
 	// 2. Final component list(post filtering components by tags)
 	log.Debugf("filtering components: tags=%v, exclude-tags=%v", params.Tags, params.ExcludeTags)
+
 	componentFileteredLists := FilterComponents(componentUniqueLists, params.Tags, params.ExcludeTags)
 	log.Debugf("filtered to %d components", len(componentFileteredLists))
+
 	if len(componentFileteredLists) == 0 && len(componentUniqueLists) > 0 {
 		return fmt.Errorf("no components left after applying tag filters")
 	}
 
 	// Lookup map for components by name@version for easy reference
-	log.Debugf("building component lookup map")
 	compMap := BuildComponentMap(componentFileteredLists)
-	log.Debugf("built map with %d entries", len(compMap))
 
 	// 3. Dependency graph to build parent-child relationships
-	log.Debugf("building dependency graph")
 	graph, warn := BuildDependencyGraph(componentFileteredLists, compMap, artifact)
 	errors = append(errors, warn...)
+
 	log.Debugf("built dependency graph: %d dependencies", len(graph.Edges))
 
 	// Build BOM model from artifact, components, and dependency graph
-	log.Debugf("building BOM model")
 	bom := BuildBOM(artifact, componentFileteredLists, graph)
 	log.Debugf("built BOM: %d components, format=%s", len(bom.Components), params.Format)
 
-	// Run strict checks on all components (warnings in default mode, errors in strict mode)
-	// These include: missing license, vendored without pedigree, missing hashes,
-	// missing distribution URL, library without supplier
 	log.Debugf("running strict checks: strict=%v", params.Strict)
+
 	strictWarnings, err := ValidateStrictChecks(params.Ctx, componentFileteredLists, params.Strict)
 	if err != nil {
 		// Strict mode: return error
 		log.Infof("strict mode validation failed with %d warnings", len(strictWarnings))
 		return fmt.Errorf("strict mode validation failed: %v", err)
 	}
+
 	log.Debugf("strict checks completed: %d warnings", len(strictWarnings))
 	errors = append(errors, strictWarnings...)
 

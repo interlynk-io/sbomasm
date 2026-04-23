@@ -30,6 +30,21 @@ var (
 	ErrInvalidSchema = errors.New("invalid schema")
 )
 
+// SkippedDirectories are directories that are skipped during recursive file discovery.
+// These include version control systems, dependency directories, and virtual environments.
+var SkippedDirectories = map[string]bool{
+	".git":         true, // Git version control
+	".hg":          true, // Mercurial version control
+	".svn":         true, // Subversion version control
+	"node_modules": true, // Node.js dependencies
+	"vendor":       true, // Go and other language dependencies
+	".venv":        true, // Python virtual environments
+	"venv":         true, // Python virtual environments (alternative name)
+	"__pycache__":  true, // Python cache
+	".idea":        true, // IntelliJ IDEA configuration
+	".vscode":      true, // VS Code configuration
+}
+
 // CollectInputFiles performs the following steps:
 // - Appends any explicitly provided input files to the explicit list.
 // - If a RecursePath is provided, it walks through the directory tree starting from that path.
@@ -40,19 +55,23 @@ var (
 // Files without a schema marker are handled differently:
 //   - Explicit files: missing schema = error
 //   - Discovered files: missing schema = silently skipped
+//
 // If ValidateSchema is enabled, JSON files are validated against the schema.
 func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error) {
 	var explicitFiles []string
 	var discoveredFiles []string
 	var errors []error
+
 	seen := make(map[string]bool) // Track unique file paths
 
 	// Helper to add file only if not already seen
 	addFile := func(path string, isDiscovered bool) {
 		// Use Clean to normalize paths for comparison
 		cleanPath := filepath.Clean(path)
+
 		if !seen[cleanPath] {
 			seen[cleanPath] = true
+
 			if isDiscovered {
 				discoveredFiles = append(discoveredFiles, path)
 			} else {
@@ -62,22 +81,26 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 	}
 
 	// 1. Collect explicit inputs FIRST
-	// For explicit files, validate schema at collection time and return error if invalid
 	for _, f := range params.InputFiles {
-		if err := validateSchema(f); err != nil {
+
+		// check schema marker: "interlynk/component-manifest/v1"
+		if err := checkSchemaMarker(f); err != nil {
 			return nil, nil, []error{fmt.Errorf("explicit file %s: %v", f, err)}
 		}
+
 		// Optional JSON schema validation
 		if params.ValidateSchema && strings.ToLower(filepath.Ext(f)) == ".json" {
 			if err := ValidateJSONSchema(f); err != nil {
 				return nil, nil, []error{err}
 			}
 		}
+
 		addFile(f, false)
 	}
 
 	// 2. Handle recurse if RecursePath is provided
 	if params.RecursePath != "" {
+
 		err := filepath.Walk(params.RecursePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				errors = append(errors, fmt.Errorf("error accessing path %s: %v", path, err))
@@ -85,10 +108,8 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 			}
 
 			if info.IsDir() {
-				// Skip common VCS and dependency directories
-				name := info.Name()
-				if name == ".git" || name == ".hg" || name == ".svn" ||
-					name == "node_modules" || name == "vendor" || name == ".venv" {
+				// skip common VCS and dependency directories
+				if SkippedDirectories[info.Name()] {
 					return filepath.SkipDir
 				}
 				return nil
@@ -98,20 +119,22 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 				// For discovered files, apply spec-compliant handling:
 				// - File without schema marker: SILENT SKIP (not our file)
 				// - File with our schema but malformed/unknown version: HARD ERROR
-				if err := validateSchema(path); err != nil {
+				if err := checkSchemaMarker(path); err != nil {
 					if err == ErrMissingSchema {
-						// Silently skip files without our schema marker
-						return nil
+						return nil // silently skip files without our schema marker
 					}
+
 					// Hard error for malformed files or unknown schema versions
 					return fmt.Errorf("file %s: %w", path, err)
 				}
+
 				// Optional JSON schema validation for discovered files
 				if params.ValidateSchema && strings.ToLower(filepath.Ext(path)) == ".json" {
 					if err := ValidateJSONSchema(path); err != nil {
 						return err
 					}
 				}
+
 				addFile(path, true)
 			}
 
@@ -126,8 +149,7 @@ func CollectInputFiles(params *GenerateSBOMParams) ([]string, []string, []error)
 	return explicitFiles, discoveredFiles, errors
 }
 
-// shouldDiscoverFile checks if a file should be discovered during recursive walk.
-// If using default filename, discovers both .components.json and .components.csv.
+// shouldDiscoverFile matches with a file `.components.json` or `.components.csv`
 // Otherwise, matches the exact filename provided.
 func shouldDiscoverFile(name, filename string) bool {
 	// Default case: discover both JSON and CSV
@@ -138,26 +160,26 @@ func shouldDiscoverFile(name, filename string) bool {
 	return name == filename
 }
 
-// validateSchema checks if a file has the interlynk component-manifest schema marker.
+// checkSchemaMarker checks if a file has the interlynk component-manifest schema marker.
 // Returns nil if valid, error with specific message otherwise.
 // For JSON files: checks the "schema" field equals ComponentFileSchema.
 // For CSV files: checks the first line starts with the schema marker.
-func validateSchema(path string) error {
+func checkSchemaMarker(path string) error {
 	ext := strings.ToLower(filepath.Ext(path))
 
 	switch ext {
 	case ".json":
-		return validateJSONSchema(path)
+		return checkJSONSchemaMarker(path)
 	case ".csv":
-		return validateCSVSchema(path)
+		return checkCSVSchemaMarker(path)
 	default:
 		return fmt.Errorf("unsupported file format: %s", ext)
 	}
 }
 
-// validateJSONSchema checks if a JSON file has our schema marker.
+// checkJSONSchemaMarker checks if a JSON file has our schema marker.
 // Returns specific error for missing vs invalid schema.
-func validateJSONSchema(path string) error {
+func checkJSONSchemaMarker(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
@@ -183,9 +205,9 @@ func validateJSONSchema(path string) error {
 	return nil
 }
 
-// validateCSVSchema checks if a CSV file has our schema marker in the first line.
+// checkCSVSchemaMarker checks if a CSV file has our schema marker in the first line.
 // Returns specific error for missing vs invalid schema.
-func validateCSVSchema(path string) error {
+func checkCSVSchemaMarker(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)

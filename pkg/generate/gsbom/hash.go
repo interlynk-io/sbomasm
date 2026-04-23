@@ -67,6 +67,7 @@ func ComputeHashes(components []Component, manifestDir string) []error {
 					continue
 				}
 				h.Value = value
+
 			} else if h.Path != "" {
 
 				// 3. Dir Hash: Compute based on directory (with optional extensions filter)

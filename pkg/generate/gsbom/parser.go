@@ -170,10 +170,9 @@ type Hash struct {
 }
 
 // ParseComponentFiles takes a list of file paths, parses each file and extracts components.
-// Schema validation is assumed to have been done at file collection time.
 // Returns a list of component lists (one per file) and any parsing errors.
 func ParseComponentFiles(files []string) ([][]Component, []error) {
-	var allComponentsFromFiles [][]Component
+	var componentList [][]Component
 	var errors []error
 
 	for _, file := range files {
@@ -188,25 +187,26 @@ func ParseComponentFiles(files []string) ([][]Component, []error) {
 			components[i].SourcePath = file
 		}
 
-		allComponentsFromFiles = append(allComponentsFromFiles, components)
+		componentList = append(componentList, components)
 	}
 
 	/*
-		allComponentsByFiles =
+		componentList =
 			[
 			  [c1, c2],      // file1
 			  [c3],          // file2
 			  [c4, c5, c6],  // file3
 			]
 	*/
-	return allComponentsFromFiles, errors
+	return componentList, errors
 }
 
 // parseComponents determines the file format based on the extension
 // and calls the appropriate parser.
 func parseComponents(path string) ([]Component, error) {
+	fileExt := strings.ToLower(filepath.Ext(path))
 
-	switch strings.ToLower(filepath.Ext(path)) {
+	switch fileExt {
 	case ".json":
 		return parseJSONComponents(path)
 	case ".csv":

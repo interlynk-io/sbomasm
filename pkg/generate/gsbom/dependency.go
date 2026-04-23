@@ -113,6 +113,7 @@ func BuildDependencyGraph(components []Component, compMap map[string]Component, 
 			Name:    artifact.Name,
 			Version: artifact.Version,
 		})
+
 		attachOrphansToRoot(graph.Edges, components, root)
 	}
 

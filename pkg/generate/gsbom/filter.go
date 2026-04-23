@@ -27,6 +27,7 @@ func FilterComponents(components []Component, includeTags, excludeTags []string)
 	var filteredComponentsList []Component
 
 	for _, comp := range components {
+
 		// Step 0: Always drop components with scope: "excluded"
 		if strings.TrimSpace(strings.ToLower(comp.Scope)) == "excluded" {
 			continue
