@@ -95,7 +95,7 @@ func validateAndSanitize(cfg *app.Config) error {
 		if strings.EqualFold(vs, "[optional]") {
 			return ""
 		}
-		return v
+		return vs
 	}
 
 	validValue := func(v string) bool {
@@ -111,6 +111,9 @@ func validateAndSanitize(cfg *app.Config) error {
 	cfg.App.Version = sanitize(cfg.App.Version)
 	cfg.App.Description = sanitize(cfg.App.Description)
 	cfg.App.PrimaryPurpose = sanitize(cfg.App.PrimaryPurpose)
+
+	// Normalize primary purpose to lowercase
+	cfg.App.PrimaryPurpose = strings.ToLower(cfg.App.PrimaryPurpose)
 	cfg.App.Purl = sanitize(cfg.App.Purl)
 	cfg.App.CPE = sanitize(cfg.App.CPE)
 	cfg.App.Copyright = sanitize(cfg.App.Copyright)
