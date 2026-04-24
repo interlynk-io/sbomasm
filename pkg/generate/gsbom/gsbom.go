@@ -195,9 +195,8 @@ func Generate(params *GenerateSBOMParams) error {
 
 	strictWarnings, err := ValidateStrictChecks(params.Ctx, componentFileteredLists, params.Strict)
 	if err != nil {
-		// Strict mode: return error
-		log.Infof("strict mode validation failed with %d warnings", len(strictWarnings))
-		return fmt.Errorf("strict mode validation failed: %v", err)
+		// Strict mode: return error with formatted message
+		return fmt.Errorf("strict mode validation failed with %d issue(s)\nRun without --strict to see warnings or fix the issues above", len(strictWarnings))
 	}
 
 	log.Debugf("strict checks completed: %d warnings", len(strictWarnings))
@@ -207,18 +206,39 @@ func Generate(params *GenerateSBOMParams) error {
 	log.Debugf("serializing BOM: format=%s, output=%s, specVersion=%s", params.Format, params.Output, params.SpecVersion)
 	err = Serialize(*params.Ctx, params.Format, bom, params.Output, params.SpecVersion)
 
-	// Print warnings
-	defer func() {
-		for _, w := range errors {
-			fmt.Fprintf(os.Stderr, "warning: %v\n", w)
-		}
-	}()
-
 	if err != nil {
 		log.Debugf("serialization failed: %v", err)
 		return err
 	}
-	log.Infof("successfully generated SBOM: %s", params.Output)
+
+	// Print formatted output
+	printGenerateOutput(params, errors)
 
 	return nil
+}
+
+// printGenerateOutput prints formatted output for the generate command
+func printGenerateOutput(params *GenerateSBOMParams, warnings []error) {
+	// When outputting to stdout, print messages to stderr so JSON remains valid
+	toStderr := params.Output == ""
+
+	if toStderr {
+		fmt.Fprintf(os.Stderr, "\nGenerated %s SBOM written to stdout\n", params.Format)
+		if len(warnings) > 0 {
+			fmt.Fprintf(os.Stderr, "\nWarnings (%d):\n", len(warnings))
+			for _, w := range warnings {
+				fmt.Fprintf(os.Stderr, "  - %v\n", w)
+			}
+		}
+		fmt.Fprintln(os.Stderr)
+	} else {
+		fmt.Printf("Generated %s SBOM written to %s file\n", params.Format, params.Output)
+		if len(warnings) > 0 {
+			fmt.Printf("\nWarnings (%d):\n", len(warnings))
+			for _, w := range warnings {
+				fmt.Printf("  - %v\n", w)
+			}
+		}
+		fmt.Println()
+	}
 }
