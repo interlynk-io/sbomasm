@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 )
@@ -65,6 +66,16 @@ func Generate(params *GenerateSBOMParams) error {
 
 	log.Debugf("final output config: format=%s, specVersion=%s", params.Format, params.SpecVersion)
 
+	// Check file_format from config
+	fileFormat := artifact.OutputConfig.FileFormat
+	if fileFormat == "" {
+		fileFormat = "json" // default
+	}
+	if strings.ToLower(fileFormat) == "xml" {
+		return fmt.Errorf("XML output format is not supported. Use 'json' format.")
+	}
+	log.Debugf("output file format: %s", fileFormat)
+
 	// Collect input files: `.components.json` (explicit/recursive)
 	// `.components.json` files contain component information
 	log.Debugf("collecting input files: input=%v, recurse=%s", params.InputFiles, params.RecursePath)
@@ -111,16 +122,6 @@ func Generate(params *GenerateSBOMParams) error {
 		}
 	}
 
-	// Merge all components into a single list
-	log.Debugf("merging %d component lists", len(componentLists))
-
-	componentMergedLists := MergeAll(componentLists)
-	log.Debugf("merged into %d total components", len(componentMergedLists))
-
-	if len(componentMergedLists) == 0 {
-		return fmt.Errorf("no components found in input files")
-	}
-
 	// Process pedigree information for all components
 	// Pedigree errors are hard failures
 	log.Debugf("processing pedigree information")
@@ -134,6 +135,31 @@ func Generate(params *GenerateSBOMParams) error {
 				return fmt.Errorf("pedigree processing failed: %v", pedigreeErrs[0])
 			}
 		}
+	}
+
+	// Process license files for all components
+	// License file errors are hard failures
+	log.Debugf("processing license files")
+
+	for i, list := range componentLists {
+		if len(list) > 0 && list[0].SourcePath != "" {
+			manifestDir := filepath.Dir(list[0].SourcePath)
+
+			licenseErrs := ProcessLicenses(componentLists[i], manifestDir)
+			if len(licenseErrs) > 0 {
+				return fmt.Errorf("license processing failed: %v", licenseErrs[0])
+			}
+		}
+	}
+
+	// Merge all components into a single list
+	log.Debugf("merging %d component lists", len(componentLists))
+
+	componentMergedLists := MergeAll(componentLists)
+	log.Debugf("merged into %d total components", len(componentMergedLists))
+
+	if len(componentMergedLists) == 0 {
+		return fmt.Errorf("no components found in input files")
 	}
 
 	// Dedup components and collect warnings for duplicates
