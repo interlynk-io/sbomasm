@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/generate/app"
 	"github.com/spf13/cobra"
@@ -24,7 +25,20 @@ import (
 var generateConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Generate artifact metadata config",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s", app.DefaultAppYaml())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		outputPath, _ := cmd.Flags().GetString("output")
+
+		content := app.DefaultAppYaml()
+
+		if err := os.WriteFile(outputPath, content, 0644); err != nil {
+			return fmt.Errorf("failed to write config file: %w", err)
+		}
+
+		fmt.Printf("artifact config written to %s\n", outputPath)
+		return nil
 	},
+}
+
+func init() {
+	generateConfigCmd.Flags().StringP("output", "o", ".artifact-metadata.yaml", "output file path for the generated config")
 }
