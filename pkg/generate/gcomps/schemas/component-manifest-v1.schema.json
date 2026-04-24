@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://interlynk.io/schemas/component-manifest-v1.schema.json",
+  "title": "Component Manifest",
+  "description": "Schema for component manifest files used by sbomasm generate components",
+  "type": "object",
+  "required": ["schema", "components"],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "interlynk/component-manifest/v1",
+      "description": "Schema identifier"
+    },
+    "components": {
+      "type": "array",
+      "description": "List of components",
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Component name"
+        },
+        "version": {
+          "type": "string",
+          "description": "Component version"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["library", "application", "framework", "container", "operating-system", "device", "firmware", "file", "platform", "device-driver", "machine-learning-model", "data"],
+          "default": "library",
+          "description": "Component type"
+        },
+        "description": {
+          "type": "string",
+          "description": "Component description"
+        },
+        "supplier": {
+          "$ref": "#/$defs/supplier",
+          "description": "Component supplier"
+        },
+        "license": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "SPDX license expression (e.g., 'MIT', 'Apache-2.0 OR MIT')"
+            },
+            {
+              "type": "object",
+              "description": "Structured license with optional text or file reference",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "SPDX license identifier"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Inline license text"
+                },
+                "file": {
+                  "type": "string",
+                  "description": "Path to license file"
+                }
+              },
+              "anyOf": [
+                { "required": ["id"] },
+                { "required": ["text"] },
+                { "required": ["file"] }
+              ]
+            }
+          ]
+        },
+        "purl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Package URL (purl)"
+        },
+        "cpe": {
+          "type": "string",
+          "description": "Common Platform Enumeration identifier"
+        },
+        "external_references": {
+          "type": "array",
+          "description": "External references",
+          "items": {
+            "$ref": "#/$defs/externalReference"
+          }
+        },
+        "hashes": {
+          "type": "array",
+          "description": "File hashes",
+          "items": {
+            "$ref": "#/$defs/hash"
+          }
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["required", "optional", "excluded"],
+          "description": "Dependency scope"
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of dependencies (name@version)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Component tags",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "supplier": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "externalReference": {
+      "type": "object",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["website", "vcs", "documentation", "issue-tracker", "license", "release-notes", "security", "bom", "mailing-list", "social-media", "support", "distribution", "distribution-intake", "build-system", "other"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "hash": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["MD5", "SHA-1", "SHA-256", "SHA-384", "SHA-512", "SHA3-256", "SHA3-384", "SHA3-512", "BLAKE2b-256", "BLAKE2b-384", "BLAKE2b-512", "BLAKE3"]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]+$"
+        },
+        "file": {
+          "type": "string",
+          "description": "File path this hash applies to"
+        }
+      }
+    }
+  }
+}
