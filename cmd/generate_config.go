@@ -40,5 +40,5 @@ var generateConfigCmd = &cobra.Command{
 }
 
 func init() {
-	generateConfigCmd.Flags().StringP("output", "o", ".artifact-metadata.yaml", "output file path for the generated config")
+	generateConfigCmd.Flags().StringP("output", "o", ".artifact-metadata.yaml", "Output file path for the generated artifact metadata config. Contains app metadata (name, version, supplier) and output format pinning.")
 }

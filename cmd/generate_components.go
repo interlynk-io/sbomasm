@@ -131,9 +131,9 @@ func validateGenerateComponentsParams(params *gcomps.GenerateComponentsParams) e
 
 func init() {
 	// Flags
-	generateComponentsCmd.Flags().StringP("output", "o", "", "output file path (default: .components.json or .components.csv)")
-	generateComponentsCmd.Flags().Bool("csv", false, "generate CSV format instead of JSON")
-	generateComponentsCmd.Flags().BoolP("force", "f", false, "overwrite existing file")
-	generateComponentsCmd.Flags().Bool("describe", false, "print human-readable field descriptions")
-	generateComponentsCmd.Flags().Bool("schema", false, "print JSON Schema")
+	generateComponentsCmd.Flags().StringP("output", "o", "", "Explicit output file path. If omitted, writes to .components.json (or .components.csv with --csv) in the current directory or specified path.")
+	generateComponentsCmd.Flags().Bool("csv", false, "Emit .components.csv instead of .components.json. CSV has limitations (no pedigree, no external_references).")
+	generateComponentsCmd.Flags().BoolP("force", "f", false, "Overwrite target file if it already exists. Without --force, the command errors rather than clobbering.")
+	generateComponentsCmd.Flags().Bool("describe", false, "Print a human-readable list of every field the component manifest supports, grouped by required/optional. Useful for field discovery.")
+	generateComponentsCmd.Flags().Bool("schema", false, "Print the canonical JSON Schema (draft 2020-12) for the component manifest to stdout (or to -o <file>). Machine-readable for CI validators.")
 }

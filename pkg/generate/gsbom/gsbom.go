@@ -50,16 +50,20 @@ func Generate(params *GenerateSBOMParams) error {
 
 	log.Debugf("loaded artifact: %s@%s", artifact.Name, artifact.Version)
 
-	// Apply artifact output config if CLI flags weren't explicitly set
-	if !params.FormatSet && artifact.OutputConfig.Spec != "" {
-		params.Format = artifact.OutputConfig.Spec
-		log.Debugf("using format from artifact config: %s", params.Format)
+	// Apply artifact output config only if neither format nor spec-version CLI flags were set.
+	// If either flag is provided, CLI takes precedence over config for output settings.
+	if !params.FormatSet && !params.SpecVersionSet {
+		if artifact.OutputConfig.Spec != "" {
+			params.Format = artifact.OutputConfig.Spec
+			log.Debugf("using format from artifact config: %s", params.Format)
+		}
+		if artifact.OutputConfig.SpecVersion != "" {
+			params.SpecVersion = artifact.OutputConfig.SpecVersion
+			log.Debugf("using spec version from artifact config: %s", params.SpecVersion)
+		}
 	}
 
-	if !params.SpecVersionSet && artifact.OutputConfig.SpecVersion != "" {
-		params.SpecVersion = artifact.OutputConfig.SpecVersion
-		log.Debugf("using spec version from artifact config: %s", params.SpecVersion)
-	}
+	log.Debugf("final output config: format=%s, specVersion=%s", params.Format, params.SpecVersion)
 
 	// Collect input files: `.components.json` (explicit/recursive)
 	// `.components.json` files contain component information
