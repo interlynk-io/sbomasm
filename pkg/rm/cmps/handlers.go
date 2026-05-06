@@ -185,6 +185,11 @@ func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument
 			}
 		}
 
+		if sbomDoc.Dependencies == nil {
+			log.Debugf("No dependencies found in CycloneDX BOM")
+			return dependencies
+		}
+
 		for _, dep := range *sbomDoc.Dependencies {
 			totalDependencies++
 			if compRefs[dep.Ref] {
