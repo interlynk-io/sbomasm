@@ -40,6 +40,8 @@ var ValidFields = map[string][]string{
 		"copyright",
 		"purl",
 		"description",
+		"group",
+		"publisher",
 	},
 	"dependency": {
 		"from",

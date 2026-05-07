@@ -77,3 +77,15 @@ type PurlEntry struct {
 	Component *cydx.Component
 	Value     string // Use string for PURL to handle Component.PURL
 }
+
+// GroupEntry for Component.Group
+type GroupEntry struct {
+	Component *cydx.Component
+	Value     string
+}
+
+// PublisherEntry for Component.Publisher
+type PublisherEntry struct {
+	Component *cydx.Component
+	Value     string
+}

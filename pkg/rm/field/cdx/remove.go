@@ -821,3 +821,91 @@ func RemoveTypeFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 	}
 	return nil
 }
+
+func RemoveGroupFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
+	removedCount := 0
+	for _, e := range entries {
+		entry, ok := e.(GroupEntry)
+		if !ok || entry.Value == "" {
+			log.Debugf("Skipping invalid group entry: %v", e)
+			continue
+		}
+
+		comp := entry.Component
+		found := false
+		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
+			found = true
+		} else if doc.Components != nil {
+			for i := range *doc.Components {
+				if &(*doc.Components)[i] == comp {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			continue
+		}
+
+		if strings.EqualFold(comp.Group, entry.Value) {
+			comp.Group = ""
+			removedCount++
+			log.Debugf("Removed group from component: %s@%s, Group: %s\n", comp.Name, comp.Version, entry.Value)
+			if params.Value == "NOASSERTION" {
+				log.Warnf("Matched NOASSERTION for group")
+			}
+		}
+	}
+
+	log.Debugf("Removed %d group entries from components\n", removedCount)
+	if len(entries) > 0 && removedCount == 0 {
+		log.Debugf("No group entries removed\n")
+	}
+	return nil
+}
+
+func RemovePublisherFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
+	log := logger.FromContext(*params.Ctx)
+	removedCount := 0
+	for _, e := range entries {
+		entry, ok := e.(PublisherEntry)
+		if !ok || entry.Value == "" {
+			log.Debugf("Skipping invalid publisher entry: %v", e)
+			continue
+		}
+
+		comp := entry.Component
+		found := false
+		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
+			found = true
+		} else if doc.Components != nil {
+			for i := range *doc.Components {
+				if &(*doc.Components)[i] == comp {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+			continue
+		}
+
+		if strings.EqualFold(comp.Publisher, entry.Value) {
+			comp.Publisher = ""
+			removedCount++
+			log.Debugf("Removed publisher from component: %s@%s, Publisher: %s\n", comp.Name, comp.Version, entry.Value)
+			if params.Value == "NOASSERTION" {
+				log.Warnf("Matched NOASSERTION for publisher")
+			}
+		}
+	}
+
+	log.Debugf("Removed %d publisher entries from components\n", removedCount)
+	if len(entries) > 0 && removedCount == 0 {
+		log.Debugf("No publisher entries removed\n")
+	}
+	return nil
+}

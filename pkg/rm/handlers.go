@@ -56,6 +56,8 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	handlerRegistry["cdx:component:cpe"] = &cdxcomp.CdxComponentCpeHandler{Bom: bom}
 	handlerRegistry["cdx:component:purl"] = &cdxcomp.CdxComponentPurlHandler{Bom: bom}
 	handlerRegistry["cdx:component:hash"] = &cdxcomp.CdxComponentHashHandler{Bom: bom}
+	handlerRegistry["cdx:component:group"] = &cdxcomp.CdxComponentGroupHandler{Bom: bom}
+	handlerRegistry["cdx:component:publisher"] = &cdxcomp.CdxComponentPublisherHandler{Bom: bom}
 
 	// SPDX Document-level handlers
 	handlerRegistry["spdx:document:author"] = &spdxmeta.SpdxDocAuthorHandler{Doc: spdxDoc}

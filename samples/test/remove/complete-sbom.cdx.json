@@ -79,6 +79,8 @@
     ],
     "component": {
         "bom-ref": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module#cmd/kyverno",
+        "group": "github.com/kyverno",
+        "publisher": "kyverno.io",
         "type": "application",
         "name": "github.com/kyverno/kyverno",
         "version": "v1.14.0",
@@ -133,6 +135,8 @@
     {
       "bom-ref": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
       "type": "library",
+      "group": "github.com/fluxcd",
+      "publisher": "fluxcd.io",
       "name": "github.com/fluxcd/pkg/oci",
       "version": "v0.45.0",
       "licenses": [
@@ -185,6 +189,8 @@
     {
       "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module",
       "type": "library",
+      "group": "github.com/Azure",
+      "publisher": "azure.microsoft.com",
       "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
       "version": "v1.17.0",
       "licenses": [
@@ -237,6 +243,8 @@
     {
       "bom-ref": "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module",
       "type": "library",
+      "group": "github.com/sigstore",
+      "publisher": "sigstore.dev",
       "name": "github.com/sigstore/rekor",
       "version": "v1.3.9",
       "licenses": [
@@ -289,6 +297,8 @@
     {
       "bom-ref": "pkg:golang/cel.dev/expr@v0.19.1?type=module",
       "type": "library",
+      "group":"cel.dev",
+      "publisher": "cel.dev",
       "name": "cel.dev/expr",
       "version": "v0.19.1",
       "licenses": [

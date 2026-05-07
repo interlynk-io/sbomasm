@@ -342,3 +342,43 @@ func RenderSummaryTypeFromComponent(entries []interface{}) {
 			entry.Value)
 	}
 }
+
+func RenderSummaryGroupFromComponent(entries []interface{}) {
+	fmt.Println("Summary of group entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No group entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(GroupEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid group entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Group: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+	}
+}
+
+func RenderSummaryPublisherFromComponent(entries []interface{}) {
+	fmt.Println("Summary of publisher entries to be removed:")
+	if len(entries) == 0 {
+		fmt.Println("No publisher entries selected for removal")
+		return
+	}
+
+	for _, e := range entries {
+		entry, ok := e.(PublisherEntry)
+		if !ok || entry.Value == "" {
+			fmt.Println("Skipping invalid publisher entry:", e)
+			continue
+		}
+		fmt.Printf("  - Component: %s@%s, Publisher: %s\n",
+			entry.Component.Name,
+			entry.Component.Version,
+			entry.Value)
+	}
+}

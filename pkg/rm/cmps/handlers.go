@@ -854,6 +854,18 @@ func getCDXComponentFieldValue(ctx context.Context, comp cydx.Component, field s
 			log.Debugf("Found hash values for %s: %s", comp.BOMRef, strings.Join(values, ","))
 			return strings.Join(values, ",")
 		}
+
+	case "group":
+		if comp.Group != "" {
+			log.Debugf("Found group value for %s: %s", comp.BOMRef, comp.Group)
+			return comp.Group
+		}
+
+	case "publisher":
+		if comp.Publisher != "" {
+			log.Debugf("Found publisher value for %s: %s", comp.BOMRef, comp.Publisher)
+			return comp.Publisher
+		}
 	}
 	return ""
 }
