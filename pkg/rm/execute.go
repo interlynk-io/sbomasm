@@ -181,6 +181,14 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 	log := logger.FromContext(ctx)
 	log.Debugf("Executing components removal process")
 
+	// Validate field if provided
+	if params.Field != "" {
+		spec := c.doc.SpecType()
+		if err := types.ValidateComponentField(spec, params.Field); err != nil {
+			return err
+		}
+	}
+
 	// Step 1: Select components based on filter criteria
 	selectedComponents, err := c.selectComponents(ctx, params)
 	if err != nil {

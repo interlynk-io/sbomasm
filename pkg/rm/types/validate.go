@@ -16,7 +16,10 @@
 
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 var ValidFields = map[string][]string{
 	"document": {
@@ -158,4 +161,43 @@ func contains(allowedFields []string, field string) bool {
 		}
 	}
 	return false
+}
+
+// ValidateComponentField validates if the field is supported for component removal
+// based on the SBOM spec type (spdx or cdx)
+func ValidateComponentField(spec, field string) error {
+	field = strings.ToLower(field)
+	spec = strings.ToLower(spec)
+
+	// Common fields supported by both SPDX and CDX
+	commonFields := []string{"author", "supplier", "type", "repository", "cpe",
+		"hash", "license", "copyright", "purl", "description"}
+
+	// CDX-specific fields
+	cdxFields := []string{"group", "publisher"}
+
+	// Check if it's a common field
+	for _, f := range commonFields {
+		if f == field {
+			return nil
+		}
+	}
+
+	// For CDX, also check CDX-specific fields
+	if spec == "cdx" {
+		for _, f := range cdxFields {
+			if f == field {
+				return nil
+			}
+		}
+	}
+
+	// Build allowed fields list based on spec
+	var allowedFields []string
+	allowedFields = append(allowedFields, commonFields...)
+	if spec == "cdx" {
+		allowedFields = append(allowedFields, cdxFields...)
+	}
+
+	return fmt.Errorf("invalid field '%s' for spec '%s'. Allowed values are: %v", field, spec, allowedFields)
 }
