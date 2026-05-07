@@ -201,6 +201,35 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 		return fmt.Errorf("error selecting dependencies: %w", err)
 	}
 
+	// Handle dry-run mode
+	if params.DryRun {
+		fmt.Printf("Dry-run: would remove %d component(s):\n", len(selectedComponents))
+		for _, comp := range selectedComponents {
+			switch c := comp.(type) {
+			case spdx.Package:
+				fmt.Printf("  - %s@%s\n", c.PackageName, c.PackageVersion)
+			case cydx.Component:
+				fmt.Printf("  - %s@%s\n", c.Name, c.Version)
+			default:
+				fmt.Printf("  - %v\n", comp)
+			}
+		}
+		if len(selectedDeps) > 0 {
+			fmt.Printf("Dry-run: would remove %d dependency reference(s):\n", len(selectedDeps))
+			for _, dep := range selectedDeps {
+				switch d := dep.(type) {
+				case string:
+					fmt.Printf("  - %s\n", d)
+				case cydx.Dependency:
+					fmt.Printf("  - %s\n", d.Ref)
+				default:
+					fmt.Printf("  - %v\n", dep)
+				}
+			}
+		}
+		return nil
+	}
+
 	// Step 3: Remove components
 	if err := c.removeComponents(ctx, selectedComponents); err != nil {
 		return fmt.Errorf("error removing components: %w", err)

@@ -213,8 +213,6 @@ func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument
 }
 
 func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) ([]interface{}, error) {
-	log := logger.FromContext(ctx)
-
 	var selectedComponents []interface{}
 	var totalComponents int
 	var totalSelectedComponents int
@@ -251,9 +249,7 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	if len(selectedComponents) == 0 {
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
-	log.Infof("Total components: %d, Total selected components: %d", totalComponents, totalSelectedComponents)
 
-	// fmt.Println("Selected components:", selectedComponents)
 	return selectedComponents, nil
 }
 
