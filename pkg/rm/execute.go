@@ -181,6 +181,14 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 	log := logger.FromContext(ctx)
 	log.Debugf("Executing components removal process")
 
+	// Validate field if provided
+	if params.Field != "" {
+		spec := c.doc.SpecType()
+		if err := types.ValidateComponentField(spec, params.Field); err != nil {
+			return err
+		}
+	}
+
 	// Step 1: Select components based on filter criteria
 	selectedComponents, err := c.selectComponents(ctx, params)
 	if err != nil {
@@ -191,6 +199,35 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 	selectedDeps, err := c.findDependenciesForComponents(ctx, selectedComponents)
 	if err != nil {
 		return fmt.Errorf("error selecting dependencies: %w", err)
+	}
+
+	// Handle dry-run mode
+	if params.DryRun {
+		fmt.Printf("Dry-run: would remove %d component(s):\n", len(selectedComponents))
+		for _, comp := range selectedComponents {
+			switch c := comp.(type) {
+			case spdx.Package:
+				fmt.Printf("  - %s@%s\n", c.PackageName, c.PackageVersion)
+			case cydx.Component:
+				fmt.Printf("  - %s@%s\n", c.Name, c.Version)
+			default:
+				fmt.Printf("  - %v\n", comp)
+			}
+		}
+		if len(selectedDeps) > 0 {
+			fmt.Printf("Dry-run: would remove %d dependency reference(s):\n", len(selectedDeps))
+			for _, dep := range selectedDeps {
+				switch d := dep.(type) {
+				case string:
+					fmt.Printf("  - %s\n", d)
+				case cydx.Dependency:
+					fmt.Printf("  - %s\n", d.Ref)
+				default:
+					fmt.Printf("  - %v\n", dep)
+				}
+			}
+		}
+		return nil
 	}
 
 	// Step 3: Remove components

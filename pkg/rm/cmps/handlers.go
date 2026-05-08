@@ -213,8 +213,6 @@ func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument
 }
 
 func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *types.RmParams) ([]interface{}, error) {
-	log := logger.FromContext(ctx)
-
 	var selectedComponents []interface{}
 	var totalComponents int
 	var totalSelectedComponents int
@@ -251,9 +249,7 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	if len(selectedComponents) == 0 {
 		return nil, fmt.Errorf("no components matched the selection criteria")
 	}
-	log.Infof("Total components: %d, Total selected components: %d", totalComponents, totalSelectedComponents)
 
-	// fmt.Println("Selected components:", selectedComponents)
 	return selectedComponents, nil
 }
 
@@ -853,6 +849,18 @@ func getCDXComponentFieldValue(ctx context.Context, comp cydx.Component, field s
 		if len(values) > 0 {
 			log.Debugf("Found hash values for %s: %s", comp.BOMRef, strings.Join(values, ","))
 			return strings.Join(values, ",")
+		}
+
+	case "group":
+		if comp.Group != "" {
+			log.Debugf("Found group value for %s: %s", comp.BOMRef, comp.Group)
+			return comp.Group
+		}
+
+	case "publisher":
+		if comp.Publisher != "" {
+			log.Debugf("Found publisher value for %s: %s", comp.BOMRef, comp.Publisher)
+			return comp.Publisher
 		}
 	}
 	return ""

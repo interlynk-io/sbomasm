@@ -318,6 +318,12 @@ sbomasm rm --components --field supplier  samples/test/remove/complete-sbom.cdx.
 sbomasm rm --components --field type  samples/test/remove/complete-sbom.spdx.json -o remove-comp-with-type-field.sbom.spdx.json
 
 sbomasm rm --components --field type  samples/test/remove/complete-sbom.cdx.json -o remove-comp-with-type-field.sbom.cdx.json
+
+# group (CDX only)
+sbomasm rm --components --field group  samples/test/remove/complete-sbom.cdx.json -o remove-all-components-with-group.cdx.json
+
+# publisher (CDX only)
+sbomasm rm --components --field publisher  samples/test/remove/complete-sbom.cdx.json -o remove-all-components-with-publisher.cdx.json
 ```
 
 ### 4.2 Remove all component if field and value is present
@@ -382,4 +388,10 @@ sbomasm rm --components --field supplier --value "Sigstore"  samples/test/remove
 sbomasm rm --components --field type --value "library"  samples/test/remove/complete-sbom.spdx.json -o remove-comp-with-type-field-with-value.sbom.spdx.json
 
 sbomasm rm --components --field type --value "library"  samples/test/remove/complete-sbom.cdx.json -o remove-comp-with-type-field-with-value.sbom.cdx.json
+
+# group (CDX only)
+sbomasm rm --components --field group --value "github.com/fluxcd"  samples/test/remove/complete-sbom.cdx.json -o remove-fluxcd-group-components.cdx.json
+
+# publisher (CDX only)
+sbomasm rm --components --field publisher --value "cel.dev"  samples/test/remove/complete-sbom.cdx.json -o remove-cel.dev-group-components.cdx.json
 ```

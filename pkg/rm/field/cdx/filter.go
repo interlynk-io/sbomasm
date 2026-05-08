@@ -653,3 +653,79 @@ func FilterTypeFromComponent(doc *cydx.BOM, selected []interface{}, params *type
 	log.Debugf("Filtered type from component: %v", filtered)
 	return filtered, nil
 }
+
+func FilterGroupFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering group from component")
+
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(GroupEntry)
+		if !ok || entry.Value == "" {
+			log.Warn("Skipping invalid group entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsFieldAndValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				log.Warn("Warning: NOASSERTION is unlikely for group field")
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	log.Debugf("Filtered group from component: %v", filtered)
+	return filtered, nil
+}
+
+func FilterPublisherFromComponent(doc *cydx.BOM, selected []interface{}, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Filtering publisher from component")
+
+	if params.Value == "" && !params.All && !params.IsKeyPresent {
+		return selected, nil
+	}
+
+	var filtered []interface{}
+	for _, e := range selected {
+		entry, ok := e.(PublisherEntry)
+		if !ok || entry.Value == "" {
+			log.Warn("Skipping invalid publisher entry:", e)
+			continue
+		}
+
+		match := false
+		switch {
+		case params.IsFieldAndValuePresent:
+			if strings.EqualFold(entry.Value, params.Value) {
+				match = true
+			}
+			if params.Value == "NOASSERTION" {
+				log.Warn("Warning: NOASSERTION is unlikely for publisher field")
+			}
+		default:
+			match = true
+		}
+
+		if match {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	log.Debugf("Filtered publisher from component: %v", filtered)
+	return filtered, nil
+}

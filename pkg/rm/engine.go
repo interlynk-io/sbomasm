@@ -26,9 +26,12 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	cdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/cdx"
+	spdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/spdx"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
+	"github.com/spdx/tools-golang/spdx/v2/common"
 )
 
 func Engine(ctx context.Context, args []string, params *types.RmParams) error {
@@ -91,6 +94,12 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	if err != nil {
 		return err
 	}
+
+	// Skip writing output in dry-run mode
+	if params.DryRun {
+		return nil
+	}
+
 	fmt.Println("successfully removed...")
 
 	if params.OutputFile != "" {
@@ -157,9 +166,53 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 		return nil
 	}
 	if params.DryRun {
-		log.Debugf("Dry-run: matched entries:")
+		fmt.Printf("Dry-run: matched entries:\n")
 		for _, entry := range targets {
-			fmt.Printf("  - %v\n", entry)
+			switch e := entry.(type) {
+			case common.Creator:
+				fmt.Printf("  - Creator: %s (%s)\n", e.Creator, e.CreatorType)
+			case spdx.Originator:
+				fmt.Printf("  - Author: %s (%s)\n", e.Originator, e.OriginatorType)
+			case spdx.Supplier:
+				fmt.Printf("  - Supplier: %s (%s)\n", e.Supplier, e.SupplierType)
+			case cydx.OrganizationalContact:
+				fmt.Printf("  - Author: %s (%s)\n", e.Name, e.Email)
+			case cydx.OrganizationalEntity:
+				fmt.Printf("  - Supplier: %s\n", e.Name)
+			case cydx.LicenseChoice:
+				if e.License != nil {
+					if e.License.ID != "" {
+						fmt.Printf("  - License: %s\n", e.License.ID)
+					} else if e.License.Name != "" {
+						fmt.Printf("  - License: %s\n", e.License.Name)
+					}
+				} else if e.Expression != "" {
+					fmt.Printf("  - License Expression: %s\n", e.Expression)
+				}
+			case cydx.Lifecycle:
+				fmt.Printf("  - Lifecycle: %s\n", e.Phase)
+			case cydx.Tool:
+				fmt.Printf("  - Tool: %s@%s\n", e.Name, e.Version)
+			case cydx.Component:
+				fmt.Printf("  - Tool: %s@%s\n", e.Name, e.Version)
+			case []cydx.Component:
+				for _, c := range e {
+					fmt.Printf("  - Tool: %s@%s\n", c.Name, c.Version)
+				}
+			case []cydx.Tool:
+				for _, t := range e {
+					fmt.Printf("  - Tool: %s@%s\n", t.Name, t.Version)
+				}
+			case []cydx.OrganizationalContact:
+				for _, a := range e {
+					fmt.Printf("  - Author: %s (%s)\n", a.Name, a.Email)
+				}
+			case string:
+				// timestamp, repository URL, etc.
+				fmt.Printf("  - %s\n", e)
+			default:
+				fmt.Printf("  - %v\n", entry)
+			}
 		}
 		return nil
 	}
@@ -180,8 +233,6 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		log.Debugf("No matching components found.")
 		return nil
 	}
-
-	log.Infof("Total selected components for field removal: %d", len(selectedComponents))
 
 	// Step 2: For each selected component, operate on field
 	spec, field := f.doc.SpecType(), strings.ToLower(params.Field)
@@ -221,9 +272,92 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 		return nil
 	}
 	if params.DryRun {
-		log.Infof("Dry-run: matched field entries:")
+		fmt.Printf("Dry-run: matched field entries:\n")
 		for _, entry := range targets {
-			fmt.Printf("  - %v\n", entry)
+			switch e := entry.(type) {
+			case spdxcomp.AuthorEntry:
+				author := ""
+				if e.Originator != nil {
+					author = e.Originator.Originator
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, author)
+			case spdxcomp.SupplierEntry:
+				supplier := ""
+				if e.Supplier != nil {
+					supplier = e.Supplier.Supplier
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, supplier)
+			case spdxcomp.DescriptionEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, e.Value)
+			case spdxcomp.CopyrightEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, e.Value)
+			case spdxcomp.RepositoryEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, e.Value)
+			case spdxcomp.LicenseEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, e.Value)
+			case spdxcomp.TypeEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, e.Value)
+			case spdxcomp.CpeEntry:
+				cpe := ""
+				if e.Ref != nil {
+					cpe = e.Ref.Locator
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, cpe)
+			case spdxcomp.HashEntry:
+				hash := ""
+				if e.Checksum != nil {
+					hash = e.Checksum.Value
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, hash)
+			case spdxcomp.PurlEntry:
+				purl := ""
+				if e.Ref != nil {
+					purl = e.Ref.Locator
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Package.PackageName, e.Package.PackageVersion, purl)
+			case cdxcomp.AuthorEntry:
+				author := ""
+				if e.Author != nil {
+					author = fmt.Sprintf("%s (%s)", e.Author.Name, e.Author.Email)
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, author)
+			case cdxcomp.SupplierEntry:
+				supplier := ""
+				if e.Value != nil {
+					supplier = e.Value.Name
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, supplier)
+			case cdxcomp.DescriptionEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.CopyrightEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.RepositoryEntry:
+				url := ""
+				if e.Ref != nil {
+					url = e.Ref.URL
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, url)
+			case cdxcomp.LicenseEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.TypeEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.CpeEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Ref)
+			case cdxcomp.HashEntry:
+				hash := ""
+				if e.Hash != nil {
+					hash = e.Hash.Value
+				}
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, hash)
+			case cdxcomp.PurlEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.GroupEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			case cdxcomp.PublisherEntry:
+				fmt.Printf("  - %s@%s: %s\n", e.Component.Name, e.Component.Version, e.Value)
+			default:
+				fmt.Printf("  - %v\n", entry)
+			}
 		}
 		return nil
 	}

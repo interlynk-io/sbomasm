@@ -44,8 +44,10 @@ Removes specific fields from the document metadata or from components.
 | `author`      | `originator`            | `authors`              |
 | `copyright`   | `copyrightText`         | `copyright`            |
 | `cpe`         | `externalRefs` (cpe23)  | `cpe`                  |
+| `group`       | *(not applicable)*      | `group`                |
 | `hash`        | `packageChecksums` / checksums | `hashes`  |
 | `license`     | `licenseDeclared`       | `licenses`             |
+| `publisher`   | *(not applicable)*      | `publisher`            |
 | `purl`        | `externalRefs` (purl)   | `purl`                 |
 | `repository`  | `externalRefs` (vcs)    | `externalReferences`   |
 | `supplier`    | `packageSupplier`       | `supplier`             |
@@ -414,9 +416,11 @@ echo "Published SBOM written to $OUTPUT_SBOM"
 | `author`      | ✓              | ✓               |
 | `copyright`   |                | ✓               |
 | `cpe`         |                | ✓               |
+| `group`       |                | ✓ (CDX only)    |
 | `hash`        |                | ✓               |
 | `license`     | ✓              | ✓               |
 | `lifecycle`   | ✓              |                 |
+| `publisher`   |                | ✓ (CDX only)    |
 | `purl`        |                | ✓               |
 | `repository`  | ✓ (CDX only)   | ✓               |
 | `supplier`    | ✓              | ✓               |

@@ -372,3 +372,47 @@ func SelectTypeFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface
 	log.Debugf("Selected types from component: %v", selected)
 	return selected, nil
 }
+
+func SelectGroupFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting group from component")
+
+	var selected []interface{}
+	for _, comp := range params.SelectedComponents {
+		c, ok := comp.(*cydx.Component)
+		if !ok {
+			continue
+		}
+		if c.Group != "" {
+			log.Debugf("Selecting group from component: %s@%s, Group: %s", c.Name, c.Version, c.Group)
+			selected = append(selected, GroupEntry{Component: c, Value: c.Group})
+		}
+	}
+	if len(selected) == 0 {
+		log.Debugf("No group entries found in selected components")
+	}
+	log.Debugf("Selected groups from component: %v", selected)
+	return selected, nil
+}
+
+func SelectPublisherFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interface{}, error) {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Selecting publisher from component")
+
+	var selected []interface{}
+	for _, comp := range params.SelectedComponents {
+		c, ok := comp.(*cydx.Component)
+		if !ok {
+			continue
+		}
+		if c.Publisher != "" {
+			log.Debugf("Selecting publisher from component: %s@%s, Publisher: %s", c.Name, c.Version, c.Publisher)
+			selected = append(selected, PublisherEntry{Component: c, Value: c.Publisher})
+		}
+	}
+	if len(selected) == 0 {
+		log.Debugf("No publisher entries found in selected components")
+	}
+	log.Debugf("Selected publishers from component: %v", selected)
+	return selected, nil
+}
