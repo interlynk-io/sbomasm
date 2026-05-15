@@ -71,10 +71,10 @@ func (v *CycloneDXViewer) ParseAndEnrichWithFormat(input io.Reader, format cydx.
 
 	// Build vulnerability lookup map
 	vulnMap := buildVulnerabilityMap(bom)
-	
+
 	// Build annotation lookup map (subject -> annotations)
 	annotationMap := buildAnnotationMap(bom)
-	
+
 	// Build composition lookup map (assembly/dependency -> compositions)
 	compositionMap := buildCompositionMap(bom)
 
@@ -231,12 +231,12 @@ func enrichComponent(comp *cydx.Component, parent *EnrichedComponent, vulnMap ma
 		enriched.Vulnerabilities = vulns
 		enriched.VulnCount = aggregateVulnStats(vulns)
 	}
-	
+
 	// Attach annotations for this component
 	if anns, ok := annotationMap[comp.BOMRef]; ok {
 		enriched.Annotations = anns
 	}
-	
+
 	// Attach compositions where this component is referenced
 	if comps, ok := compositionMap[comp.BOMRef]; ok {
 		enriched.Compositions = comps
@@ -258,16 +258,16 @@ func enrichComponent(comp *cydx.Component, parent *EnrichedComponent, vulnMap ma
 // buildAnnotationMap creates a map of subject BOMRef -> annotations
 func buildAnnotationMap(bom *cydx.BOM) map[string][]AnnotationInfo {
 	annMap := make(map[string][]AnnotationInfo)
-	
+
 	if bom.Annotations == nil {
 		return annMap
 	}
-	
+
 	for _, ann := range *bom.Annotations {
 		info := AnnotationInfo{
 			Text: ann.Text,
 		}
-		
+
 		// Extract annotator information
 		if ann.Annotator != nil {
 			annotatorStr := ""
@@ -288,14 +288,14 @@ func buildAnnotationMap(bom *cydx.BOM) map[string][]AnnotationInfo {
 			}
 			info.Annotator = annotatorStr
 		}
-		
+
 		// Extract timestamp
 		if ann.Timestamp != "" {
 			if t, err := time.Parse(time.RFC3339, ann.Timestamp); err == nil {
 				info.Timestamp = t
 			}
 		}
-		
+
 		// Map to each subject
 		if ann.Subjects != nil {
 			for _, subj := range *ann.Subjects {
@@ -304,23 +304,23 @@ func buildAnnotationMap(bom *cydx.BOM) map[string][]AnnotationInfo {
 			}
 		}
 	}
-	
+
 	return annMap
 }
 
 // buildCompositionMap creates a map of component BOMRef -> compositions
 func buildCompositionMap(bom *cydx.BOM) map[string][]CompositionInfo {
 	compMap := make(map[string][]CompositionInfo)
-	
+
 	if bom.Compositions == nil {
 		return compMap
 	}
-	
+
 	for _, comp := range *bom.Compositions {
 		info := CompositionInfo{
 			Aggregate: string(comp.Aggregate),
 		}
-		
+
 		// Extract assemblies and dependencies as strings
 		if comp.Assemblies != nil {
 			for _, asm := range *comp.Assemblies {
@@ -332,7 +332,7 @@ func buildCompositionMap(bom *cydx.BOM) map[string][]CompositionInfo {
 				info.Dependencies = append(info.Dependencies, string(dep))
 			}
 		}
-		
+
 		// Map composition to each assembly
 		if comp.Assemblies != nil {
 			for _, asm := range *comp.Assemblies {
@@ -340,11 +340,11 @@ func buildCompositionMap(bom *cydx.BOM) map[string][]CompositionInfo {
 				compMap[asmRef] = append(compMap[asmRef], info)
 			}
 		}
-		
+
 		// Also map to dependencies if needed
 		// (This depends on how you want compositions displayed)
 	}
-	
+
 	return compMap
 }
 
@@ -675,6 +675,8 @@ func specVersionToString(sv cydx.SpecVersion) string {
 		return "1.5"
 	case cydx.SpecVersion1_6:
 		return "1.6"
+	case cydx.SpecVersion1_7:
+		return "1.7"
 	default:
 		return fmt.Sprintf("%d", sv)
 	}
