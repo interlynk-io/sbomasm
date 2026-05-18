@@ -273,20 +273,36 @@ func SelectLicenseFromComponent(doc *cydx.BOM, params *types.RmParams) ([]interf
 		}
 		if c.Licenses != nil {
 			for _, license := range *c.Licenses {
-				licenseValue := license.License.ID
-				field := "ID"
-				if licenseValue == "" {
-					licenseValue = license.License.Name
-					field = "Name"
+
+				if license.License != nil {
+
+					if license.License.ID != "" {
+						selected = append(selected, LicenseEntry{
+							Component: c,
+							Value:     license.License.ID,
+						})
+						log.Debugf("Selecting license from component: %s@%s, License: %s (Field: %s)",
+							c.Name, c.Version, license.License.ID, "ID")
+
+					}
+
+					if license.License.Name != "" {
+						selected = append(selected, LicenseEntry{
+							Component: c,
+							Value:     license.License.Name,
+						})
+						log.Debugf("Selecting license from component: %s@%s, License: %s (Field: %s)",
+							c.Name, c.Version, license.License.Name, "Name")
+					}
 				}
-				if licenseValue == "" {
-					licenseValue = license.Expression
-					field = "Expression"
-				}
-				if licenseValue != "" {
+
+				if license.Expression != "" {
+					selected = append(selected, LicenseEntry{
+						Component: c,
+						Value:     license.Expression,
+					})
 					log.Debugf("Selecting license from component: %s@%s, License: %s (Field: %s)",
-						c.Name, c.Version, licenseValue, field)
-					selected = append(selected, LicenseEntry{Component: c, Value: licenseValue})
+						c.Name, c.Version, license.Expression, "Expression")
 				}
 			}
 		}

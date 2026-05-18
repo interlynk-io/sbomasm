@@ -1,7 +1,7 @@
 {
-  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
-  "specVersion": "1.6",
+  "specVersion": "1.7",
   "serialNumber": "urn:uuid:4d2edcda-fcc4-42fe-8e9d-87cf33e47b94",
   "version": 1,
   "metadata": {
@@ -18,7 +18,36 @@
             "alg": "SHA-256",
             "content": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
           }
-        ]
+        ],
+        "licenses": [
+        {
+          "expression": "GPL-3.0-or-later OR GPL-2.0",
+          "acknowledgement": "declared",
+          "expressionDetails": [
+            {
+              "licenseIdentifier": "GPL-3.0-or-later",
+              "text": {
+                "content": "specific GPL-3.0-or-later license text"
+              }
+            },
+            {
+              "licenseIdentifier": "GPL-2.0",
+              "text": {
+                "content": "specific GPL-2.0 license text"
+              }
+            }
+          ]
+        },
+        {
+          "license": {
+            "id": "GPL-3.0-only",
+            "acknowledgement": "concluded",
+            "text": {
+              "content": "specific GPL-3.0-or-later license text"
+            }
+          }
+        }
+      ]
     }
   },
   "components": [
@@ -35,7 +64,48 @@
         }
       ],
       "purl": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4",
-      "cpe": "cpe:2.3:a:felixge:httpsnoop:v1.0.4:*:*:*:*:*:*:*"
+      "cpe": "cpe:2.3:a:felixge:httpsnoop:v1.0.4:*:*:*:*:*:*:*",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared",
+            "url": "https://example.com/licenses/MIT"
+          }
+        },
+        {
+          "license": {
+            "id": "PostgreSQL",
+            "acknowledgement": "declared",
+            "url": "https://example.com/licenses/PostgreSQL"
+          }
+        },
+        {
+          "license": {
+            "name": "Apache Software License",
+            "acknowledgement": "declared",
+            "url": "https://example.com/licenses/Apache-2.0"
+          }
+        },
+        {
+          "expression": "(MIT AND PostgreSQL AND Apache-2.0)",
+          "acknowledgement": "concluded",
+          "expressionDetails": [
+            {
+              "licenseIdentifier": "MIT",
+              "url": "https://example.com/licenses/MIT"
+            },
+            {
+              "licenseIdentifier": "PostgreSQL",
+              "url": "https://example.com/licenses/PostgreSQL"
+            },
+            {
+              "licenseIdentifier": "Apache-2.0",
+              "url": "https://example.com/licenses/Apache-2.0"
+            }
+          ]
+        }
+      ]
     },
     {
       "bom-ref": "pkg:golang/github.com/sigstore/fulcio@v1.7.1?type=module",
@@ -84,3 +154,4 @@
     }
   ]
 }
+

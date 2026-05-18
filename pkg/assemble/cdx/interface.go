@@ -37,18 +37,20 @@ var cdx_strings_to_types = map[string]cydx.ComponentType{
 }
 
 var cdx_hash_algos = map[string]cydx.HashAlgorithm{
-	"MD5":         cydx.HashAlgoMD5,
-	"SHA-1":       cydx.HashAlgoSHA1,
-	"SHA-256":     cydx.HashAlgoSHA256,
-	"SHA-384":     cydx.HashAlgoSHA384,
-	"SHA-512":     cydx.HashAlgoSHA512,
-	"SHA3-256":    cydx.HashAlgoSHA3_256,
-	"SHA3-384":    cydx.HashAlgoSHA3_384,
-	"SHA3-512":    cydx.HashAlgoSHA3_512,
-	"BLAKE2b-256": cydx.HashAlgoBlake2b_256,
-	"BLAKE2b-384": cydx.HashAlgoBlake2b_384,
-	"BLAKE2b-512": cydx.HashAlgoBlake2b_512,
-	"BLAKE3":      cydx.HashAlgoBlake3,
+	"MD5":          cydx.HashAlgoMD5,
+	"SHA-1":        cydx.HashAlgoSHA1,
+	"SHA-256":      cydx.HashAlgoSHA256,
+	"SHA-384":      cydx.HashAlgoSHA384,
+	"SHA-512":      cydx.HashAlgoSHA512,
+	"SHA3-256":     cydx.HashAlgoSHA3_256,
+	"SHA3-384":     cydx.HashAlgoSHA3_384,
+	"SHA3-512":     cydx.HashAlgoSHA3_512,
+	"BLAKE2b-256":  cydx.HashAlgoBlake2b_256,
+	"BLAKE2b-384":  cydx.HashAlgoBlake2b_384,
+	"BLAKE2b-512":  cydx.HashAlgoBlake2b_512,
+	"BLAKE3":       cydx.HashAlgoBlake3,
+	"STREEBOG-256": cydx.HashAlgoStreebog256,
+	"STREEBOG-512": cydx.HashAlgoStreebog512,
 }
 
 func SupportedChecksums() []string {
