@@ -611,6 +611,7 @@ func RemoveHashFromComponent(doc *cydx.BOM, entries []interface{}, params *types
 func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *types.RmParams) error {
 	log := logger.FromContext(*params.Ctx)
 	removedCount := 0
+
 	for _, e := range entries {
 		entry, ok := e.(LicenseEntry)
 		if !ok || entry.Value == "" {
@@ -619,58 +620,81 @@ func RemoveLicenseFromComponent(doc *cydx.BOM, entries []interface{}, params *ty
 		}
 
 		comp := entry.Component
-		found := false
-		if doc.Metadata.Component != nil && comp == doc.Metadata.Component {
-			found = true
-		} else if doc.Components != nil {
-			for i := range *doc.Components {
-				if &(*doc.Components)[i] == comp {
-					found = true
-					break
-				}
-			}
-		}
-		if !found {
-			log.Warnf("Warning: Component %s@%s not found in document\n", comp.Name, comp.Version)
+
+		if comp.Licenses == nil {
 			continue
 		}
 
-		if params.Value == "NOASSERTION" {
-			log.Warnf("Warning: NOASSERTION is unlikely for license field")
+		var newLicenses cydx.Licenses
+
+		for _, license := range *comp.Licenses {
+
+			remove := false
+
+			// Match license ID
+			if license.License != nil &&
+				license.License.ID != "" &&
+				strings.EqualFold(license.License.ID, entry.Value) {
+
+				remove = true
+
+				log.Debugf(
+					"Removed license from component: %s@%s, License: %s (Field: ID)",
+					comp.Name,
+					comp.Version,
+					license.License.ID,
+				)
+			}
+
+			// Match license Name
+			if license.License != nil &&
+				license.License.Name != "" &&
+				strings.EqualFold(license.License.Name, entry.Value) {
+
+				remove = true
+
+				log.Debugf(
+					"Removed license from component: %s@%s, License: %s (Field: Name)",
+					comp.Name,
+					comp.Version,
+					license.License.Name,
+				)
+			}
+
+			// Match expression
+			if license.Expression != "" &&
+				strings.EqualFold(license.Expression, entry.Value) {
+
+				remove = true
+
+				log.Debugf(
+					"Removed license from component: %s@%s, License: %s (Field: Expression)",
+					comp.Name,
+					comp.Version,
+					license.Expression,
+				)
+			}
+
+			if remove {
+				removedCount++
+			} else {
+				newLicenses = append(newLicenses, license)
+			}
 		}
 
-		if comp.Licenses != nil {
-			var newLicenses cydx.Licenses
-			for _, license := range *comp.Licenses {
-				licenseValue := license.License.ID
-				field := "ID"
-				if licenseValue == "" {
-					licenseValue = license.License.Name
-					field = "Name"
-				}
-				if licenseValue == "" {
-					licenseValue = license.Expression
-					field = "Expression"
-				}
-				if licenseValue == "" || !strings.EqualFold(licenseValue, entry.Value) {
-					newLicenses = append(newLicenses, license)
-				} else {
-					removedCount++
-					log.Debugf("Removed license from component: %s@%s, License: %s (Field: %s)\n",
-						comp.Name, comp.Version, licenseValue, field)
-				}
-			}
+		if len(newLicenses) == 0 {
+			comp.Licenses = nil
+		} else {
 			comp.Licenses = &newLicenses
-			if len(newLicenses) == 0 {
-				comp.Licenses = nil
-			}
 		}
 	}
 
-	log.Debugf("Removed %d license entries from components\n", removedCount)
+	log.Debugf("Removed %d license entries from components", removedCount)
+
 	if len(entries) > 0 && removedCount == 0 {
-		log.Debugf("No license entries removed\n")
+		log.Debugf("No license entries removed")
 	}
+
 	return nil
 }
 
