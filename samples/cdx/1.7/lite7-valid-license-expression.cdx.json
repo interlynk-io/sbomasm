@@ -1,0 +1,114 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:4d2edcda-fcc4-42fe-8e9d-87cf33e47b94",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-04-25T00:42:27Z",
+    "component": {
+        "bom-ref": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module#cmd/kyverno",
+        "type": "application",
+        "name": "github.com/kyverno/kyverno",
+        "version": "v1.14.0",
+        "purl": "pkg:golang/github.com/kyverno/kyverno@v1.14.0",
+        "cpe": "cpe:/golang/github.com/kyverno/kyverno:v1.14.0",
+        "hashes": [
+          {
+            "alg": "SHA-256",
+            "content": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+          }
+        ],
+        "licenses": [
+        {
+          "bom-ref": "my-application-license",
+          "acknowledgement": "declared",
+          "expression": "LicenseRef-my-custom-license AND (EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0) AND MIT",
+          "expressionDetails": [
+            {
+              "licenseIdentifier": "LicenseRef-my-custom-license",
+              "text": {
+                "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+              },
+              "url": "https://my-application.example.com/license.txt"
+            },
+            {
+              "licenseIdentifier": "EPL-2.0",
+              "text": {
+                "content": "Eclipse Public License - v 2.0\n\n    THE ACCOMPANYING PROGRAM IS PROVIDED UNDER THE TERMS OF THIS ECLIPSE\n    PUBLIC LICENSE (\"AGREEMENT\"). ANY USE, REPRODUCTION OR DISTRIBUTION\n    OF THE PROGRAM CONSTITUTES RECIPIENT'S ACCEPTANCE OF THIS AGREEMENT..."
+              }
+            },
+            {
+              "licenseIdentifier": "GPL-2.0 WITH Classpath-exception-2.0",
+              "text": {
+                "contentType": "text/plain",
+                "content": "                    GNU GENERAL PUBLIC LICENSE\n                       Version 2, June 1991\n\n Copyright (C) 1989, 1991 Free Software Foundation, Inc.,\n <https://fsf.org/>\n Everyone is permitted to copy and distribute verbatim copies\n of this license document, but changing it is not allowed...\n\n...\n\nLinking this library statically or dynamically with other modules is making a combined work based on this library..."
+              }
+            },
+            {
+              "licenseIdentifier": "MIT",
+              "bom-ref": "LicenseDetails-component-B",
+              "text": {
+                "content": "MIT License\n\nCopyright (c) 1996 Component-B-Creators Inc.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"),...\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software..."
+              }
+            },
+            {
+              "licenseIdentifier": "MIT",
+              "bom-ref": "LicenseDetails-component-C",
+              "text": {
+                "content": "MIT License\n\nCopyright (c) 2001 Component-C-Creators Org\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"),...\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software..."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
+      "type": "library",
+      "name": "github.com/fluxcd/pkg/oci",
+      "version": "v0.45.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e"
+        }
+      ],
+      "purl": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0",
+      "cpe": "cpe:2.3:a:fluxcd:oci:v0.45.0:*:*:*:*:*:*:*"
+    },
+    {
+      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module",
+      "type": "library",
+      "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+      "version": "v1.17.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "834119270cfbc645d0899008e718bd7f75961580655f508f4eb47e3434e84644"
+        }
+      ],
+      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0",
+      "cpe": "cpe:/golang/github.com/azure/azure-sdk-for-go/sdk/azcore:v1.17.0"
+    }
+],
+"dependencies": [
+    {
+      "ref": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module#cmd/kyverno",
+      "dependsOn": [
+        "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module"
+        ]
+    },
+    {
+      "ref": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module",
+      "dependsOn": [
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module"
+      ]
+    }
+  ]
+}
+

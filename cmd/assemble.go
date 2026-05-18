@@ -130,7 +130,7 @@ func init() {
 	assembleCmd.Flags().BoolP("outputSpecSpdx", "s", false, "output in SPDX format")
 	assembleCmd.MarkFlagsMutuallyExclusive("outputSpecCdx", "outputSpecSpdx")
 
-	assembleCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom (e.g., 1.5, 1.6 for CycloneDX)")
+	assembleCmd.Flags().StringP("outputSpecVersion", "e", "", "spec version of the output sbom (e.g., 1.5, 1.6, 1.7 for CycloneDX)")
 
 	assembleCmd.Flags().BoolP("xml", "x", false, "output in XML format")
 	assembleCmd.Flags().BoolP("json", "j", true, "output in JSON format")
