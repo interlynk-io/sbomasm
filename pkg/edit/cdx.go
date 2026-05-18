@@ -323,35 +323,40 @@ func cdxConstructHashes(_ *cydx.BOM, c *configParams) *[]cydx.Hash {
 }
 
 func cdxConstructLicenses(_ *cydx.BOM, c *configParams) cydx.Licenses {
-	licenses := cydx.Licenses{}
+	var licenses cydx.Licenses
 
-	for _, license := range c.licenses {
-		if liclib.IsSpdxExpression(license.name) {
+	for _, in := range c.licenses {
+
+		// SPDX expression
+		if liclib.IsSpdxExpression(in.name) {
 			licenses = append(licenses, cydx.LicenseChoice{
-				Expression: license.name,
+				Expression: in.name,
 			})
-		} else {
-			lic, err := liclib.LookupSpdxLicense(license.name)
-			if err != nil {
-				licenses = append(licenses, cydx.LicenseChoice{
-					License: &cydx.License{
-						BOMRef: newBomRef(),
-						Name:   license.name,
-						URL:    license.value,
-					},
-				})
-			} else {
-				licenses = append(licenses, cydx.LicenseChoice{
-					License: &cydx.License{
-						BOMRef: newBomRef(),
-						ID:     lic.ShortID(),
-						Name:   lic.Name(),
-						URL:    license.value,
-					},
-				})
-			}
+			continue
 		}
+
+		// SPDX license
+		if lic, err := liclib.LookupSpdxLicense(in.name); err == nil {
+			licenses = append(licenses, cydx.LicenseChoice{
+				License: &cydx.License{
+					BOMRef: newBomRef(),
+					ID:     lic.ShortID(),
+					URL:    in.value,
+				},
+			})
+			continue
+		}
+
+		// Custom license
+		licenses = append(licenses, cydx.LicenseChoice{
+			License: &cydx.License{
+				BOMRef: newBomRef(),
+				Name:   in.name,
+				URL:    in.value,
+			},
+		})
 	}
+
 	return licenses
 }
 
