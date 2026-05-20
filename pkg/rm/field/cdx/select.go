@@ -28,6 +28,10 @@ func SelectAuthorFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting authors from metadata")
 
+	if bom.Metadata == nil {
+		return nil, nil
+	}
+
 	if bom.Metadata.Authors == nil || len(*bom.Metadata.Authors) == 0 {
 		return nil, nil
 	}
@@ -40,6 +44,10 @@ func SelectSupplierFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting supplier from metadata")
 
+	if bom.Metadata == nil {
+		return nil, nil
+	}
+
 	if bom.Metadata.Supplier == nil {
 		return nil, nil
 	}
@@ -50,6 +58,10 @@ func SelectSupplierFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface
 func SelectTimestampFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting timestamp from metadata")
+
+	if bom.Metadata == nil {
+		return nil, nil
+	}
 
 	if bom.Metadata.Timestamp == "" {
 		return nil, nil
@@ -62,6 +74,10 @@ func SelectTimestampFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interfac
 func SelectToolFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting tool from metadata")
+
+	if bom.Metadata == nil {
+		return nil, nil
+	}
 
 	log.Debugf("Selecting tools from metadata")
 	if bom.Metadata.Tools == nil {
@@ -85,6 +101,10 @@ func SelectLicenseFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting licenses from metadata")
 
+	if bom.Metadata == nil {
+		return nil, nil
+	}
+
 	if bom.Metadata.Licenses == nil {
 		return nil, nil
 	}
@@ -101,6 +121,10 @@ func SelectLicenseFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{
 func SelectLifecycleFromMetadata(ctx context.Context, bom *cydx.BOM) ([]interface{}, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("Selecting lifecycles from metadata")
+
+	if bom.Metadata == nil {
+		return nil, nil
+	}
 
 	if bom.Metadata.Lifecycles == nil {
 		return nil, nil

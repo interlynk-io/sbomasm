@@ -64,7 +64,7 @@ func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
 	doc.c = c
 
 	if c.search.subject == "primary-component" {
-		if b.Metadata.Component == nil {
+		if b.Metadata == nil || b.Metadata.Component == nil {
 			return nil, fmt.Errorf("primary component is missing")
 		}
 		doc.comp = b.Metadata.Component
@@ -78,6 +78,12 @@ func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
 	}
 
 	return doc, nil
+}
+
+func (d *cdxEditDoc) ensureMetadata() {
+	if d.bom.Metadata == nil {
+		d.bom.Metadata = &cydx.Metadata{}
+	}
 }
 
 func (d *cdxEditDoc) update() {
@@ -118,10 +124,11 @@ func (d *cdxEditDoc) update() {
 }
 
 func (d *cdxEditDoc) timeStamp() error {
-	if d.c.shouldTimeStamp() {
+	if !d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
 
+	d.ensureMetadata()
 	d.bom.Metadata.Timestamp = utcNowTime()
 	return nil
 }
@@ -149,6 +156,7 @@ func (d *cdxEditDoc) lifeCycles() error {
 		})
 	}
 
+	d.ensureMetadata()
 	if d.c.onMissing() {
 		if d.bom.Metadata.Lifecycles == nil {
 			d.bom.Metadata.Lifecycles = &lc
@@ -370,6 +378,10 @@ func (d *cdxEditDoc) tools() error {
 }
 
 func (d *cdxEditDoc) initializeMetadataTools() {
+	if d.bom.Metadata == nil {
+		d.bom.Metadata = &cydx.Metadata{}
+	}
+
 	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
 		if d.bom.Metadata.Tools == nil {
 			d.bom.Metadata.Tools = &cydx.ToolsChoice{
@@ -584,6 +596,8 @@ func (d *cdxEditDoc) licenses() error {
 		return errNoConfiguration
 	}
 
+	d.ensureMetadata()
+
 	lics := cdxConstructLicenses(d.bom, d.c)
 
 	if d.c.onMissing() {
@@ -700,6 +714,8 @@ func (d *cdxEditDoc) supplier() error {
 		return errNoConfiguration
 	}
 
+	d.ensureMetadata()
+
 	supplier := cdxConstructSupplier(d.bom, d.c)
 
 	if d.c.onMissing() {
@@ -727,6 +743,8 @@ func (d *cdxEditDoc) authors() error {
 	if !d.c.shouldAuthors() {
 		return errNoConfiguration
 	}
+
+	d.ensureMetadata()
 
 	authors := cdxConstructAuthors(d.bom, d.c)
 
