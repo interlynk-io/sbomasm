@@ -240,5 +240,7 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 		return fmt.Errorf("error removing dependencies: %w", err)
 	}
 
+	params.RemovedCount += len(selectedComponents) + len(selectedDeps)
+
 	return nil
 }
