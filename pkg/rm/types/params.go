@@ -59,4 +59,5 @@ type RmParams struct {
 	SelectedComponents []interface{}
 	AllComponents      bool
 	Ctx                *context.Context
+	RemovedCount       int
 }

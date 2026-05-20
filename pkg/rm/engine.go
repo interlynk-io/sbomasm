@@ -100,7 +100,11 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		return nil
 	}
 
-	fmt.Println("successfully removed...")
+	if params.RemovedCount > 0 {
+		fmt.Println("successfully removed...")
+	} else {
+		fmt.Println("no matching entries found.")
+	}
 
 	if params.OutputFile != "" {
 
@@ -217,6 +221,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 		return nil
 	}
 
+	params.RemovedCount += len(targets)
 	return handler.Remove(targets, params)
 }
 
@@ -363,5 +368,6 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 	}
 
 	// Step 5: Remove matched fields from components
+	params.RemovedCount += len(targets)
 	return handler.Remove(targets, params)
 }

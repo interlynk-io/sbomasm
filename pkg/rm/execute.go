@@ -87,7 +87,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 
 		if params.AllComponents {
 			log.Debugf("Selecting all components from CycloneDX BOM")
-			if raw.Metadata.Component != nil {
+			if raw.Metadata != nil && raw.Metadata.Component != nil {
 				result = append(result, raw.Metadata.Component)
 			}
 
@@ -103,7 +103,7 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 			return nil, fmt.Errorf("component name and version are required unless --all-components is set")
 		}
 
-		if raw.Metadata.Component != nil && strings.EqualFold(raw.Metadata.Component.Name, name) && strings.EqualFold(raw.Metadata.Component.Version, version) {
+		if raw.Metadata != nil && raw.Metadata.Component != nil && strings.EqualFold(raw.Metadata.Component.Name, name) && strings.EqualFold(raw.Metadata.Component.Version, version) {
 			result = append(result, raw.Metadata.Component)
 		}
 		if raw.Components != nil {
@@ -239,6 +239,8 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 	if err := c.removeDependencies(ctx, selectedDeps); err != nil {
 		return fmt.Errorf("error removing dependencies: %w", err)
 	}
+
+	params.RemovedCount += len(selectedComponents) + len(selectedDeps)
 
 	return nil
 }

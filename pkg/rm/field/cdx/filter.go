@@ -121,9 +121,27 @@ func FilterLicenseFromMetadata(selected []interface{}, params *types.RmParams) (
 			log.Debugf("skipping license filter for non-license entry: %v", entry)
 			continue
 		}
-		if params.IsFieldAndValuePresent && license.License.Name == params.Value || license.License.ID == params.Value {
-			filtered = append(filtered, license)
+
+		match := false
+		if params.IsFieldAndValuePresent {
+			// Match expression
+			if license.Expression != "" && license.Expression == params.Value {
+				match = true
+			}
+			// Match license ID or Name
+			if license.License != nil {
+				if license.License.ID != "" && license.License.ID == params.Value {
+					match = true
+				}
+				if license.License.Name != "" && license.License.Name == params.Value {
+					match = true
+				}
+			}
 		} else if params.All || (!params.IsFieldAndKeyPresent && !params.IsFieldAndValuePresent) {
+			match = true
+		}
+
+		if match {
 			filtered = append(filtered, license)
 		}
 	}
