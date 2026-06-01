@@ -99,8 +99,8 @@ func (m *merge) combinedMerge() error {
 		log.Debugf("flat merge: final component list: %d", len(finalCompList))
 		m.out.Components = &finalCompList
 
-		priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
-			return c.BOMRef
+		priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
+			return c.BOMRef, c.BOMRef != ""
 		})
 		depList = append(depList, cydx.Dependency{
 			Ref:          m.out.Metadata.Component.BOMRef,
@@ -157,8 +157,8 @@ func (m *merge) combinedMerge() error {
 
 		m.out.Components = &priCompList
 
-		priCompIds := lo.Map(priCompList, func(c cydx.Component, _ int) string {
-			return c.BOMRef
+		priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
+			return c.BOMRef, c.BOMRef != ""
 		})
 		depList = append(depList, cydx.Dependency{
 			Ref:          m.out.Metadata.Component.BOMRef,

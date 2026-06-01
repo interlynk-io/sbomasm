@@ -269,20 +269,23 @@ func buildComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Compo
 }
 
 func buildPrimaryComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Component {
-	return lo.Map(in, func(bom *cydx.BOM, _ int) cydx.Component {
+	return lo.FilterMap(in, func(bom *cydx.BOM, _ int) (cydx.Component, bool) {
 		if bom.Metadata != nil && bom.Metadata.Component != nil {
 			newComp, duplicate := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
 			if !duplicate {
-				return *newComp
+				return *newComp, true
 			}
+			// Skip duplicate components - don't add empty entries
+			return cydx.Component{}, false
 		}
-		return cydx.Component{}
+		return cydx.Component{}, false
 	})
 }
 
 func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Dependency {
-	return lo.Flatten(lo.Map(in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
-		newDeps := []cydx.Dependency{}
+	depMap := make(map[string]cydx.Dependency)
+
+	for _, bom := range in {
 		for _, dep := range lo.FromPtr(bom.Dependencies) {
 			nd := cydx.Dependency{}
 			ref, found := cs.ResolveDepID(dep.Ref)
@@ -297,10 +300,36 @@ func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Depe
 			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
 			nd.Ref = ref
 			nd.Dependencies = &deps
-			newDeps = append(newDeps, nd)
+
+			// If we already have this dependency, merge the dependsOn lists
+			if existingDep, exists := depMap[ref]; exists {
+				mergedDeps := mergeDependencyLists(existingDep.Dependencies, nd.Dependencies)
+				nd.Dependencies = &mergedDeps
+			}
+			depMap[ref] = nd
 		}
-		return newDeps
-	}))
+	}
+
+	// Convert map back to slice
+	return lo.Values(depMap)
+}
+
+// mergeDependencyLists combines two dependency lists, removing duplicates
+func mergeDependencyLists(deps1, deps2 *[]string) []string {
+	depSet := make(map[string]struct{})
+
+	for _, d := range lo.FromPtr(deps1) {
+		depSet[d] = struct{}{}
+	}
+	for _, d := range lo.FromPtr(deps2) {
+		depSet[d] = struct{}{}
+	}
+
+	result := make([]string, 0, len(depSet))
+	for d := range depSet {
+		result = append(result, d)
+	}
+	return result
 }
 
 // cloneVulnerability creates a deep copy of a vulnerability
