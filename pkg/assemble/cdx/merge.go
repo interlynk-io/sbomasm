@@ -48,6 +48,7 @@ func (m *merge) loadBoms() {
 		if err != nil {
 			panic(err) // TODO: return error instead of panic
 		}
+		normalizeBomRefs(bom)
 		m.in = append(m.in, bom)
 	}
 }
@@ -139,14 +140,26 @@ func (m *merge) combinedMerge() error {
 				}
 			}
 
-			//Initialize the components list for the primary component
-			priCompList[newPc].Components = &[]cydx.Component{}
+			//Initialize the components list for the primary component (only once)
+			if priCompList[newPc].Components == nil {
+				priCompList[newPc].Components = &[]cydx.Component{}
+			}
+
+			// Track which components are already attached to avoid duplicates across BOMs
+			seenComp := make(map[string]struct{})
+			for _, comp := range *priCompList[newPc].Components {
+				seenComp[comp.BOMRef] = struct{}{}
+			}
 
 			for _, oldComp := range lo.FromPtr(b.Components) {
 				newCompId, _ := cs.ResolveDepID(oldComp.BOMRef)
+				if _, exists := seenComp[newCompId]; exists {
+					continue
+				}
 				for _, comp := range compList {
 					if comp.BOMRef == newCompId {
 						*priCompList[newPc].Components = append(*priCompList[newPc].Components, comp)
+						seenComp[newCompId] = struct{}{}
 						break
 					}
 				}
@@ -265,7 +278,7 @@ func (m *merge) setupPrimaryComp() *cydx.Component {
 		}
 	}
 
-	pc.BOMRef = newBomRef()
+	pc.BOMRef = generateComponentBomRef(&pc)
 	return &pc
 }
 

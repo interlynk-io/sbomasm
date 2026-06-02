@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -306,7 +307,7 @@ func buildPrimaryComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cyd
 			if !duplicate {
 				return *newComp, true
 			}
-			// Skip duplicate components - don't add empty entries
+			// Skip duplicate components: don't add empty entries
 			return cydx.Component{}, false
 		}
 		return cydx.Component{}, false
@@ -341,18 +342,22 @@ func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Depe
 		}
 	}
 
-	// Convert map back to slice
-	return lo.Values(depMap)
+	// Convert map back to slice and sort for deterministic output
+	result := lo.Values(depMap)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Ref < result[j].Ref
+	})
+	return result
 }
 
 // mergeDependencyLists combines two dependency lists, removing duplicates
-func mergeDependencyLists(deps1, deps2 *[]string) []string {
+func mergeDependencyLists(exitingDeps, newDeps *[]string) []string {
 	depSet := make(map[string]struct{})
 
-	for _, d := range lo.FromPtr(deps1) {
+	for _, d := range lo.FromPtr(exitingDeps) {
 		depSet[d] = struct{}{}
 	}
-	for _, d := range lo.FromPtr(deps2) {
+	for _, d := range lo.FromPtr(newDeps) {
 		depSet[d] = struct{}{}
 	}
 
@@ -360,6 +365,7 @@ func mergeDependencyLists(deps1, deps2 *[]string) []string {
 	for d := range depSet {
 		result = append(result, d)
 	}
+	sort.Strings(result)
 	return result
 }
 
