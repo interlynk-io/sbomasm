@@ -56,6 +56,37 @@ func newBomRef() string {
 	return fmt.Sprintf("lynk:%s", u)
 }
 
+// generateComponentBomRef creates a human-readable BOMRef based on component identity.
+// Prefers purl, falls back to name==version, then name, then a random lynk:uuid.
+func normalizeBomRefs(bom *cydx.BOM) {
+	if bom == nil {
+		return
+	}
+	if bom.Metadata != nil && bom.Metadata.Component != nil {
+		if bom.Metadata.Component.BOMRef == "" {
+			bom.Metadata.Component.BOMRef = generateComponentBomRef(bom.Metadata.Component)
+		}
+	}
+	for i := range lo.FromPtr(bom.Components) {
+		if bom.Components != nil && (*bom.Components)[i].BOMRef == "" {
+			(*bom.Components)[i].BOMRef = generateComponentBomRef(&(*bom.Components)[i])
+		}
+	}
+}
+
+func generateComponentBomRef(c *cydx.Component) string {
+	if c.PackageURL != "" {
+		return c.PackageURL
+	}
+	if c.Name != "" && c.Version != "" {
+		return fmt.Sprintf("%s@%s", c.Name, c.Version)
+	}
+	if c.Name != "" {
+		return c.Name
+	}
+	return newBomRef()
+}
+
 func cloneComp(c *cydx.Component) (*cydx.Component, error) {
 	var newComp cydx.Component
 
