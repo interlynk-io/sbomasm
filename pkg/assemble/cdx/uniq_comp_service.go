@@ -64,7 +64,7 @@ func (s *uniqueComponentService) StoreAndCloneWithNewID(c *cydx.Component) (*cyd
 		panic(err)
 	}
 
-	newID := newBomRef()
+	newID := generateComponentBomRef(nc)
 	nc.BOMRef = newID
 
 	s.compMap[lookupKey] = nc

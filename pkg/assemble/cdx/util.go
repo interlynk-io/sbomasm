@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"time"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -54,6 +55,37 @@ func newBomRef() string {
 	u := uuid.New().String()
 
 	return fmt.Sprintf("lynk:%s", u)
+}
+
+// generateComponentBomRef creates a human-readable BOMRef based on component identity.
+// Prefers purl, falls back to name==version, then name, then a random lynk:uuid.
+func normalizeBomRefs(bom *cydx.BOM) {
+	if bom == nil {
+		return
+	}
+	if bom.Metadata != nil && bom.Metadata.Component != nil {
+		if bom.Metadata.Component.BOMRef == "" {
+			bom.Metadata.Component.BOMRef = generateComponentBomRef(bom.Metadata.Component)
+		}
+	}
+	for i := range lo.FromPtr(bom.Components) {
+		if bom.Components != nil && (*bom.Components)[i].BOMRef == "" {
+			(*bom.Components)[i].BOMRef = generateComponentBomRef(&(*bom.Components)[i])
+		}
+	}
+}
+
+func generateComponentBomRef(c *cydx.Component) string {
+	if c.PackageURL != "" {
+		return c.PackageURL
+	}
+	if c.Name != "" && c.Version != "" {
+		return fmt.Sprintf("%s@%s", c.Name, c.Version)
+	}
+	if c.Name != "" {
+		return c.Name
+	}
+	return newBomRef()
 }
 
 func cloneComp(c *cydx.Component) (*cydx.Component, error) {
@@ -269,20 +301,23 @@ func buildComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Compo
 }
 
 func buildPrimaryComponentList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Component {
-	return lo.Map(in, func(bom *cydx.BOM, _ int) cydx.Component {
+	return lo.FilterMap(in, func(bom *cydx.BOM, _ int) (cydx.Component, bool) {
 		if bom.Metadata != nil && bom.Metadata.Component != nil {
 			newComp, duplicate := cs.StoreAndCloneWithNewID(bom.Metadata.Component)
 			if !duplicate {
-				return *newComp
+				return *newComp, true
 			}
+			// Skip duplicate components: don't add empty entries
+			return cydx.Component{}, false
 		}
-		return cydx.Component{}
+		return cydx.Component{}, false
 	})
 }
 
 func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Dependency {
-	return lo.Flatten(lo.Map(in, func(bom *cydx.BOM, _ int) []cydx.Dependency {
-		newDeps := []cydx.Dependency{}
+	depMap := make(map[string]cydx.Dependency)
+
+	for _, bom := range in {
 		for _, dep := range lo.FromPtr(bom.Dependencies) {
 			nd := cydx.Dependency{}
 			ref, found := cs.ResolveDepID(dep.Ref)
@@ -297,10 +332,41 @@ func buildDependencyList(in []*cydx.BOM, cs *uniqueComponentService) []cydx.Depe
 			deps := cs.ResolveDepIDs(lo.FromPtr(dep.Dependencies))
 			nd.Ref = ref
 			nd.Dependencies = &deps
-			newDeps = append(newDeps, nd)
+
+			// If we already have this dependency, merge the dependsOn lists
+			if existingDep, exists := depMap[ref]; exists {
+				mergedDeps := mergeDependencyLists(existingDep.Dependencies, nd.Dependencies)
+				nd.Dependencies = &mergedDeps
+			}
+			depMap[ref] = nd
 		}
-		return newDeps
-	}))
+	}
+
+	// Convert map back to slice and sort for deterministic output
+	result := lo.Values(depMap)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Ref < result[j].Ref
+	})
+	return result
+}
+
+// mergeDependencyLists combines two dependency lists, removing duplicates
+func mergeDependencyLists(exitingDeps, newDeps *[]string) []string {
+	depSet := make(map[string]struct{})
+
+	for _, d := range lo.FromPtr(exitingDeps) {
+		depSet[d] = struct{}{}
+	}
+	for _, d := range lo.FromPtr(newDeps) {
+		depSet[d] = struct{}{}
+	}
+
+	result := make([]string, 0, len(depSet))
+	for d := range depSet {
+		result = append(result, d)
+	}
+	sort.Strings(result)
+	return result
 }
 
 // cloneVulnerability creates a deep copy of a vulnerability
