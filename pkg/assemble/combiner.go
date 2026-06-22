@@ -96,6 +96,7 @@ func toCDXMergerSettings(c *config) *cdx.MergeSettings {
 	ms.Assemble.PrimaryFile = c.Assemble.PrimaryFile
 	ms.Assemble.MergeMode = c.Assemble.MergeMode
 	ms.Assemble.DocLicense = c.Assemble.DocLicense
+	ms.Assemble.IsAssemblyMergeWithPrimary = c.Assemble.IsAssemblyMergeWithPrimary
 	ms.Assemble.IncludeComponents = c.Assemble.IncludeComponents
 	ms.Assemble.IncludeDuplicateComponents = c.Assemble.includeDuplicateComponents
 	ms.Assemble.IncludeDependencyGraph = c.Assemble.IncludeDependencyGraph

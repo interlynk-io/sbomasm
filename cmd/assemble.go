@@ -63,6 +63,8 @@ Config File:
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		augmentMerge, _ := cmd.Flags().GetBool("augmentMerge")
+		assemblyMerge, _ := cmd.Flags().GetBool("assemblyMerge")
+		primaryFile, _ := cmd.Flags().GetString("primary")
 
 		// For augment merge, args are secondary SBOMs (primary is specified via flag)
 		// For other modes, args are all input SBOMs
@@ -71,12 +73,18 @@ Config File:
 		}
 
 		if augmentMerge {
-			primaryFile, _ := cmd.Flags().GetString("primary")
 			if primaryFile == "" {
 				return fmt.Errorf("primary SBOM file is required for augment merge (use --primary flag)")
 			}
 			if len(args) == 0 {
 				return fmt.Errorf("please provide at least one secondary sbom file for augment merge")
+			}
+		}
+
+		// For assembly merge with --primary, primary file is optional but if set, must be valid
+		if assemblyMerge && primaryFile != "" {
+			if len(args) == 0 {
+				return fmt.Errorf("please provide at least one secondary sbom file for assembly merge with --primary")
 			}
 		}
 
@@ -122,9 +130,11 @@ func init() {
 	assembleCmd.Flags().BoolP("hierMerge", "m", false, "hierarchical merge - preserve original SBOM structures under new root")
 	assembleCmd.Flags().BoolP("assemblyMerge", "a", false, "assembly merge - combine as assembly with shared dependencies")
 
-	// Augment merge flags
+	// Primary file flag (used by augmentMerge and assemblyMerge)
+	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file (required for augment merge; optional for assembly merge to use existing primary as root)")
+
+	// Augment merge specific flags
 	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
-	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge (required for augment merge)")
 	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
 
 	// Document license flag

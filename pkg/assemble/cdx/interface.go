@@ -126,6 +126,9 @@ type assemble struct {
 	PrimaryFile                string
 	MergeMode                  string // if-missing-or-empty, overwrite
 	DocLicense                 string
+
+	// Derived flag for assembly merge with primary
+	IsAssemblyMergeWithPrimary bool
 }
 
 type MergeSettings struct {
