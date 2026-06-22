@@ -79,3 +79,20 @@ or
 ```bash
 sbomasm assemble -n "final-in-complete" -t "application" -v "v1.0.0" samples/test/assemble/lite-sbom1-cdx.json samples/test/assemble/lite-sbom2-cdx.json -o hiermerge-lite-sbom.cdx.json
 ```
+
+## 4. Assembly Merge with Primary
+
+Merge SBOMs into an existing primary SBOM without creating a new synthetic root. The primary SBOM's primary becomes the document root, and secondary SBOMs' primaries become sub-components:
+
+```bash
+sbomasm assemble --assemblyMerge \
+  --primary samples/test/assemble/lite-sbom1-cdx.json \
+  samples/test/assemble/lite-sbom2-cdx.json \
+  -o assembly-with-primary.cdx.json
+```
+
+**Result:**
+- `lite-sbom1-cdx.json`'s primary (`github.com/kyverno/kyverno`) becomes the document root
+- `lite-sbom2-cdx.json`'s primary (`github.com/sigstore/cosign`) becomes a sub-component of the primary
+- All components from both SBOMs are in the flat `components` section
+- The primary now has dependencies on both its original components and the secondary primary

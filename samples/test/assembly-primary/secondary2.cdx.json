@@ -1,0 +1,34 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:33333333-3333-3333-3333-333333333333",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-15T12:00:00Z",
+    "component": {
+      "bom-ref": "pkg:pypi/tertiary-lib@3.0.0",
+      "type": "library",
+      "name": "tertiary-lib",
+      "version": "3.0.0",
+      "author": "Tertiary Author",
+      "purl": "pkg:pypi/tertiary-lib@3.0.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:pypi/dep-c@1.5.0",
+      "type": "library",
+      "name": "dep-c",
+      "version": "1.5.0",
+      "purl": "pkg:pypi/dep-c@1.5.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:pypi/tertiary-lib@3.0.0",
+      "dependsOn": [
+        "pkg:pypi/dep-c@1.5.0"
+      ]
+    }
+  ]
+}
