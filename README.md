@@ -25,6 +25,9 @@ sbomasm assemble -n "my-app" -v "1.0.0" -o final.json service1.json service2.jso
 # Augment existing SBOM with additional data
 sbomasm assemble --augmentMerge --primary base.json scan-results.json -o enhanced.json
 
+# Assembly merge with primary (nest SBOMs without creating new root)
+sbomasm assemble --assemblyMerge --primary container.json app.json -o merged.json
+
 # Edit SBOM metadata for compliance
 sbomasm edit --subject document --supplier "ACME Corp (acme.com)" --timestamp sbom.json
 
@@ -63,6 +66,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
       - [Container and Application Assembly](#container-and-application-assembly)
       - [Document License](#document-license)
       - [Augment Merge (Enrich Existing SBOM)](#augment-merge-enrich-existing-sbom)
+      - [Assembly Merge with Primary (Nest SBOMs)](#assembly-merge-with-primary-nest-sboms)
     - [Editing SBOMs](#editing-sboms)
       - [Add Missing Supplier Information](#add-missing-supplier-information)
       - [Update Component Licenses](#update-component-licenses)
@@ -218,6 +222,37 @@ sbomasm assemble --augmentMerge \
   vendor-sbom.json \
   -o updated-sbom.json
 ```
+
+#### Assembly Merge with Primary (Nest SBOMs)
+
+Merge SBOMs into an existing primary SBOM without creating a new synthetic root. Secondary SBOMs' primaries become sub-components (assemblies) of the primary:
+
+```bash
+# Python wheel shipping JavaScript - nest JS SBOM inside Python primary
+sbomasm assemble --assemblyMerge \
+  --primary python-wheel.cdx.json \
+  javascript-bundle.cdx.json \
+  -o merged.cdx.json
+
+# Container with bundled applications
+sbomasm assemble --assemblyMerge \
+  --primary container.cdx.json \
+  app1.cdx.json app2.cdx.json \
+  -o complete.cdx.json
+```
+
+**Use cases:**
+
+- Python wheels shipping JavaScript bundles
+- Container images with bundled applications
+- Any scenario where one SBOM should contain others as sub-components
+- Preserves primary SBOM's identity (serial number, supplier, licenses, authors) while adding secondary assemblies
+- Updates timestamp to reflect modification time
+
+The secondary primaries become:
+
+1. Sub-components in `metadata.component.components` (assembly relationship)
+2. Direct dependencies of the primary component (dependency relationship)
 
 ### Editing SBOMs
 

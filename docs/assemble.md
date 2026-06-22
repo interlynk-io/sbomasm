@@ -5,6 +5,7 @@ The `assemble` command merges multiple SBOMs into a single comprehensive SBOM do
 ## Overview
 
 `sbomasm assemble` combines SBOMs from different sources while:
+
 - Preserving component relationships
 - Managing duplicate components (based on merge algorithm)
 - Creating proper metadata for the assembled SBOM
@@ -76,6 +77,7 @@ sbomasm assemble --flat-merge \
 ### Assembly Merge
 
 Treats each SBOM as an independent assembly:
+
 - Similar to hierarchical but doesn't create relationships with the primary component
 - Useful when combining independent products
 
@@ -86,9 +88,66 @@ sbomasm assemble --assembly-merge \
   product1.json product2.json
 ```
 
+#### Assembly Merge with Primary (--primary flag)
+
+When using `--assemblyMerge --primary`, the specified SBOM's primary component becomes the document root, and all other SBOMs' primaries are nested as sub-components (assemblies). This is useful for:
+
+- **Python wheels shipping JavaScript bundles**: Nest the JS SBOM inside the Python package's primary
+- **Container images with bundled applications**: Keep the image's primary as root, nest application SBOMs
+- **Any scenario where one SBOM should contain others as sub-components**
+
+```bash
+# Merge JS SBOM into Python wheel SBOM
+sbomasm assemble --assembly-merge \
+  --primary python-wheel.cdx.json \
+  javascript-bundle.cdx.json \
+  -o merged.cdx.json
+```
+
+**Behavior:**
+
+- Primary SBOM's primary component becomes the document root (no new synthetic primary)
+- Secondary SBOMs' primaries become sub-components (`metadata.component.components`)
+- Secondary primaries are also added as direct dependencies of the primary component
+- Primary SBOM's **serial number is preserved** (maintains document identity)
+- Primary SBOM's **timestamp is updated** to reflect modification time
+- Primary SBOM's tools and metadata are preserved (sbomasm tool added)
+- Component deduplication still applies
+
+**Example Output Structure:**
+
+```json
+{
+  "metadata": {
+    "component": {
+      "name": "python-wheel",      // Primary SBOM's primary
+      "components": [
+        { "name": "js-bundle" }     // Secondary primary as sub-component
+      ]
+    }
+  },
+  "components": [
+    { "name": "python-dep-1" },    // Primary's components
+    { "name": "python-dep-2" },
+    // JS bundle's components (if any) - NOT the JS primary
+  ],
+  "dependencies": [
+    {
+      "ref": "python-wheel",
+      "dependsOn": [
+        "python-dep-1",
+        "python-dep-2",
+        "js-bundle"                   // Secondary primary as dependency
+      ]
+    }
+  ]
+}
+```
+
 ### Augment Merge
 
 Enriches an existing primary SBOM with additional information from secondary SBOMs:
+
 - Does not create a new root component
 - Merges matching components based on name, version, purl and CPE
 - Adds new components that don't exist in the primary SBOM
@@ -113,6 +172,7 @@ Enriches an existing primary SBOM with additional information from secondary SBO
 When components match, the following SPDX package fields are merged:
 
 **Basic Information Fields:**
+
 - `PackageDescription`: Package description text
 - `PackageDownloadLocation`: Where the package can be downloaded
 - `PackageHomePage`: Package home page URL
