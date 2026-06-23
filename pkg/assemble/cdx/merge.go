@@ -488,6 +488,7 @@ func (m *merge) initOutBomFromPrimary(primaryBom *cydx.BOM) {
 	}
 
 	m.out.Metadata = &cydx.Metadata{}
+
 	// Update timestamp to reflect modification
 	m.out.Metadata.Timestamp = utcNowTime()
 

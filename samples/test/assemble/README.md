@@ -92,6 +92,7 @@ sbomasm assemble --assemblyMerge \
 ```
 
 **Result:**
+
 - `lite-sbom1-cdx.json`'s primary (`github.com/kyverno/kyverno`) becomes the document root
 - `lite-sbom2-cdx.json`'s primary (`github.com/sigstore/cosign`) becomes a sub-component of the primary
 - All components from both SBOMs are in the flat `components` section
