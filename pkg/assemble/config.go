@@ -100,6 +100,7 @@ type assemble struct {
 	AugmentMerge               bool   `yaml:"augment_merge"`
 	PrimaryFile                string `yaml:"primary_file"`
 	MergeMode                  string `yaml:"merge_mode"` // if-missing-or-empty, overwrite
+	DocLicense                 string `yaml:"doc_license"`
 }
 
 type config struct {
@@ -252,6 +253,10 @@ func (c *config) readAndMerge(p *Params) error {
 
 	if p.OutputSpecVersion != "" {
 		c.Output.SpecVersion = strings.Trim(p.OutputSpecVersion, " ")
+	}
+
+	if p.DocLicense != "" {
+		c.Assemble.DocLicense = strings.Trim(p.DocLicense, " ")
 	}
 
 	return nil

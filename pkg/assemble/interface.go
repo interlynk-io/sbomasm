@@ -47,6 +47,9 @@ type Params struct {
 	PrimaryFile string
 	MergeMode   string // if-missing-or-empty, overwrite
 
+	// Document license (metadata level, not component level)
+	DocLicense string
+
 	Xml  bool
 	Json bool
 
