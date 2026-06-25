@@ -58,9 +58,9 @@ func (m *merge) loadBoms() {
 func (m *merge) combinedMerge() error {
 	log := logger.FromContext(*m.settings.Ctx)
 
-	// For assembly merge with primary, pre-append primary file to input list
-	// This ensures primary is at index 0, secondaries follow
-	if m.settings.Assemble.IsAssemblyMergeWithPrimary {
+	// For assembly/flat merge with primary, pre-append primary file to input list
+	// It ensures primary is at index 0, secondaries follow
+	if m.settings.Assemble.IsAssemblyMergeWithPrimary || m.settings.Assemble.IsFlatMergeWithPrimary {
 		m.settings.Input.Files = append([]string{m.settings.Assemble.PrimaryFile}, m.settings.Input.Files...)
 		log.Debugf("prepended primary file to input list: %s", m.settings.Assemble.PrimaryFile)
 	}
@@ -93,13 +93,21 @@ func (m *merge) combinedMerge() error {
 
 	//Build the final sbom
 	log.Debugf("generating output sbom")
-	m.initOutBom()
-
-	log.Debugf("generating primary component")
-	m.out.Metadata.Component = m.setupPrimaryComp()
+	if m.settings.Assemble.IsFlatMergeWithPrimary {
+		primaryBom := m.in[0]
+		m.initOutBomFromPrimary(primaryBom)
+		m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
+	} else {
+		m.initOutBom()
+		m.out.Metadata.Component = m.setupPrimaryComp()
+	}
 
 	log.Debugf("assign tools to metadata")
-	m.out.Metadata.Tools = toolsList
+	// For primary modes, tools are set separately to preserve primary's tools only
+	// Other modes use combined tools from all SBOMs
+	if !m.settings.Assemble.IsAssemblyMergeWithPrimary && !m.settings.Assemble.IsFlatMergeWithPrimary {
+		m.out.Metadata.Tools = toolsList
+	}
 
 	if m.settings.Assemble.IsAssemblyMergeWithPrimary {
 		// Assembly merge with primary: use existing primary as root, nest secondaries as sub-components
@@ -107,21 +115,58 @@ func (m *merge) combinedMerge() error {
 			return err
 		}
 	} else if m.settings.Assemble.FlatMerge {
-		finalCompList := []cydx.Component{}
-		finalCompList = append(finalCompList, priCompList...)
-		finalCompList = append(finalCompList, compList...)
-		log.Debugf("flat merge: final component list: %d", len(finalCompList))
-		m.out.Components = &finalCompList
+		if m.settings.Assemble.IsFlatMergeWithPrimary {
+			// Flat merge with primary: filter out primary's component from flat list
 
-		priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
-			return c.BOMRef, c.BOMRef != ""
-		})
-		depList = append(depList, cydx.Dependency{
-			Ref:          m.out.Metadata.Component.BOMRef,
-			Dependencies: &priCompIds,
-		})
-		log.Debugf("flat merge: final dependency list: %d", len(depList))
-		m.out.Dependencies = &depList
+			primaryName := m.out.Metadata.Component.Name
+			primaryVersion := m.out.Metadata.Component.Version
+
+			filteredPriCompList := lo.Filter(priCompList, func(c cydx.Component, _ int) bool {
+				return !(c.Name == primaryName && c.Version == primaryVersion)
+			})
+
+			finalCompList := append(filteredPriCompList, compList...)
+			log.Debugf("flat merge with primary: final component list: %d", len(finalCompList))
+			m.out.Components = &finalCompList
+
+			// Update primary's dependency to include secondary primaries
+			secondaryPrimaryRefs := lo.FilterMap(filteredPriCompList, func(c cydx.Component, _ int) (string, bool) {
+				return c.BOMRef, c.BOMRef != ""
+			})
+
+			for i, dep := range depList {
+				if dep.Ref == m.out.Metadata.Component.BOMRef {
+					existingDeps := lo.FromPtr(dep.Dependencies)
+					mergedDeps := lo.Uniq(append(existingDeps, secondaryPrimaryRefs...))
+					depList[i].Dependencies = &mergedDeps
+					break
+				}
+			}
+			m.out.Dependencies = &depList
+
+			// Build tools list preserving primary's tools and adding sbomasm
+			primaryBom := m.in[0]
+			toolsList := m.buildToolListWithPrimary(primaryBom)
+			m.out.Metadata.Tools = toolsList
+			log.Debugf("flat merge with primary: tools list: %d components, %d services", len(*toolsList.Components), len(*toolsList.Services))
+		} else {
+			// Regular flat merge
+			finalCompList := []cydx.Component{}
+			finalCompList = append(finalCompList, priCompList...)
+			finalCompList = append(finalCompList, compList...)
+			log.Debugf("flat merge: final component list: %d", len(finalCompList))
+			m.out.Components = &finalCompList
+
+			priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
+				return c.BOMRef, c.BOMRef != ""
+			})
+			depList = append(depList, cydx.Dependency{
+				Ref:          m.out.Metadata.Component.BOMRef,
+				Dependencies: &priCompIds,
+			})
+			log.Debugf("flat merge: final dependency list: %d", len(depList))
+			m.out.Dependencies = &depList
+		}
 	} else if m.settings.Assemble.AssemblyMerge {
 		// Add the sbom primary components to the new primary component
 		m.out.Metadata.Component.Components = &priCompList

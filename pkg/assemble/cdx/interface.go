@@ -127,8 +127,11 @@ type assemble struct {
 	MergeMode                  string // if-missing-or-empty, overwrite
 	DocLicense                 string
 
-	// Derived flag for assembly merge with primary
+	// represent assembly merge with primary
 	IsAssemblyMergeWithPrimary bool
+
+	// represent flat merge with primary
+	IsFlatMergeWithPrimary bool
 }
 
 type MergeSettings struct {

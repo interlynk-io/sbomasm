@@ -104,6 +104,7 @@ type assemble struct {
 
 	// Derived fields (not set via YAML)
 	IsAssemblyMergeWithPrimary bool // Set when --assemblyMerge --primary is used
+	IsFlatMergeWithPrimary     bool // Set when --flatMerge --primary is used
 }
 
 type config struct {
@@ -235,6 +236,12 @@ func (c *config) readAndMerge(p *Params) error {
 		c.Assemble.PrimaryFile = p.PrimaryFile
 		c.Assemble.IsAssemblyMergeWithPrimary = true
 	}
+
+	// Set flat merge with primary flag
+	if p.FlatMerge && p.PrimaryFile != "" {
+		c.Assemble.PrimaryFile = p.PrimaryFile
+		c.Assemble.IsFlatMergeWithPrimary = true
+	}
 	if c.ctx == nil {
 		return errors.New("config context is not initialized")
 	}
@@ -298,8 +305,8 @@ func (c *config) validate() error {
 		return strings.Trim(v, " ")
 	}
 
-	// Skip app name/version validation for augment merge or assembly merge with primary
-	if !c.Assemble.AugmentMerge && !c.Assemble.IsAssemblyMergeWithPrimary {
+	// Skip app name/version validation for augment merge, assembly merge with primary, or flat merge with primary
+	if !c.Assemble.AugmentMerge && !c.Assemble.IsAssemblyMergeWithPrimary && !c.Assemble.IsFlatMergeWithPrimary {
 		if !validValue(c.App.Name) {
 			return fmt.Errorf("app name is not set")
 		}
