@@ -67,6 +67,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
       - [Document License](#document-license)
       - [Augment Merge (Enrich Existing SBOM)](#augment-merge-enrich-existing-sbom)
       - [Assembly Merge with Primary (Nest SBOMs)](#assembly-merge-with-primary-nest-sboms)
+      - [Flat Merge with Primary (Combine with Preserved Identity)](#flat-merge-with-primary-combine-with-preserved-identity)
     - [Editing SBOMs](#editing-sboms)
       - [Add Missing Supplier Information](#add-missing-supplier-information)
       - [Update Component Licenses](#update-component-licenses)
@@ -253,6 +254,24 @@ The secondary primaries become:
 
 1. Sub-components in `metadata.component.components` (assembly relationship)
 2. Direct dependencies of the primary component (dependency relationship)
+
+#### Flat Merge with Primary (Combine with Preserved Identity)
+
+Merge SBOMs while preserving an existing primary SBOM as the document root in a flat structure. All components (including secondary primaries) are placed directly in the `components` section:
+
+```bash
+# Python wheel with dependencies - preserve Python primary as root
+sbomasm assemble --flatMerge \
+  --primary python-wheel.cdx.json \
+  dependency1.cdx.json dependency2.cdx.json \
+  -o combined.cdx.json
+
+# Merge multiple SBOMs preserving the base SBOM's identity
+sbomasm assemble --flatMerge \
+  --primary base.cdx.json \
+  component-a.cdx.json component-b.cdx.json \
+  -o merged.cdx.json
+```
 
 ### Editing SBOMs
 

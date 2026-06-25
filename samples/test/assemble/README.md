@@ -97,3 +97,22 @@ sbomasm assemble --assemblyMerge \
 - `lite-sbom2-cdx.json`'s primary (`github.com/sigstore/cosign`) becomes a sub-component of the primary
 - All components from both SBOMs are in the flat `components` section
 - The primary now has dependencies on both its original components and the secondary primary
+
+## 5. Flat Merge with Primary
+
+Merge SBOMs while preserving an existing primary SBOM as the document root. Unlike assembly merge, this creates a flat structure where all components (including secondary primaries) are in the `components` section:
+
+```bash
+sbomasm assemble --flatMerge \
+  --primary samples/test/assemble/lite-sbom1-cdx.json \
+  samples/test/assemble/lite-sbom2-cdx.json \
+  -o flat-with-primary.cdx.json
+```
+
+**Result:**
+
+- `lite-sbom1-cdx.json`'s primary (`github.com/kyverno/kyverno`) becomes the document root
+- `lite-sbom2-cdx.json`'s primary (`github.com/sigstore/cosign`) is added to the `components` section
+- All components from both SBOMs are in the flat `components` section (no nesting)
+- Primary SBOM's serial number, metadata, and tools are preserved, sbomasm is appended in the tools.
+- The primary's dependencies include the secondary primary

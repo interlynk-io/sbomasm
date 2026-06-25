@@ -134,8 +134,14 @@ func (m *merge) combinedMerge() error {
 				return c.BOMRef, c.BOMRef != ""
 			})
 
+			// Resolve primary's bom-ref through component service (may have been normalized)
+			primaryRef := m.out.Metadata.Component.BOMRef
+			if resolved, found := cs.ResolveDepID(primaryRef); found {
+				primaryRef = resolved
+			}
+
 			for i, dep := range depList {
-				if dep.Ref == m.out.Metadata.Component.BOMRef {
+				if dep.Ref == primaryRef {
 					existingDeps := lo.FromPtr(dep.Dependencies)
 					mergedDeps := lo.Uniq(append(existingDeps, secondaryPrimaryRefs...))
 					depList[i].Dependencies = &mergedDeps

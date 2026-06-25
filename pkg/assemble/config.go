@@ -394,14 +394,14 @@ func (c *config) validate() error {
 		if len(c.input.files) < 1 {
 			return fmt.Errorf("augment merge requires at least one secondary sbom file")
 		}
-	} else if c.Assemble.IsAssemblyMergeWithPrimary {
+	} else if c.Assemble.IsAssemblyMergeWithPrimary || c.Assemble.IsFlatMergeWithPrimary {
 		// For assembly merge with primary, primary is specified via --primary flag
 		// Input args are only secondary SBOMs
 		if c.Assemble.PrimaryFile == "" {
-			return fmt.Errorf("primary file is required for assembly merge with --primary")
+			return fmt.Errorf("primary file is required for assembly/flat merge with --primary")
 		}
 		if len(c.input.files) < 1 {
-			return fmt.Errorf("assembly merge with --primary requires at least one secondary SBOM")
+			return fmt.Errorf("assembly/flat merge with --primary requires at least one secondary SBOM")
 		}
 	} else if len(c.input.files) <= 1 {
 		return fmt.Errorf("assembly requires more than one sbom file")

@@ -55,6 +55,11 @@ Augment Merge (enrich existing SBOM):
 Custom Document License (default: CC0-1.0):
   $ sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "Apache-2.0" service1.json service2.json -o licensed.json
   $ sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "none" service1.json service2.json -o no-license.json
+Assembly Merge with Primary (nest into existing SBOM):
+  $ sbomasm assemble --assemblyMerge --primary container.json app.json -o merged.json
+
+Flat Merge with Primary (combine with preserved identity):
+  $ sbomasm assemble --flatMerge --primary base.json component.json -o combined.json
 
 Config File:
   $ sbomasm generate > config.yaml
