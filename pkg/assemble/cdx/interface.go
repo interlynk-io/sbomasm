@@ -125,6 +125,7 @@ type assemble struct {
 	AugmentMerge               bool
 	PrimaryFile                string
 	MergeMode                  string // if-missing-or-empty, overwrite
+	DocLicense                 string
 }
 
 type MergeSettings struct {

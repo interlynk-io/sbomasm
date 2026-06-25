@@ -52,6 +52,10 @@ Augment Merge (enrich existing SBOM):
   $ sbomasm assemble --augmentMerge --primary base.json delta.json -o enriched.json
   $ sbomasm assemble --augmentMerge --primary base.json --merge-mode overwrite vendor-sbom.json
 
+Custom Document License (default: CC0-1.0):
+  $ sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "Apache-2.0" service1.json service2.json -o licensed.json
+  $ sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "none" service1.json service2.json -o no-license.json
+
 Config File:
   $ sbomasm generate > config.yaml
   $ sbomasm assemble -c config.yaml sbom1.json sbom2.json sbom3.json -o final.json
@@ -122,6 +126,9 @@ func init() {
 	assembleCmd.Flags().BoolP("augmentMerge", "", false, "augment merge - merge components into primary SBOM without creating new root")
 	assembleCmd.Flags().StringP("primary", "p", "", "primary SBOM file for augment merge (required for augment merge)")
 	assembleCmd.Flags().StringP("merge-mode", "", "if-missing-or-empty", "merge mode for augment merge: if-missing-or-empty, overwrite")
+
+	// Document license flag
+	assembleCmd.Flags().StringP("doc-license", "", "CC0-1.0", "document license for assembled SBOM metadata (default: CC0-1.0, use 'none' to omit)")
 
 	assembleCmd.MarkFlagsMutuallyExclusive("flatMerge", "hierMerge", "assemblyMerge", "augmentMerge")
 
@@ -208,6 +215,9 @@ func extractArgs(cmd *cobra.Command, args []string) (*assemble.Params, error) {
 
 	specVersion, _ := cmd.Flags().GetString("outputSpecVersion")
 	aParams.OutputSpecVersion = specVersion
+
+	docLicense, _ := cmd.Flags().GetString("doc-license")
+	aParams.DocLicense = docLicense
 
 	cdx, _ := cmd.Flags().GetBool("outputSpecCdx")
 

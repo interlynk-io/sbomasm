@@ -209,11 +209,18 @@ func (m *merge) initOutBom() {
 		}
 	}
 
-	// Always add data sharing license.
-	m.out.Metadata.Licenses = &cydx.Licenses{
-		{
-			License: &cydx.License{ID: "CC-BY-1.0"},
-		},
+	// Add document license if specified (default: CC0-1.0, can be overridden via --doc-license)
+	// Use "none" or empty string to skip adding a license
+	docLicense := m.settings.Assemble.DocLicense
+	if docLicense == "" {
+		docLicense = "CC0-1.0" // Default license
+	}
+	if strings.ToLower(docLicense) != "none" && docLicense != "" {
+		m.out.Metadata.Licenses = &cydx.Licenses{
+			{
+				License: &cydx.License{ID: docLicense},
+			},
+		}
 	}
 
 	if len(m.settings.App.Authors) > 0 {

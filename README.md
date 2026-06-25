@@ -61,6 +61,7 @@ sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.
     - [Assembling SBOMs](#assembling-sboms)
       - [Simple Assembly](#simple-assembly)
       - [Container and Application Assembly](#container-and-application-assembly)
+      - [Document License](#document-license)
       - [Augment Merge (Enrich Existing SBOM)](#augment-merge-enrich-existing-sbom)
     - [Editing SBOMs](#editing-sboms)
       - [Add Missing Supplier Information](#add-missing-supplier-information)
@@ -182,6 +183,21 @@ sbomasm assemble \
   --type "container" \
   -o final-container.spdx.json \
   alpine-base.spdx.json app-deps.spdx.json
+```
+
+#### Document License
+
+Control the license of the assembled SBOM (default: CC0-1.0):
+
+```bash
+# Use default CC0-1.0 license
+sbomasm assemble -n "my-app" -v "1.0.0" -t "application" samples/test/assemble/lite-sbom1-cdx.json samples/test/assemble/lite-sbom2-cdx.json -o output-default-license.json
+
+# Specify a custom license
+sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "Apache-2.0" samples/test/assemble/lite-sbom1-cdx.json samples/test/assemble/lite-sbom2-cdx.json -o output-custom-license.json
+
+# Omit license entirely
+sbomasm assemble -n "my-app" -v "1.0.0" -t "application" --doc-license "none" samples/test/assemble/lite-sbom1-cdx.json samples/test/assemble/lite-sbom2-cdx.jsonn -o output-no-license.json
 ```
 
 #### Augment Merge (Enrich Existing SBOM)
