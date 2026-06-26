@@ -37,9 +37,13 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Debug extracted tags
+        run: |
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
 
       - name: Build and push
         id: push

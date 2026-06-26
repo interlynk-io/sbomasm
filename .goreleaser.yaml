@@ -100,5 +100,3 @@ changelog:
 release:
   prerelease: auto
   draft: true
-  make_latest: true 
-
