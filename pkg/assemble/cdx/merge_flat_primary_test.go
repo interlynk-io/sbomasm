@@ -24,9 +24,9 @@ import (
 )
 
 // Test SBOMs as JSON byte slices for flat merge with primary
-var (
-	// Primary SBOM: Python wheel with 2 components
-	flatPrimarySBOM = []byte(`
+
+// Primary SBOM: Python wheel with 2 components
+var flatPrimarySBOM = []byte(`
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
@@ -81,8 +81,8 @@ var (
 }
 `)
 
-	// Secondary SBOM: JavaScript bundle
-	flatSecondarySBOM = []byte(`
+// Secondary SBOM: JavaScript bundle
+var flatSecondarySBOM = []byte(`
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
@@ -125,8 +125,8 @@ var (
 }
 `)
 
-	// Secondary SBOM 2: CSS assets
-	flatSecondary2SBOM = []byte(`
+// Secondary SBOM 2: CSS assets
+var flatSecondary2SBOM = []byte(`
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
@@ -160,7 +160,6 @@ var (
   ]
 }
 `)
-)
 
 // parseCDXBytesForFlat parses CycloneDX JSON bytes into a BOM (for flat merge tests)
 func parseCDXBytesForFlat(data []byte) (*cydx.BOM, error) {
