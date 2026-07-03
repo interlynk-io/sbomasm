@@ -1,0 +1,40 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:22222222-2222-2222-2222-222222222222",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-01-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "js-bundle",
+      "version": "0.0.1",
+      "bom-ref": "pkg:npm/js-bundle@0.0.1"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "react",
+      "version": "18.2.0",
+      "bom-ref": "pkg:npm/react@18.2.0",
+      "purl": "pkg:npm/react@18.2.0"
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "bom-ref": "pkg:npm/lodash@4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/js-bundle@0.0.1",
+      "dependsOn": [
+        "pkg:npm/react@18.2.0",
+        "pkg:npm/lodash@4.17.21"
+      ]
+    }
+  ]
+}

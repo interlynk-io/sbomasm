@@ -18,6 +18,7 @@ package cdx
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	dtrack "github.com/DependencyTrack/client-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/samber/lo"
+	"sigs.k8s.io/release-utils/version"
 )
 
 type merge struct {
@@ -56,11 +58,17 @@ func (m *merge) loadBoms() {
 func (m *merge) combinedMerge() error {
 	log := logger.FromContext(*m.settings.Ctx)
 
+	// For assembly/flat merge with primary, pre-append primary file to input list
+	// It ensures primary is at index 0, secondaries follow
+	if m.settings.Assemble.IsAssemblyMergeWithPrimary || m.settings.Assemble.IsFlatMergeWithPrimary {
+		m.settings.Input.Files = append([]string{m.settings.Assemble.PrimaryFile}, m.settings.Input.Files...)
+		log.Debugf("prepended primary file to input list: %s", m.settings.Assemble.PrimaryFile)
+	}
+
 	log.Debug("loading sboms")
 	m.loadBoms()
 
 	log.Debugf("initialize component service")
-	//cs := newComponentService(*m.settings.Ctx)
 	cs := newUniqueComponentService(*m.settings.Ctx)
 
 	// Build primary component list from each sbom
@@ -85,30 +93,86 @@ func (m *merge) combinedMerge() error {
 
 	//Build the final sbom
 	log.Debugf("generating output sbom")
-	m.initOutBom()
-
-	log.Debugf("generating primary component")
-	m.out.Metadata.Component = m.setupPrimaryComp()
+	if m.settings.Assemble.IsFlatMergeWithPrimary {
+		primaryBom := m.in[0]
+		m.initOutBomFromPrimary(primaryBom)
+		m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
+	} else {
+		m.initOutBom()
+		m.out.Metadata.Component = m.setupPrimaryComp()
+	}
 
 	log.Debugf("assign tools to metadata")
-	m.out.Metadata.Tools = toolsList
+	// For primary modes, tools are set separately to preserve primary's tools only
+	// Other modes use combined tools from all SBOMs
+	if !m.settings.Assemble.IsAssemblyMergeWithPrimary && !m.settings.Assemble.IsFlatMergeWithPrimary {
+		m.out.Metadata.Tools = toolsList
+	}
 
-	if m.settings.Assemble.FlatMerge {
-		finalCompList := []cydx.Component{}
-		finalCompList = append(finalCompList, priCompList...)
-		finalCompList = append(finalCompList, compList...)
-		log.Debugf("flat merge: final component list: %d", len(finalCompList))
-		m.out.Components = &finalCompList
+	if m.settings.Assemble.IsAssemblyMergeWithPrimary {
+		// Assembly merge with primary: use existing primary as root, nest secondaries as sub-components
+		if err := m.assemblyMergeWithPrimary(cs, compList, depList); err != nil {
+			return err
+		}
+	} else if m.settings.Assemble.FlatMerge {
+		if m.settings.Assemble.IsFlatMergeWithPrimary {
+			// Flat merge with primary: filter out primary's component from flat list
 
-		priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
-			return c.BOMRef, c.BOMRef != ""
-		})
-		depList = append(depList, cydx.Dependency{
-			Ref:          m.out.Metadata.Component.BOMRef,
-			Dependencies: &priCompIds,
-		})
-		log.Debugf("flat merge: final dependency list: %d", len(depList))
-		m.out.Dependencies = &depList
+			primaryName := m.out.Metadata.Component.Name
+			primaryVersion := m.out.Metadata.Component.Version
+
+			filteredPriCompList := lo.Filter(priCompList, func(c cydx.Component, _ int) bool {
+				return !(c.Name == primaryName && c.Version == primaryVersion)
+			})
+
+			finalCompList := append(filteredPriCompList, compList...)
+			log.Debugf("flat merge with primary: final component list: %d", len(finalCompList))
+			m.out.Components = &finalCompList
+
+			// Update primary's dependency to include secondary primaries
+			secondaryPrimaryRefs := lo.FilterMap(filteredPriCompList, func(c cydx.Component, _ int) (string, bool) {
+				return c.BOMRef, c.BOMRef != ""
+			})
+
+			// Resolve primary's bom-ref through component service (may have been normalized)
+			primaryRef := m.out.Metadata.Component.BOMRef
+			if resolved, found := cs.ResolveDepID(primaryRef); found {
+				primaryRef = resolved
+			}
+
+			for i, dep := range depList {
+				if dep.Ref == primaryRef {
+					existingDeps := lo.FromPtr(dep.Dependencies)
+					mergedDeps := lo.Uniq(append(existingDeps, secondaryPrimaryRefs...))
+					depList[i].Dependencies = &mergedDeps
+					break
+				}
+			}
+			m.out.Dependencies = &depList
+
+			// Build tools list preserving primary's tools and adding sbomasm
+			primaryBom := m.in[0]
+			toolsList := m.buildToolListWithPrimary(primaryBom)
+			m.out.Metadata.Tools = toolsList
+			log.Debugf("flat merge with primary: tools list: %d components, %d services", len(*toolsList.Components), len(*toolsList.Services))
+		} else {
+			// Regular flat merge
+			finalCompList := []cydx.Component{}
+			finalCompList = append(finalCompList, priCompList...)
+			finalCompList = append(finalCompList, compList...)
+			log.Debugf("flat merge: final component list: %d", len(finalCompList))
+			m.out.Components = &finalCompList
+
+			priCompIds := lo.FilterMap(priCompList, func(c cydx.Component, _ int) (string, bool) {
+				return c.BOMRef, c.BOMRef != ""
+			})
+			depList = append(depList, cydx.Dependency{
+				Ref:          m.out.Metadata.Component.BOMRef,
+				Dependencies: &priCompIds,
+			})
+			log.Debugf("flat merge: final dependency list: %d", len(depList))
+			m.out.Dependencies = &depList
+		}
 	} else if m.settings.Assemble.AssemblyMerge {
 		// Add the sbom primary components to the new primary component
 		m.out.Metadata.Component.Components = &priCompList
@@ -367,4 +431,266 @@ func (m *merge) uploadToServer(bomContent string) error {
 
 	log.Debugf("bom upload token: %v", token)
 	return nil
+}
+
+// assemblyMergeWithPrimary implements the assembly merge with --primary flag logic
+// Uses the primary SBOM's primary as the document root, nests secondary primaries as sub-components
+func (m *merge) assemblyMergeWithPrimary(cs *uniqueComponentService, compList []cydx.Component, depList []cydx.Dependency) error {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	// Find primary and secondary SBOM indices
+	primaryIdx, secondaryIdxs := m.findPrimaryAndSecondaryIndices()
+	if primaryIdx == -1 {
+		return fmt.Errorf("primary SBOM file not found in input: %s", m.settings.Assemble.PrimaryFile)
+	}
+
+	log.Debugf("assembly merge with primary: primary index %d, secondary indices %v", primaryIdx, secondaryIdxs)
+
+	// Get primary BOM
+	primaryBom := m.in[primaryIdx]
+
+	// Setup output BOM with primary's metadata
+	m.initOutBomFromPrimary(primaryBom)
+
+	// Setup primary component from primary SBOM (preserves all fields)
+	m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
+	if m.out.Metadata.Component == nil {
+		return fmt.Errorf("primary SBOM has no primary component")
+	}
+
+	log.Debugf("assembly merge with primary: using primary component %s", m.out.Metadata.Component.BOMRef)
+
+	// Build sub-components list from secondary SBOMs' primaries
+	var subComponents []cydx.Component
+	secondaryPrimaryRefs := []string{}
+	for _, idx := range secondaryIdxs {
+		secBom := m.in[idx]
+		if secBom.Metadata != nil && secBom.Metadata.Component != nil {
+			secPrimary := m.extractPrimaryComponent(secBom)
+			if secPrimary != nil {
+				// Store and clone with new ID if needed for uniqueness
+				newComp, _ := cs.StoreAndCloneWithNewID(secPrimary)
+				subComponents = append(subComponents, *newComp)
+				secondaryPrimaryRefs = append(secondaryPrimaryRefs, newComp.BOMRef)
+				log.Debugf("assembly merge with primary: added secondary primary %s as sub-component", newComp.BOMRef)
+			}
+		}
+	}
+
+	// Set sub-components on primary
+	if len(subComponents) > 0 {
+		m.out.Metadata.Component.Components = &subComponents
+		log.Debugf("assembly merge with primary: set %d sub-components", len(subComponents))
+	}
+
+	// Build component list excluding secondary primaries (they're in sub-components)
+	// Use the already-built compList and filter out secondary primaries
+	finalCompList := m.filterComponentList(compList, secondaryPrimaryRefs)
+	m.out.Components = &finalCompList
+	log.Debugf("assembly merge with primary: final component list: %d", len(finalCompList))
+
+	// Build dependencies with primary's deps updated to include secondary primaries
+	finalDepList := m.buildDependencyListWithPrimaryLinks(cs, primaryIdx, secondaryPrimaryRefs, depList)
+	m.out.Dependencies = &finalDepList
+	log.Debugf("assembly merge with primary: final dependency list: %d", len(finalDepList))
+
+	// Build tools list preserving primary's tools and adding sbomasm
+	toolsList := m.buildToolListWithPrimary(primaryBom)
+	m.out.Metadata.Tools = toolsList
+	log.Debugf("assembly merge with primary: tools list: %d components, %d services", len(*toolsList.Components), len(*toolsList.Services))
+
+	return nil
+}
+
+// findPrimaryAndSecondaryIndices returns primary at index 0 and secondary indices (1+)
+func (m *merge) findPrimaryAndSecondaryIndices() (int, []int) {
+	primaryIdx := 0
+	var secondaryIdxs []int
+
+	for i := 1; i < len(m.in); i++ {
+		secondaryIdxs = append(secondaryIdxs, i)
+	}
+
+	return primaryIdx, secondaryIdxs
+}
+
+// extractPrimaryComponent extracts the primary component from a BOM
+func (m *merge) extractPrimaryComponent(bom *cydx.BOM) *cydx.Component {
+	if bom.Metadata != nil && bom.Metadata.Component != nil {
+		// Clone the component to avoid modifying the original
+		clonedComp, err := cloneComp(bom.Metadata.Component)
+		if err != nil {
+			// If cloning fails, return the original
+			return bom.Metadata.Component
+		}
+		return clonedComp
+	}
+	return nil
+}
+
+// initOutBomFromPrimary initializes output BOM metadata from primary SBOM
+// Preserves primary's identity (serial number) like augment merge, updates timestamp
+func (m *merge) initOutBomFromPrimary(primaryBom *cydx.BOM) {
+	// Preserve primary's serial number (maintains document identity)
+	if primaryBom.SerialNumber != "" {
+		m.out.SerialNumber = primaryBom.SerialNumber
+	} else {
+		m.out.SerialNumber = newSerialNumber()
+	}
+
+	m.out.Metadata = &cydx.Metadata{}
+
+	// Update timestamp to reflect modification
+	m.out.Metadata.Timestamp = utcNowTime()
+
+	// Preserve primary's supplier if present
+	if primaryBom.Metadata != nil && primaryBom.Metadata.Supplier != nil {
+		m.out.Metadata.Supplier = primaryBom.Metadata.Supplier
+	}
+
+	// Preserve primary's licenses if present
+	if primaryBom.Metadata != nil && primaryBom.Metadata.Licenses != nil {
+		m.out.Metadata.Licenses = primaryBom.Metadata.Licenses
+	} else {
+		// Default license
+		m.out.Metadata.Licenses = &cydx.Licenses{
+			{
+				License: &cydx.License{ID: "CC-BY-1.0"},
+			},
+		}
+	}
+
+	// Preserve primary's authors
+	if primaryBom.Metadata != nil && primaryBom.Metadata.Authors != nil {
+		m.out.Metadata.Authors = primaryBom.Metadata.Authors
+	}
+}
+
+// filterComponentList filters out secondary primary components from the component list
+func (m *merge) filterComponentList(compList []cydx.Component, secondaryRefs []string) []cydx.Component {
+	secondarySet := make(map[string]bool)
+	for _, ref := range secondaryRefs {
+		secondarySet[ref] = true
+	}
+
+	var filtered []cydx.Component
+	for _, comp := range compList {
+		if !secondarySet[comp.BOMRef] {
+			filtered = append(filtered, comp)
+		}
+	}
+	return filtered
+}
+
+// buildDependencyListWithPrimaryLinks builds dependencies and adds links from primary to secondaries
+func (m *merge) buildDependencyListWithPrimaryLinks(cs *uniqueComponentService, primaryIdx int, secondaryRefs []string, depList []cydx.Dependency) []cydx.Dependency {
+	log := logger.FromContext(*m.settings.Ctx)
+
+	// Get primary's bom-ref
+	primaryRef := ""
+	if m.in[primaryIdx].Metadata != nil && m.in[primaryIdx].Metadata.Component != nil {
+		primaryRef = m.in[primaryIdx].Metadata.Component.BOMRef
+		// Resolve to potentially updated ref
+		if resolved, found := cs.ResolveDepID(primaryRef); found {
+			primaryRef = resolved
+		}
+	}
+
+	// Build dependency map for efficient lookup
+	depMap := make(map[string]*cydx.Dependency)
+	for i := range depList {
+		dep := &depList[i]
+		depMap[dep.Ref] = dep
+	}
+
+	// Update primary's dependency entry to include secondary primaries
+	if primaryRef != "" && len(secondaryRefs) > 0 {
+		if existingDep, exists := depMap[primaryRef]; exists {
+			// Append secondary refs to existing dependencies
+			existingDeps := lo.FromPtr(existingDep.Dependencies)
+			mergedDeps := lo.Uniq(append(existingDeps, secondaryRefs...))
+			existingDep.Dependencies = &mergedDeps
+			log.Debugf("updated primary dependency %s with %d secondary refs", primaryRef, len(secondaryRefs))
+		} else {
+			// Create new dependency entry
+			newDep := cydx.Dependency{
+				Ref:          primaryRef,
+				Dependencies: &secondaryRefs,
+			}
+			depList = append(depList, newDep)
+			log.Debugf("created new primary dependency %s with %d secondary refs", primaryRef, len(secondaryRefs))
+		}
+	}
+
+	return depList
+}
+
+// buildToolListWithPrimary builds tools list preserving primary's tools and adding sbomasm
+func (m *merge) buildToolListWithPrimary(primaryBom *cydx.BOM) *cydx.ToolsChoice {
+	tools := cydx.ToolsChoice{
+		Components: &[]cydx.Component{},
+		Services:   &[]cydx.Service{},
+	}
+
+	// Preserve primary's existing tools
+	if primaryBom.Metadata != nil && primaryBom.Metadata.Tools != nil {
+		// Copy old-format tools
+		if primaryBom.Metadata.Tools.Tools != nil {
+			for _, tool := range *primaryBom.Metadata.Tools.Tools {
+				*tools.Components = append(*tools.Components, cydx.Component{
+					Type:    cydx.ComponentTypeApplication,
+					Name:    tool.Name,
+					Version: tool.Version,
+					Supplier: &cydx.OrganizationalEntity{
+						Name: tool.Vendor,
+					},
+				})
+			}
+		}
+		// Copy component-format tools
+		if primaryBom.Metadata.Tools.Components != nil {
+			for _, tool := range *primaryBom.Metadata.Tools.Components {
+				comp, _ := cloneComp(&tool)
+				*tools.Components = append(*tools.Components, *comp)
+			}
+		}
+		// Copy services
+		if primaryBom.Metadata.Tools.Services != nil {
+			for _, service := range *primaryBom.Metadata.Tools.Services {
+				serv, _ := cloneService(&service)
+				*tools.Services = append(*tools.Services, *serv)
+			}
+		}
+	}
+
+	// Add sbomasm tool
+	*tools.Components = append(*tools.Components, cydx.Component{
+		Type:        cydx.ComponentTypeApplication,
+		Name:        "sbomasm",
+		Version:     version.GetVersionInfo().GitVersion,
+		Description: "Assembler & Editor for your sboms",
+		Supplier: &cydx.OrganizationalEntity{
+			Name: "Interlynk",
+			URL:  &[]string{"https://interlynk.io"},
+			Contact: &[]cydx.OrganizationalContact{
+				{Email: "support@interlynk.io"},
+			},
+		},
+		Licenses: &cydx.Licenses{
+			{License: &cydx.License{ID: "Apache-2.0"}},
+		},
+	})
+
+	// Deduplicate tools by name-version
+	uniqTools := lo.UniqBy(*tools.Components, func(c cydx.Component) string {
+		return fmt.Sprintf("%s-%s", c.Name, c.Version)
+	})
+	uniqServices := lo.UniqBy(*tools.Services, func(s cydx.Service) string {
+		return fmt.Sprintf("%s-%s", s.Name, s.Version)
+	})
+
+	tools.Components = &uniqTools
+	tools.Services = &uniqServices
+
+	return &tools
 }

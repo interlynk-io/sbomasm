@@ -101,6 +101,10 @@ type assemble struct {
 	PrimaryFile                string `yaml:"primary_file"`
 	MergeMode                  string `yaml:"merge_mode"` // if-missing-or-empty, overwrite
 	DocLicense                 string `yaml:"doc_license"`
+
+	// Derived fields (not set via YAML)
+	IsAssemblyMergeWithPrimary bool // Set when --assemblyMerge --primary is used
+	IsFlatMergeWithPrimary     bool // Set when --flatMerge --primary is used
 }
 
 type config struct {
@@ -226,6 +230,18 @@ func (c *config) readAndMerge(p *Params) error {
 		c.Assemble.PrimaryFile = p.PrimaryFile
 		c.Assemble.MergeMode = p.MergeMode
 	}
+
+	// Set assembly merge with primary flag
+	if p.AssemblyMerge && p.PrimaryFile != "" {
+		c.Assemble.PrimaryFile = p.PrimaryFile
+		c.Assemble.IsAssemblyMergeWithPrimary = true
+	}
+
+	// Set flat merge with primary flag
+	if p.FlatMerge && p.PrimaryFile != "" {
+		c.Assemble.PrimaryFile = p.PrimaryFile
+		c.Assemble.IsFlatMergeWithPrimary = true
+	}
 	if c.ctx == nil {
 		return errors.New("config context is not initialized")
 	}
@@ -289,8 +305,8 @@ func (c *config) validate() error {
 		return strings.Trim(v, " ")
 	}
 
-	// Skip app name/version validation for augment merge
-	if !c.Assemble.AugmentMerge {
+	// Skip app name/version validation for augment merge, assembly merge with primary, or flat merge with primary
+	if !c.Assemble.AugmentMerge && !c.Assemble.IsAssemblyMergeWithPrimary && !c.Assemble.IsFlatMergeWithPrimary {
 		if !validValue(c.App.Name) {
 			return fmt.Errorf("app name is not set")
 		}
@@ -300,7 +316,7 @@ func (c *config) validate() error {
 			return fmt.Errorf("app version is not set")
 		}
 		c.App.Version = sanitize(c.App.Version)
-	} else {
+	} else if c.Assemble.AugmentMerge {
 		// For augment merge, validate specific requirements
 		if c.Assemble.PrimaryFile == "" {
 			return fmt.Errorf("primary SBOM file is required for augment merge")
@@ -369,7 +385,7 @@ func (c *config) validate() error {
 		c.Output.FileFormat = DEFAULT_OUTPUT_FILE_FORMAT
 	}
 
-	if c.input.files == nil || len(c.input.files) == 0 {
+	if len(c.input.files) == 0 {
 		return fmt.Errorf("input files are not set")
 	}
 
@@ -377,6 +393,15 @@ func (c *config) validate() error {
 	if c.Assemble.AugmentMerge {
 		if len(c.input.files) < 1 {
 			return fmt.Errorf("augment merge requires at least one secondary sbom file")
+		}
+	} else if c.Assemble.IsAssemblyMergeWithPrimary || c.Assemble.IsFlatMergeWithPrimary {
+		// For assembly merge with primary, primary is specified via --primary flag
+		// Input args are only secondary SBOMs
+		if c.Assemble.PrimaryFile == "" {
+			return fmt.Errorf("primary file is required for assembly/flat merge with --primary")
+		}
+		if len(c.input.files) < 1 {
+			return fmt.Errorf("assembly/flat merge with --primary requires at least one secondary SBOM")
 		}
 	} else if len(c.input.files) <= 1 {
 		return fmt.Errorf("assembly requires more than one sbom file")

@@ -126,6 +126,12 @@ type assemble struct {
 	PrimaryFile                string
 	MergeMode                  string // if-missing-or-empty, overwrite
 	DocLicense                 string
+
+	// represent assembly merge with primary
+	IsAssemblyMergeWithPrimary bool
+
+	// represent flat merge with primary
+	IsFlatMergeWithPrimary bool
 }
 
 type MergeSettings struct {

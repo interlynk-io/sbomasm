@@ -5,6 +5,7 @@ The `assemble` command merges multiple SBOMs into a single comprehensive SBOM do
 ## Overview
 
 `sbomasm assemble` combines SBOMs from different sources while:
+
 - Preserving component relationships
 - Managing duplicate components (based on merge algorithm)
 - Creating proper metadata for the assembled SBOM
@@ -48,6 +49,7 @@ sbomasm assemble -n <name> -v <version> -t <type> -o <output> <input-files...>
 ### Hierarchical Merge (Default)
 
 Maintains the relationship structure between components:
+
 - Each input SBOM's primary component becomes a dependency of the new primary component
 - Preserves all component relationships
 - Does not remove duplicates in SPDX format
@@ -62,6 +64,7 @@ sbomasm assemble --hierarchical-merge \
 ### Flat Merge
 
 Creates a flat list of all components:
+
 - Removes all relationships except "describes"
 - Removes duplicate components (CycloneDX only)
 - Useful for simple component inventories
@@ -76,6 +79,7 @@ sbomasm assemble --flat-merge \
 ### Assembly Merge
 
 Treats each SBOM as an independent assembly:
+
 - Similar to hierarchical but doesn't create relationships with the primary component
 - Useful when combining independent products
 
@@ -86,9 +90,66 @@ sbomasm assemble --assembly-merge \
   product1.json product2.json
 ```
 
+#### Assembly Merge with Primary (--primary flag)
+
+When using `--assemblyMerge --primary`, the specified SBOM's primary component becomes the document root, and all other SBOMs' primaries are nested as sub-components (assemblies). This is useful for:
+
+- **Python wheels shipping JavaScript bundles**: Nest the JS SBOM inside the Python package's primary
+- **Container images with bundled applications**: Keep the image's primary as root, nest application SBOMs
+- **Any scenario where one SBOM should contain others as sub-components**
+
+```bash
+# Merge JS SBOM into Python wheel SBOM
+sbomasm assemble --assembly-merge \
+  --primary python-wheel.cdx.json \
+  javascript-bundle.cdx.json \
+  -o merged.cdx.json
+```
+
+**Behavior:**
+
+- Primary SBOM's primary component becomes the document root (no new synthetic primary)
+- Secondary SBOMs' primaries become sub-components (`metadata.component.components`)
+- Secondary primaries are also added as direct dependencies of the primary component
+- Primary SBOM's **serial number is preserved** (maintains document identity)
+- Primary SBOM's **timestamp is updated** to reflect modification time
+- Primary SBOM's tools and metadata are preserved (sbomasm tool added)
+- Component deduplication still applies
+
+**Example Output Structure:**
+
+```json
+{
+  "metadata": {
+    "component": {
+      "name": "python-wheel",      // Primary SBOM's primary
+      "components": [
+        { "name": "js-bundle" }     // Secondary primary as sub-component
+      ]
+    }
+  },
+  "components": [
+    { "name": "python-dep-1" },    // Primary's components
+    { "name": "python-dep-2" },
+    // JS bundle's components (if any) - NOT the JS primary
+  ],
+  "dependencies": [
+    {
+      "ref": "python-wheel",
+      "dependsOn": [
+        "python-dep-1",
+        "python-dep-2",
+        "js-bundle"                   // Secondary primary as dependency
+      ]
+    }
+  ]
+}
+```
+
 ### Augment Merge
 
 Enriches an existing primary SBOM with additional information from secondary SBOMs:
+
 - Does not create a new root component
 - Merges matching components based on name, version, purl and CPE
 - Adds new components that don't exist in the primary SBOM
@@ -113,6 +174,7 @@ Enriches an existing primary SBOM with additional information from secondary SBO
 When components match, the following SPDX package fields are merged:
 
 **Basic Information Fields:**
+
 - `PackageDescription`: Package description text
 - `PackageDownloadLocation`: Where the package can be downloaded
 - `PackageHomePage`: Package home page URL
@@ -128,6 +190,7 @@ When components match, the following SPDX package fields are merged:
 - `PackageExternalReferences`: External references
 
 **Merge Behavior:**
+
 - `if-missing-or-empty` mode: Only fills fields that are empty or missing in the primary
 - `overwrite` mode: Replaces primary fields with secondary values if secondary has data
 - External references are merged to avoid duplicates when in `if-missing-or-empty` mode
@@ -137,6 +200,7 @@ When components match, the following SPDX package fields are merged:
 When components match, the following CycloneDX component fields are merged:
 
 **Basic Information Fields:**
+
 - `Description`: Component description
 - `Author`: Component author
 - `Publisher`: Component publisher  
@@ -153,6 +217,7 @@ When components match, the following CycloneDX component fields are merged:
 - `Properties`: Custom properties
 
 **Merge Behavior:**
+
 - `if-missing-or-empty` mode: Only fills empty fields or empty lists
 - `overwrite` mode: Replaces all fields with secondary values if present
 - Lists are replaced entirely, not merged item-by-item
@@ -161,21 +226,24 @@ When components match, the following CycloneDX component fields are merged:
 
 When performing augment merge with CycloneDX SBOMs, the following sections are processed and merged:
 
-**1. Components**
+**1. Components**:
+
 - All components from secondary SBOMs are evaluated against primary SBOM components
 - Matching components have their fields merged based on merge mode
 - New components (not in primary) are added to the primary SBOM
 - Component matching uses name, version, purl, and CPE
 - All components receive validated BOM-refs
 
-**2. Dependencies**
+**2. Dependencies:**
+
 - Only dependencies involving processed (added or merged) components are included
 - Dependency references are resolved and validated against primary SBOM
 - Invalid dependencies (referencing non-existent components) are filtered out
 - Dependencies are deduplicated to avoid redundant relationships
 - All dependency refs are updated to use primary SBOM component refs
 
-**3. Vulnerabilities**
+**3. Vulnerabilities:**
+
 - Only vulnerabilities affecting processed components are included
 - Vulnerabilities are deduplicated based on ID and source name
 - Affects arrays are merged to consolidate all affected components
@@ -184,7 +252,8 @@ When performing augment merge with CycloneDX SBOMs, the following sections are p
   - `overwrite`: Updates description, detail, recommendation, workaround, analysis, and ratings from secondary
 - All vulnerability refs are validated and updated to primary SBOM component refs
 
-**4. Metadata**
+**4. Metadata:**
+
 - Primary SBOM's metadata is preserved and updated with:
   - New timestamp (current UTC time)
   - Tool information (includes sbomasm and original tools)
@@ -192,11 +261,13 @@ When performing augment merge with CycloneDX SBOMs, the following sections are p
   - Supplier, author, and license information from primary
 - Tools from all SBOMs are collected and deduplicated
 
-**5. Services**
+**5. Services:**
+
 - Similar handling to components (if present)
 - Service dependencies follow the same validation rules
 
 **Sections NOT Merged:**
+
 - Compositions
 - Annotations
 - Formulation
@@ -206,12 +277,14 @@ When performing augment merge with CycloneDX SBOMs, the following sections are p
 #### Relationship and Dependency Handling
 
 **SPDX Relationships:**
+
 - Only relationships involving added or merged packages are included
 - Both sides of a relationship must exist in the primary SBOM
 - Invalid relationships (referencing non-existent packages) are filtered out
 - Files are NOT merged (removed from secondary SBOMs)
 
 **CycloneDX Dependencies:**
+
 - Only dependencies involving added or merged components are included
 - All dependency references are validated against the primary SBOM
 - Invalid dependency references are automatically filtered out
@@ -250,6 +323,7 @@ sbomasm assemble --augmentMerge \
 #### Merge Behavior Example
 
 Given a primary SBOM with:
+
 ```json
 {
   "name": "log4j",
@@ -260,6 +334,7 @@ Given a primary SBOM with:
 ```
 
 And a secondary SBOM with:
+
 ```json
 {
   "name": "log4j",
@@ -271,6 +346,7 @@ And a secondary SBOM with:
 ```
 
 **Result with `if-missing-or-empty` mode:**
+
 ```json
 {
   "name": "log4j",
@@ -285,6 +361,7 @@ And a secondary SBOM with:
 Same as above (since primary had empty fields)
 
 If the primary had existing data:
+
 ```json
 {
   "name": "log4j",
