@@ -1,43 +1,43 @@
 module github.com/interlynk-io/sbomasm/v2
 
-go 1.25.0
+go 1.25.7
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.11.0
-	github.com/fatih/color v1.18.0
-	github.com/github/go-spdx/v2 v2.4.0
+	github.com/fatih/color v1.19.0
+	github.com/github/go-spdx/v2 v2.7.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/package-url/packageurl-go v0.1.5
+	github.com/package-url/packageurl-go v0.1.6
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.53.0
 	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
 	github.com/spdx/tools-golang v0.5.7
 	github.com/spf13/cobra v1.10.2
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.28.0
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/release-utils v0.12.3
+	sigs.k8s.io/release-utils v0.12.4
 )
 
-require golang.org/x/mod v0.34.0 // indirect
+require golang.org/x/mod v0.37.0 // indirect
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.21 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-runewidth v0.0.24 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 )
 
 require (
-	github.com/DependencyTrack/client-go v0.18.0
+	github.com/DependencyTrack/client-go v0.19.0
 	github.com/anchore/go-struct-converter v0.1.0 // indirect
 	github.com/cheggaaa/pb/v3 v3.1.7
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
@@ -47,8 +47,8 @@ require (
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
