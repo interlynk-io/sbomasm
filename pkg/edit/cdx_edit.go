@@ -382,24 +382,40 @@ func (d *cdxEditDoc) initializeMetadataTools() {
 		d.bom.Metadata = &cydx.Metadata{}
 	}
 
-	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
-		if d.bom.Metadata.Tools == nil {
+	if d.bom.Metadata.Tools == nil {
+		// No tools exist yet, initialize based on spec version
+		if d.bom.SpecVersion > cydx.SpecVersion1_4 {
 			d.bom.Metadata.Tools = &cydx.ToolsChoice{
 				Components: new([]cydx.Component),
 			}
-		}
-		if d.bom.Metadata.Tools.Components == nil {
-			d.bom.Metadata.Tools.Components = new([]cydx.Component)
-		}
-	} else {
-		if d.bom.Metadata.Tools == nil {
+		} else {
 			d.bom.Metadata.Tools = &cydx.ToolsChoice{
 				Tools: new([]cydx.Tool),
 			}
 		}
-		if d.bom.Metadata.Tools.Tools == nil {
-			d.bom.Metadata.Tools.Tools = new([]cydx.Tool)
+		return
+	}
+
+	// Tools already exists - preserve existing format, don't mix both!
+	// CycloneDX doesn't allow both Tools.Tools and Tools.Components to be set
+	if d.bom.Metadata.Tools.Tools != nil {
+		// Old format (array of tools) already present - keep it
+		// remove Components if present
+		if d.bom.Metadata.Tools.Components != nil {
+			d.bom.Metadata.Tools.Components = nil
 		}
+		return
+	}
+
+	if d.bom.Metadata.Tools.Components != nil {
+		return
+	}
+
+	// Tools exists but both are nil - initialize based on spec version
+	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+		d.bom.Metadata.Tools.Components = new([]cydx.Component)
+	} else {
+		d.bom.Metadata.Tools.Tools = new([]cydx.Tool)
 	}
 }
 
@@ -429,12 +445,12 @@ func (d *cdxEditDoc) detectExplicitComponent(components *[]cydx.Component, sboma
 
 // handle missing case for tools.tools and tools.components case
 func (d *cdxEditDoc) addMissingToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
-	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+	if d.bom.Metadata.Tools.Components != nil {
 		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
 		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
 			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
 		}
-	} else {
+	} else if d.bom.Metadata.Tools.Tools != nil {
 		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
 		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
 			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
@@ -444,12 +460,12 @@ func (d *cdxEditDoc) addMissingToolsOrComponents(newTools *cydx.ToolsChoice, sbo
 
 // handle append case for tools.tools and tools.components case
 func (d *cdxEditDoc) appendToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
-	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+	if d.bom.Metadata.Tools.Components != nil {
 		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
 		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
 			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
 		}
-	} else {
+	} else if d.bom.Metadata.Tools.Tools != nil {
 		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
 		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
 			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
@@ -459,12 +475,12 @@ func (d *cdxEditDoc) appendToolsOrComponents(newTools *cydx.ToolsChoice, sbomasm
 
 // handle default case for tools.tools and tools.components case
 func (d *cdxEditDoc) mergeToolsOrComponents(newTools *cydx.ToolsChoice, sbomasmTool cydx.Tool, sbomasmComponent cydx.Component) {
-	if d.bom.SpecVersion > cydx.SpecVersion1_4 {
+	if d.bom.Metadata.Tools.Components != nil {
 		d.bom.Metadata.Tools.Components = cdxUniqueComponents(*d.bom.Metadata.Tools.Components, *newTools.Components)
 		if !componentExists(d.bom.Metadata.Tools.Components, sbomasmComponent) {
 			*d.bom.Metadata.Tools.Components = append(*d.bom.Metadata.Tools.Components, sbomasmComponent)
 		}
-	} else {
+	} else if d.bom.Metadata.Tools.Tools != nil {
 		d.bom.Metadata.Tools.Tools = cdxUniqueTools(*d.bom.Metadata.Tools.Tools, *newTools.Tools)
 		if !toolExists(d.bom.Metadata.Tools.Tools, sbomasmTool) {
 			*d.bom.Metadata.Tools.Tools = append(*d.bom.Metadata.Tools.Tools, sbomasmTool)
