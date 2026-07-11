@@ -277,7 +277,23 @@ func cdxUniqTools(a *cydx.ToolsChoice, b *cydx.ToolsChoice) *cydx.ToolsChoice {
 func cdxConstructTools(b *cydx.BOM, c *configParams) *cydx.ToolsChoice {
 	choice := cydx.ToolsChoice{}
 
-	if b.SpecVersion > cydx.SpecVersion1_4 {
+	// Determine which format to use based on BOM's existing tools, not just SpecVersion
+	// If BOM has old format (Tools.Tools), create new tools in old format
+	// If BOM has new format (Tools.Components) or no tools, use SpecVersion to decide
+	useComponents := false
+	if b.Metadata != nil && b.Metadata.Tools != nil {
+		if b.Metadata.Tools.Tools != nil {
+			useComponents = false
+		} else if b.Metadata.Tools.Components != nil {
+			useComponents = true
+		} else {
+			useComponents = b.SpecVersion > cydx.SpecVersion1_4
+		}
+	} else {
+		useComponents = b.SpecVersion > cydx.SpecVersion1_4
+	}
+
+	if useComponents {
 		choice.Components = new([]cydx.Component)
 	} else {
 		choice.Tools = new([]cydx.Tool)
@@ -289,7 +305,7 @@ func cdxConstructTools(b *cydx.BOM, c *configParams) *cydx.ToolsChoice {
 		key := fmt.Sprintf("%s-%s", strings.ToLower(tool.name), strings.ToLower(tool.value))
 
 		if _, ok := uniqTools[key]; !ok {
-			if b.SpecVersion > cydx.SpecVersion1_4 {
+			if useComponents {
 				*choice.Components = append(*choice.Components, cydx.Component{
 					Type:    cydx.ComponentTypeApplication,
 					Name:    tool.name,
