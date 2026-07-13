@@ -14,7 +14,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.6
 	github.com/pingcap/log v1.1.0
 	github.com/samber/lo v1.53.0
-	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.3.0
+	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.7.1
 	github.com/spdx/tools-golang v0.5.7
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
@@ -43,7 +43,7 @@ require (
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/rogpeppe/go-internal v1.14.1
+	github.com/rogpeppe/go-internal v1.15.0
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
