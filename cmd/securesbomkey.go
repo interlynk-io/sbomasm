@@ -139,11 +139,11 @@ func init() {
 	keyGenerateCmd.Flags().StringVar(&keyOutputFormat, "output", "table", "Output format: table, json")
 
 	keyGenerateCmd.Flags().BoolVar(
-        &filesystemKey,
-        "filesystemkey",
-        false,
-        "Generate filesystem-backed key (NOT FOR PRODUCTION USE)",
-    )
+		&filesystemKey,
+		"filesystemkey",
+		false,
+		"Generate filesystem-backed key (NOT FOR PRODUCTION USE)",
+	)
 
 	// Output file flag for public command
 	keyPublicCmd.Flags().StringVar(&keyOutput, "output", "", "Output file path (default: stdout)")
@@ -189,15 +189,6 @@ func runKeyListCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create API client: %w", err)
 	}
 
-	// Perform health check
-	if !keyQuiet {
-		fmt.Fprintf(os.Stderr, "Connecting to Secure SBOM API...\n")
-	}
-
-	if err := client.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("API health check failed: %w", err)
-	}
-
 	// List keys
 	if !keyQuiet {
 		fmt.Fprintf(os.Stderr, "Retrieving keys...\n")
@@ -232,15 +223,6 @@ func runKeyGenerateCommand(cmd *cobra.Command, args []string) error {
 	client, err := createKeyClient()
 	if err != nil {
 		return fmt.Errorf("failed to create API client: %w", err)
-	}
-
-	// Perform health check
-	if !keyQuiet {
-		fmt.Fprintf(os.Stderr, "Connecting to Secure SBOM API...\n")
-	}
-
-	if err := client.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("API health check failed: %w", err)
 	}
 
 	var backend string
@@ -281,15 +263,6 @@ func runKeyPublicCommand(cmd *cobra.Command, args []string) error {
 	client, err := createKeyClient()
 	if err != nil {
 		return fmt.Errorf("failed to create API client: %w", err)
-	}
-
-	// Perform health check
-	if !keyQuiet {
-		fmt.Fprintf(os.Stderr, "Connecting to Secure SBOM API...\n")
-	}
-
-	if err := client.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("API health check failed: %w", err)
 	}
 
 	// Get public key

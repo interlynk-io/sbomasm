@@ -156,15 +156,6 @@ func runSignCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load SBOM: %w", err)
 	}
 
-	// Perform health check
-	if !signQuiet {
-		fmt.Fprintf(os.Stderr, "Connecting to Secure SBOM API...\n")
-	}
-
-	if err := client.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("API health check failed: %w", err)
-	}
-
 	// Sign the SBOM
 	if !signQuiet {
 		fmt.Fprintf(os.Stderr, "Signing SBOM with key %s...\n", signKeyID)
@@ -246,7 +237,7 @@ func loadSBOMForSigning(inputFile string) (*securesbom.SBOM, error) {
 }
 
 // outputSignedSBOM writes the signed SBOM to the specified output location with pretty formatting
-func outputSignedSBOM(result *securesbom.SignResultAPIResponse) error {
+func outputSignedSBOM(result *securesbom.SignResultAPIResponseV2) error {
 	// Pretty-print the JSON with indentation
 	prettyJSON, err := json.MarshalIndent(*result, "", "  ")
 	if err != nil {

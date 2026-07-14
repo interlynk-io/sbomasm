@@ -1,8 +1,8 @@
 # SecureSBOM API
 
 `sbomasm` provides enterprise-grade cryptographic signing and verification for SBOMs through integration with
-ShiftLeftCyber's SecureSBOM API. The implementation supports the standard **CycloneDX Signature Format** and 
-**SPDX** detached signatures
+ShiftLeftCyber's SecureSBOM API. The implementation supports **CycloneDX** embedded and detached signatures and
+**SPDX** detached signatures.
 
 ## Why Sign SBOMs?
 
@@ -64,16 +64,33 @@ sbomasm securesbomkey public <key-id>
 sbomasm sign --key-id <your-key-id> <input-sbom>
 ```
 
-### Verifying an SBOM (CycloneDX)
+By default, CycloneDX signing returns a signed SBOM response with the signed document in `signed_sbom`. SPDX signing
+returns a detached signature response because SPDX signatures are not embedded into the SBOM.
+
+Use `--detached` to request a detached signature response:
+
+```bash
+sbomasm sign --key-id <your-key-id> --detached --output signed-response.json <input-sbom>
+```
+
+### Verifying a CycloneDX SBOM With Embedded Signature
 
 ```bash
 sbomasm verify --key-id <key-id> <signed-sbom>
 ```
 
-### Verifying an SBOM (SPDX)
+### Verifying a CycloneDX SBOM With Detached Signature
 
 ```bash
-sbomasm verify --key-id <key-id> --signature <base64 signature> <signed-sbom>
+sbomasm verify --key-id <key-id> --signature signed-cyclonedx-detached-response.json <original-sbom>
+```
+
+CycloneDX detached verification requires the detached signing response JSON, not only the raw signature value.
+
+### Verifying an SPDX SBOM With Detached Signature
+
+```bash
+sbomasm verify --key-id <key-id> --signature <base64-signature-json-payload-or-file> <original-sbom>
 ```
 
 ## Command Options
@@ -83,14 +100,18 @@ sbomasm verify --key-id <key-id> --signature <base64 signature> <signed-sbom>
 #### Required Options
 - `--key-id <string>`: Key ID to use for signing the SBOM
 
+#### Signing Options
+- `--detached`: Return a detached signature response instead of the default signing response
+
 #### Authentication Options
 - `--api-key <string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
+- `--base-url <url>`: Base URL for SecureSBOM API (or set `SECURE_SBOM_BASE_URL`)
 
 #### Output Options
-- `-o, --output <path>`: Output file path for signed SBOM
+- `--output <path>`: Output file path for signed SBOM
   - Default: stdout
   - Use `-` for explicit stdout output
-- `-q, --quiet`: Suppress progress messages and status output
+- `--quiet`: Suppress progress messages and status output
 
 #### Network Options
 - `--timeout <duration>`: Request timeout (default: 30s)
@@ -102,41 +123,59 @@ sbomasm verify --key-id <key-id> --signature <base64 signature> <signed-sbom>
 - `--key-id <string>`: Public key ID used to verify the signature
 
 #### Required Options (SPDX Verification)
-- `--signature <string>`: base64 signature of the SBOM
+- `--signature <string>`: Detached signature value, detached signing response JSON, or path to a signature response file
+
+For SPDX, `--signature` may be a raw base64 signature, the full JSON signing response containing `signature_b64`, or
+a path to a file containing either form. For CycloneDX detached signatures, pass the full detached signing response JSON
+or a path to the detached signing response file.
 
 #### Authentication Options
-- `--api-key <base64 string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
+- `--api-key <string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
+- `--base-url <url>`: Base URL for SecureSBOM API (or set `SECURE_SBOM_BASE_URL`)
 
 #### Output Options
-- `-q, --quiet`: Suppress output except for errors (exit code indicates success/failure)
+- `--output <format>`: Output format, either `text` or `json` (default: `text`)
+- `--quiet`: Suppress progress output (exit code indicates success/failure)
 
 #### Network Options
 - `--timeout <duration>`: Request timeout (default: 30s)
 - `--retry <number>`: Number of retry attempts for failed requests (default: 3)
 
-### Keys Command
+### Securesbomkey Command
 
 #### Subcommands
 - `generate`: Generate a new cryptographic key pair
 - `list`: List all available keys in your account
 - `public <key-id>`: Retrieve the public key for sharing
 
+#### Authentication Options
+- `--api-key <string>`: API key for authentication (or set `SECURE_SBOM_API_KEY`)
+- `--base-url <url>`: Base URL for SecureSBOM API (or set `SECURE_SBOM_BASE_URL`)
+
+#### Output Options
+- `securesbomkey list --output table|json`: Output list results as a table or JSON
+- `securesbomkey generate --output table|json`: Output generated key details as a table or JSON
+- `securesbomkey public <key-id> --output <path>`: Write the public key PEM to a file
+- `--quiet`: Suppress progress output
+
 ## How It Works
 
 ### Signing Process
 
 1. **Authentication**: Connects to SecureSBOM API using your API key
-2. **Key Validation**: Verifies the specified key ID exists is linked to your account
+2. **Key Validation**: Verifies the specified key ID exists and is linked to your account
 3. **SBOM Processing**: Parses and validates the input SBOM format
 4. **Signature Generation**: Creates a cryptographic signature using your private key
 5. **Format Integration**: Embeds the signature according to format standards:
-   - **CycloneDX**: Uses the standard 1.6 signature format within the SBOM
-   - **SPDX**: Adds detached signature metadata
-6. **Output**: Returns the signed SBOM with embedded cryptographic proof or deatached signature for SPDX
+   - **CycloneDX**: Supports embedded signatures and detached signature responses
+   - **SPDX**: Uses detached signature responses
+6. **Output**: Returns a JSON signing response. For embedded CycloneDX signatures, the signed SBOM is in `signed_sbom`.
+   For detached signatures, the response contains the detached signature material.
 
 ### Verification Process
 
-1. **Signature Extraction**: Extracts the embedded signature from the signed SBOM or uses the value passed in
+1. **Signature Extraction**: Extracts an embedded CycloneDX signature from the signed SBOM or uses the detached
+   signature value passed with `--signature`
 2. **Key Retrieval**: Fetches the corresponding public key using the key ID
 3. **Hash Verification**: Validates the SBOM content against the signature
 4. **Integrity Check**: Confirms the SBOM has not been modified since signing
@@ -146,7 +185,7 @@ sbomasm verify --key-id <key-id> --signature <base64 signature> <signed-sbom>
 
 The SecureSBOM API manages your cryptographic keys securely:
 - **Key Generation**: Creates an ECDSA key pair
-- **Secure Storage**: Private keys are securely stored in a Hardware Security Modules (HSM)
+- **Secure Storage**: Private keys are securely stored by the SecureSBOM service
 - **Access Control**: Keys are tied to your API account and access permissions
 - **Public Key Sharing**: Public keys can be shared for verification purposes
 
@@ -158,11 +197,17 @@ The SecureSBOM API manages your cryptographic keys securely:
 # Sign an SBOM
 sbomasm sign --key-id prod-key-2024 --output signed-sbom.json sbom.json
 
-# Verify the signed SBOM
+# Verify a CycloneDX signed response with embedded signature
 sbomasm verify --key-id prod-key-2024 signed-sbom.json
 
-# Verify the signed SPDX SBOM
-sbomasm verify --key-id prod-key-2024 --signature "MEUCIQDmi8q+VTLgRcByA....." signed-sbom.json
+# Sign a CycloneDX SBOM with a detached signature response
+sbomasm sign --key-id prod-key-2024 --detached --output signed-cdx-detached.json sbom.cdx.json
+
+# Verify a CycloneDX SBOM with a detached signature response file
+sbomasm verify --key-id prod-key-2024 --signature signed-cdx-detached.json sbom.cdx.json
+
+# Verify an SPDX SBOM with a detached signature response file
+sbomasm verify --key-id prod-key-2024 --signature signed-spdx.json sbom.spdx.json
 ```
 
 ### Environment Variables Setup
@@ -175,8 +220,7 @@ export SECURE_SBOM_API_KEY="your-api-key-here"
 Output example:
 ```
 Loading signed SBOM...
-Connecting to Secure SBOM API...
-Verifying SBOM signature with key 045728s6-h18q-649z-67fdb-27c2afcab510...
+Verifying CycloneDX SBOM with embedded signature...
 ✓ SBOM signature is VALID
 Message: signature is valid
 Key ID: 045728s6-h18q-649z-67fdb-27c2afcab510
@@ -315,7 +359,7 @@ done
 VENDOR_KEY="vendor-public-key"
 INTERNAL_KEY="internal-key-2024"
 
-# Verify vendor-provided SBOM
+# Verify vendor-provided CycloneDX SBOM with embedded signature
 echo "Verifying vendor SBOM..."
 if sbomasm verify --key-id "$VENDOR_KEY" --quiet vendor-sbom.json; then
     echo "✓ Vendor SBOM signature valid"
@@ -346,7 +390,7 @@ Error: API key is required. Use --api-key flag or set SECURE_SBOM_API_KEY enviro
 ```
 Error: key ID 'invalid-key' not found
 ```
-**Solution**: Verify the key exists with `sbomasm keys list`
+**Solution**: Verify the key exists with `sbomasm securesbomkey list`
 
 ### Network Timeouts
 ```
@@ -363,14 +407,14 @@ sbomasm sign --timeout 60s --retry 5 --key-id my-key sbom.json
 
 | Format | Version | Signing | Verification | Notes |
 |--------|---------|---------|--------------|-------|
-| CycloneDX | 1.6+ | ✅ | ✅ | Uses standard signature format |
-| CycloneDX | 1.4-1.5 | ✅ | ✅ | Compatible with 1.6 signature format |
-| SPDX | 2.3+ | ✅ | ✅ | Detached signature support |
+| CycloneDX | 1.6+ | Yes | Yes | Embedded and detached signature support |
+| CycloneDX | 1.4-1.5 | Yes | Yes | Compatible with CycloneDX signature format |
+| SPDX | 2.3+ | Yes | Yes | Detached signature support only |
 
 ## Future Enhancements
 
 * **Signature Metadata**: Additional signature attributes and custom claims
-* **Spport for Air Gapped Verification**: Veirfy a signed sbom offline with only the public key
+* **Support for Air-Gapped Verification**: Verify a signed SBOM offline with only the public key
 * **CycloneDX Multi-Signature Support**: Multiple signatures on single SBOM
 * **Signature Chain Support**: Hierarchical signature chains for supply chain trust
 * **Certificate Authority (CA)** integration for key management

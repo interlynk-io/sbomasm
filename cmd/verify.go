@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/shiftleftcyber/securesbom-sdk-golang/v2/pkg/securesbom"
@@ -45,7 +46,7 @@ Examples:
   sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --api-key $API_KEY signed-cyclonedx-sbom.json
 
   # Verify a SPDX Detached Signature
-  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature "SIGNATURE HASH" --api-key $API_KEY signed-cyclonedx-sbom.json
+  sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature signed-spdx-response.json --api-key $API_KEY spdx-sbom.json
 
   # Verify with environment variable for API key
   export SECURE_SBOM_API_KEY=your-api-key
@@ -71,7 +72,7 @@ var (
 	verifyTimeout      time.Duration
 	verifyRetryCount   int
 	verifyQuiet        bool
-	verifySignature	   string
+	verifySignature    string
 )
 
 // VerificationOutput represents the CLI output structure
@@ -90,7 +91,7 @@ func init() {
 
 	// Verification Flag
 	verifyCmd.Flags().StringVar(&verifyKeyID, "key-id", "", "Key ID used to sign the SBOM")
-	verifyCmd.Flags().StringVar(&verifySignature, "signature", "", "Base64 signature to veirfy when using an SPDX SBOM")
+	verifyCmd.Flags().StringVar(&verifySignature, "signature", "", "Detached signature value, JSON signing response, or path to a signature response file")
 
 	// Authentication flags
 	verifyCmd.Flags().StringVar(&verifyAPIKey, "api-key", "", "API key for authentication (or set SECURE_SBOM_API_KEY)")
@@ -189,34 +190,32 @@ func runVerifyCommand(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load signed SBOM: %w", err)
 	}
 
-	// Perform health check
-	if !verifyQuiet {
-		fmt.Fprintf(os.Stderr, "Connecting to Secure SBOM API...\n")
-	}
-
-	if err := client.HealthCheck(ctx); err != nil {
-		return fmt.Errorf("API health check failed: %w", err)
-	}
-
 	var result *securesbom.VerifyResultCMDResponse
-	if verifySignature != "" {
-		// SPDX SBOM - use separate signature
+	verifyReq := securesbom.VerifyCMDRequest{
+		KeyID: verifyKeyID,
+		SBOM:  signedSBOM.Data(),
+	}
+	signatureInput, err := loadSignatureInput(verifySignature)
+	if err != nil {
+		return fmt.Errorf("failed to load signature input: %w", err)
+	}
+
+	if signatureInput != "" {
+		verifyReq.SignatureB64 = signatureInput
+
 		if !verifyQuiet {
-			fmt.Fprintf(os.Stderr, "Verifying SPDX SBOM with provided signature...\n")
-		}
-		result, err = client.VerifySPDXSBOM(ctx, verifyKeyID, verifySignature, signedSBOM.Data())
-		if err != nil {
-			return fmt.Errorf("failed to verify SPDX SBOM: %w", err)
+			fmt.Fprintf(os.Stderr, "Verifying SBOM with provided detached signature...\n")
 		}
 	} else {
 		// CycloneDX SBOM - signature embedded in SBOM
 		if !verifyQuiet {
 			fmt.Fprintf(os.Stderr, "Verifying CycloneDX SBOM with embedded signature...\n")
 		}
-		result, err = client.VerifySBOM(ctx, verifyKeyID, signedSBOM.Data())
-		if err != nil {
-			return fmt.Errorf("failed to verify CycloneDX SBOM: %w", err)
-		}
+	}
+
+	result, err = client.VerifySBOM(ctx, verifyReq)
+	if err != nil {
+		return fmt.Errorf("failed to verify SBOM: %w", err)
 	}
 
 	// Output the verification result
@@ -269,6 +268,41 @@ func loadSBOMForVerification(inputFile string) (*securesbom.SBOM, error) {
 	}
 
 	return securesbom.LoadSBOMFromFile(inputFile)
+}
+
+func loadSignatureInput(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	if looksLikeInlineJSON(value) {
+		return value, nil
+	}
+
+	fileInfo, err := os.Stat(value)
+	if err == nil {
+		if fileInfo.IsDir() {
+			return "", fmt.Errorf("signature path is a directory: %s", value)
+		}
+
+		signatureBytes, err := os.ReadFile(value)
+		if err != nil {
+			return "", fmt.Errorf("failed to read signature file %s: %w", value, err)
+		}
+		return strings.TrimSpace(string(signatureBytes)), nil
+	}
+
+	if os.IsNotExist(err) {
+		return value, nil
+	}
+
+	return value, nil
+}
+
+func looksLikeInlineJSON(value string) bool {
+	return (strings.HasPrefix(value, "{") && strings.HasSuffix(value, "}")) ||
+		(strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]")) ||
+		(strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\""))
 }
 
 func outputVerificationResult(result *securesbom.VerifyResultCMDResponse) error {

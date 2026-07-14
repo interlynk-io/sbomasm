@@ -45,6 +45,10 @@ sbomasm generate > config.yml
 
 # Sign an SBOM using ShiftLeftCyber's SecureSBOM API (using a sample key)
 sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom-signed.json sbom.json
+
+# Sign and verify an SPDX SBOM using a detached signature response file
+sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.spdx.signed.json sbom.spdx.json
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.spdx.signed.json sbom.spdx.json
 ```
 
 ## Table of Contents
@@ -402,7 +406,7 @@ API Key. To obtain an API key use the following: [ContactUs](https://shiftleftcy
 
 1. **API Key:** Obtain an API Key from ShiftLeftCyber
 2. **Key Management:** Generate or use existing signing keys through the SecureSBOM Service
-3. **Envorionment Setup:** Set your API key as an environment variable for convenience 
+3. **Environment Setup:** Set your API key as an environment variable for convenience
 
 ```bash
 export SECURE_SBOM_API_KEY="your-api-key-here"
@@ -412,16 +416,26 @@ export SECURE_SBOM_API_KEY="your-api-key-here"
 # Generate a Signing Key for signing and online verification
 sbomasm securesbomkey generate
 
-# Use the generated key to Sign a CycloneDX SBOM according to CycloneDX 1.6 Specification
-# The below examples uses a fake/sample key for educational purposes only
+# Use the generated key to sign a CycloneDX SBOM according to the CycloneDX signature format.
+# The examples below use a fake/sample key for educational purposes only.
 sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.cdx.signed.json sbom.json
 
-# Verify the Signed SBOM using the API
+# Verify the CycloneDX signed response using the API
 sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e sbom.cdx.signed.json
 
-# Sign and Verify SPDX SBOMs with SecureSBOM
+# Sign and verify a CycloneDX SBOM with a detached signature response file
+sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --detached --output sbom.cdx.detached.json sbom.cdx.json
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.cdx.detached.json sbom.cdx.json
+
+# Sign and verify an SPDX SBOM with a detached signature response file
 sbomasm sign --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --output sbom.spdx.signed.json sbom.spdx.json
-sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature "SIGNATURE_HASH" sbom.spdx.signed.json
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.spdx.signed.json sbom.spdx.json
+
+# SPDX verification also accepts a raw base64 signature
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature "MEUCIQD..." sbom.spdx.json
+
+# Or an inline JSON signing response payload
+sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature '{"algorithm":"ES256","detached":true,"sbom_type":"spdx","signature_b64":"MEUCIQD..."}' sbom.spdx.json
 ```
 
 ## Industry Use Cases
