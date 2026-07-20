@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/matcher"
@@ -648,6 +649,20 @@ func (a *augmentMerge) updateMetadata() {
 
 	// Update timestamp
 	a.primary.Metadata.Timestamp = utcNowTime()
+
+	// Apply explicit --doc-license if provided
+	docLicense := a.settings.Assemble.DocLicense
+	if docLicense != "" && strings.ToLower(docLicense) != "none" {
+		a.primary.Metadata.Licenses = &cydx.Licenses{
+			{
+				License: &cydx.License{ID: docLicense},
+			},
+		}
+		log.Debugf("Applied explicit document license: %s", docLicense)
+	} else if strings.ToLower(docLicense) == "none" {
+		a.primary.Metadata.Licenses = nil
+		log.Debugf("Cleared document licenses")
+	}
 
 	// Add tool information
 	if a.primary.Metadata.Tools == nil {
