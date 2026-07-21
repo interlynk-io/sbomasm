@@ -98,6 +98,11 @@ test: generate ## Run all tests
 	@echo "Running tests..."
 	@go test -cover -race ./...
 
+.PHONY: integration-test
+integration-test: generate ## Run integration tests
+	@echo "Running integration tests..."
+	@go test -v ./pkg/assemble/integration_test/...
+
 ##@ Building
 
 .PHONY: build
@@ -169,7 +174,7 @@ ci: deps generate vet ## Run CI pipeline locally with test summary
 	UNIT_EXIT_CODE=$$?; \
 	echo ""; \
 	echo "Integration tests:"; \
-	go test -run "Test_ScoreForStaticSBOMFiles_Summary|Test_NTIAProfile|Test_NTIA2025Profile|Test_InterlynkProfile" ./pkg/scorer/v2/... 2>&1 | grep -E "(PASS|FAIL|ok|NTIA.*Profile:|Interlynk.*Profile:)" ; \
+	go test -v ./pkg/assemble/integration_test/... 2>&1 | grep -E "(RUN|PASS|FAIL|ok)" ; \
 	INTEGRATION_EXIT_CODE=$$?; \
 	echo ""; \
 	echo "=========================================="; \
