@@ -474,6 +474,193 @@ func TestAssemblyMergeWithPrimary_ErrorNoPrimaryComponent(t *testing.T) {
 	}
 }
 
+// Test for GitHub Issue #330: Primary component bom-ref normalization
+// When primary component has a bom-ref without purl (e.g., "myapp==1.0.0"),
+// it should be normalized to match the dependency refs (e.g., "myapp@1.0.0")
+
+// Primary SBOM with non-normalized bom-ref (no purl, uses "==" format)
+var assemblyPrimaryNonNormalizedSBOM = []byte(`
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:44444444-4444-4444-4444-444444444444",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-01-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "myapp",
+      "version": "1.0.0",
+      "bom-ref": "myapp==1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "bom-ref": "pkg:npm/lodash@4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "myapp==1.0.0",
+      "dependsOn": ["pkg:npm/lodash@4.17.21"]
+    }
+  ]
+}
+`)
+
+// Secondary SBOM for issue #330 test
+var assemblySecondaryNonNormalizedSBOM = []byte(`
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:55555555-5555-5555-5555-555555555555",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-01-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "secondary",
+      "version": "2.0.0",
+      "bom-ref": "secondary==2.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "react",
+      "version": "17.0.0",
+      "bom-ref": "pkg:npm/react@17.0.0",
+      "purl": "pkg:npm/react@17.0.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "secondary==2.0.0",
+      "dependsOn": ["pkg:npm/react@17.0.0"]
+    }
+  ]
+}
+`)
+
+// Test: Issue #330 - Assembly merge with primary normalizes bom-ref
+func TestAssemblyMergeWithPrimary_BomRefNormalization(t *testing.T) {
+	ctx := setupTestContext()
+
+	primary, err := parseCDXBytes(assemblyPrimaryNonNormalizedSBOM)
+	if err != nil {
+		t.Fatalf("failed to parse primary SBOM: %v", err)
+	}
+	secondary, err := parseCDXBytes(assemblySecondaryNonNormalizedSBOM)
+	if err != nil {
+		t.Fatalf("failed to parse secondary SBOM: %v", err)
+	}
+
+	ms := &MergeSettings{
+		Ctx:   &ctx,
+		Input: input{Files: []string{"primary.cdx.json", "secondary.cdx.json"}},
+		Assemble: assemble{
+			IsAssemblyMergeWithPrimary: true,
+			PrimaryFile:                "primary.cdx.json",
+		},
+	}
+
+	m := newMerge(ms)
+	m.in = []*cydx.BOM{primary, secondary}
+	cs := newUniqueComponentService(ctx)
+
+	// Build component lists - this also stores the primary component in the service
+	// and creates the idMap entry needed for bom-ref normalization
+	priCompList := buildPrimaryComponentList(m.in, cs)
+	compList := buildComponentList(m.in, cs)
+	depList := buildDependencyList(m.in, cs)
+
+	// Verify primary component was stored with normalized bom-ref
+	// This is required for the fix in assemblyMergeWithPrimary to work
+	if len(priCompList) == 0 {
+		t.Fatal("expected primary component in priCompList")
+	}
+
+	err = m.assemblyMergeWithPrimary(cs, compList, depList)
+	if err != nil {
+		t.Fatalf("assemblyMergeWithPrimary failed: %v", err)
+	}
+
+	t.Run("primary component bom-ref is normalized", func(t *testing.T) {
+		if m.out.Metadata.Component == nil {
+			t.Fatal("expected metadata.component to be set")
+		}
+
+		primaryBomRef := m.out.Metadata.Component.BOMRef
+		if primaryBomRef == "" {
+			t.Fatal("primary component should have a bom-ref")
+		}
+
+		// The bom-ref should be normalized ("myapp@1.0.0" not "myapp==1.0.0")
+		if primaryBomRef == "myapp==1.0.0" {
+			t.Error("primary component bom-ref should be normalized (myapp@1.0.0), not original format (myapp==1.0.0)")
+		}
+		if primaryBomRef != "myapp@1.0.0" {
+			t.Errorf("expected normalized bom-ref 'myapp@1.0.0', got '%s'", primaryBomRef)
+		}
+	})
+
+	t.Run("primary component bom-ref matches dependency refs", func(t *testing.T) {
+		if m.out.Metadata.Component == nil {
+			t.Fatal("expected metadata.component to be set")
+		}
+
+		primaryBomRef := m.out.Metadata.Component.BOMRef
+
+		// Check that at least one dependency refs the primary
+		foundPrimaryRef := false
+		for _, dep := range *m.out.Dependencies {
+			if dep.Ref == primaryBomRef {
+				foundPrimaryRef = true
+				break
+			}
+		}
+
+		if !foundPrimaryRef {
+			t.Errorf("primary component bom-ref (%s) should match at least one dependency ref", primaryBomRef)
+			t.Logf("dependencies: %+v", *m.out.Dependencies)
+		}
+	})
+
+	t.Run("no dangling references in dependencies", func(t *testing.T) {
+		// Collect all component bom-refs
+		componentRefs := make(map[string]bool)
+		if m.out.Metadata.Component != nil {
+			componentRefs[m.out.Metadata.Component.BOMRef] = true
+		}
+		if m.out.Metadata.Component.Components != nil {
+			for _, comp := range *m.out.Metadata.Component.Components {
+				componentRefs[comp.BOMRef] = true
+			}
+		}
+		for _, comp := range *m.out.Components {
+			componentRefs[comp.BOMRef] = true
+		}
+
+		// Check that all dependency refs point to existing components
+		for _, dep := range *m.out.Dependencies {
+			if !componentRefs[dep.Ref] {
+				t.Errorf("dependency ref '%s' does not point to any component", dep.Ref)
+			}
+			if dep.Dependencies != nil {
+				for _, depDep := range *dep.Dependencies {
+					if !componentRefs[depDep] {
+						t.Errorf("nested dependency ref '%s' does not point to any component", depDep)
+					}
+				}
+			}
+		}
+	})
+}
+
 // Helper functions
 
 var testLoggerOnce sync.Once

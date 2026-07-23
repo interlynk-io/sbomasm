@@ -97,6 +97,19 @@ func (m *merge) combinedMerge() error {
 		primaryBom := m.in[0]
 		m.initOutBomFromPrimary(primaryBom)
 		m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
+
+		// Normalize the primary component's BOMRef to match the normalized dependency refs.
+		// The primary component may have been stored in the component service with a
+		// normalized ID (e.g., "name@version"), but the extracted component still has
+		// the original BOMRef (e.g., "name==version"). We need them to match.
+		if m.out.Metadata.Component != nil {
+			originalBomRef := m.out.Metadata.Component.BOMRef
+			if normalizedRef, found := cs.ResolveDepID(originalBomRef); found {
+				m.out.Metadata.Component.BOMRef = normalizedRef
+				log.Debugf("flat merge with primary: normalized primary component BOMRef from %s to %s",
+					originalBomRef, normalizedRef)
+			}
+		}
 	} else {
 		m.initOutBom()
 		m.out.Metadata.Component = m.setupPrimaryComp()
@@ -456,6 +469,14 @@ func (m *merge) assemblyMergeWithPrimary(cs *uniqueComponentService, compList []
 	m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
 	if m.out.Metadata.Component == nil {
 		return fmt.Errorf("primary SBOM has no primary component")
+	}
+
+	// Normalize the primary component's BOMRef to match dependency refs
+	originalBomRef := m.out.Metadata.Component.BOMRef
+	if normalizedRef, found := cs.ResolveDepID(originalBomRef); found {
+		m.out.Metadata.Component.BOMRef = normalizedRef
+		log.Debugf("assembly merge with primary: normalized primary component BOMRef from %s to %s",
+			originalBomRef, normalizedRef)
 	}
 
 	log.Debugf("assembly merge with primary: using primary component %s", m.out.Metadata.Component.BOMRef)
