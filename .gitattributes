@@ -1,0 +1,8 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF line endings for test data files to ensure cross-platform consistency
+*.json text eol=lf
+*.txt text eol=lf
+*.spdx text eol=lf
+*.cdx text eol=lf
