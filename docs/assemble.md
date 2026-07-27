@@ -32,6 +32,9 @@ sbomasm assemble -n <name> -v <version> -t <type> -o <output> <input-files...>
 - `-c, --config <path>`: Path to configuration file (YAML format)
 - `--xml`: Output in XML format (default is JSON)
 - `-e, --export-version <version>`: Specify output spec version (e.g., "1.4" for CycloneDX)
+- `--doc-license <license>`: Document license for assembled SBOM metadata (default: "CC0-1.0", use "none" to omit)
+  - Sets the license for the SBOM document itself (not component licenses)
+  - Common values: `CC0-1.0`, `Apache-2.0`, `MIT`, `none`
 
 ### Merge Algorithms
 

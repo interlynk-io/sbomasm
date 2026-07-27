@@ -215,6 +215,9 @@ func (c *config) readAndMerge(p *Params) error {
 		c.Assemble.HierarchicalMerge = p.HierMerge
 		c.Assemble.AssemblyMerge = p.AssemblyMerge
 		c.Assemble.AugmentMerge = p.AugmentMerge
+		c.Assemble.PrimaryFile = p.PrimaryFile
+		c.Assemble.MergeMode = p.MergeMode
+		c.Assemble.DocLicense = p.DocLicense
 	}
 
 	c.input.files = p.Input
