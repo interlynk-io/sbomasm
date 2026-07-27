@@ -99,9 +99,7 @@ func (m *merge) combinedMerge() error {
 		m.out.Metadata.Component = m.extractPrimaryComponent(primaryBom)
 
 		// Normalize the primary component's BOMRef to match the normalized dependency refs.
-		// The primary component may have been stored in the component service with a
-		// normalized ID (e.g., "name@version"), but the extracted component still has
-		// the original BOMRef (e.g., "name==version"). We need them to match.
+		// normalized to "name@version")
 		if m.out.Metadata.Component != nil {
 			originalBomRef := m.out.Metadata.Component.BOMRef
 			if normalizedRef, found := cs.ResolveDepID(originalBomRef); found {
