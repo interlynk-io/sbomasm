@@ -714,12 +714,22 @@ func (a *augmentMerge) writeSBOM() error {
 	if format == "xml" {
 		encoder := cydx.NewBOMEncoder(writer, cydx.BOMFileFormatXML)
 		encoder.SetPretty(true)
+		if specVersion != "" {
+			if sv, ok := specVersionMap[specVersion]; ok {
+				return encoder.EncodeVersion(a.primary, sv)
+			}
+		}
 		return encoder.Encode(a.primary)
 	} else {
 		// Default to JSON
 		encoder := cydx.NewBOMEncoder(writer, cydx.BOMFileFormatJSON)
 		encoder.SetPretty(true)
 		encoder.SetEscapeHTML(false)
+		if specVersion != "" {
+			if sv, ok := specVersionMap[specVersion]; ok {
+				return encoder.EncodeVersion(a.primary, sv)
+			}
+		}
 		return encoder.Encode(a.primary)
 	}
 }
