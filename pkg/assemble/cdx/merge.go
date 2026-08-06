@@ -394,7 +394,7 @@ func (m *merge) processSBOM() error {
 	}
 
 	encoder.SetPretty(true)
-	encoder.SetEscapeHTML(true)
+	encoder.SetEscapeHTML(false)
 
 	var err error
 	if m.settings.Output.SpecVersion == "" {

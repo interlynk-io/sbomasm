@@ -17,6 +17,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -210,6 +211,54 @@ func Test_AssemblyMergeWithPrimary_BomRefNormalization(t *testing.T) {
 
 	t.Logf("✓ Primary component bom-ref normalized: %s", primaryBomRef)
 	t.Logf("✓ Dependency refs match primary bom-ref")
+}
+
+// Test_MergePreservesAmpersandInRawJSON tests that assemble output preserves literal `&`
+// in PURLs and tool descriptions, and does not HTML-escape them to &.
+// Regression test for: https://github.com/interlynk-io/sbomasm/issues/337
+func Test_MergePreservesAmpersandInRawJSON(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "issue337-output.cdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue337")
+	primaryFile := filepath.Join(testDataDir, "primary.cdx.json")
+	secondaryFile := filepath.Join(testDataDir, "secondary.cdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{secondaryFile}
+	params.Output = outputFile
+	params.AssemblyMerge = true
+	params.PrimaryFile = primaryFile
+	params.Json = true
+	params.OutputSpec = "cyclonedx"
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	rawBytes, err := os.ReadFile(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to read output file: %v", err)
+	}
+
+	// Ensure no HTML-escaped ampersand & is present in raw JSON
+	if bytes.Contains(rawBytes, []byte("\\u0026")) {
+		t.Errorf("Output contains HTML-escaped ampersand \\u0026; literal & should be preserved")
+	}
+
+	// Ensure literal & IS present (our inputs had it)
+	if !bytes.Contains(rawBytes, []byte("&")) {
+		t.Errorf("Output missing literal & in raw JSON")
+	}
+
+	t.Logf("Output preserves literal & and contains no \\u0026")
 }
 
 // containsSubstring is a helper to check if a string contains a substring

@@ -163,7 +163,7 @@ func writeCdxBom(bom *cydx.BOM, c *configParams) error {
 	}
 
 	encoder.SetPretty(true)
-	encoder.SetEscapeHTML(true)
+	encoder.SetEscapeHTML(false)
 
 	if err := encoder.Encode(bom); err != nil {
 		return err
