@@ -18,6 +18,7 @@ package integration_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -210,6 +211,86 @@ func Test_AssemblyMergeWithPrimary_BomRefNormalization(t *testing.T) {
 
 	t.Logf("✓ Primary component bom-ref normalized: %s", primaryBomRef)
 	t.Logf("✓ Dependency refs match primary bom-ref")
+}
+
+// Test_AugmentMerge_OutputSpecVersion_SchemaURL tests that augment merge respects
+// --outputSpecVersion and writes the correct $schema URL in the JSON output.
+// Regression test for: https://github.com/interlynk-io/sbomasm/issues/328
+func Test_AugmentMerge_OutputSpecVersion_SchemaURL(t *testing.T) {
+	testCases := []struct {
+		name           string
+		outputSpecVer  string
+		expectedSchema string
+	}{
+		{
+			name:           "Downgrade 1.6 primary SBOM to 1.5 output",
+			outputSpecVer:  "1.5",
+			expectedSchema: "http://cyclonedx.org/schema/bom-1.5.schema.json",
+		},
+		{
+			name:           "Downgrade 1.6 primary SBOM to 1.4 output",
+			outputSpecVer:  "1.4",
+			expectedSchema: "http://cyclonedx.org/schema/bom-1.4.schema.json",
+		},
+		{
+			name:           "Upgrade 1.6 primary SBOM to 1.7 output",
+			outputSpecVer:  "1.7",
+			expectedSchema: "http://cyclonedx.org/schema/bom-1.7.schema.json",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			outputFile := filepath.Join(t.TempDir(), "issue328-output.cdx.json")
+
+			testDataDir := filepath.Join(getTestDataDir(), "issue328")
+			primaryFile := filepath.Join(testDataDir, "primary.cdx.json")
+			secondaryFile := filepath.Join(testDataDir, "secondary.cdx.json")
+
+			ctx := logger.WithLogger(context.Background())
+			params := assemble.NewParams()
+			params.Ctx = &ctx
+			params.Input = []string{secondaryFile}
+			params.Output = outputFile
+			params.AugmentMerge = true
+			params.PrimaryFile = primaryFile
+			params.Json = true
+			params.OutputSpec = "cyclonedx"
+			params.OutputSpecVersion = tc.outputSpecVer
+
+			config, err := assemble.PopulateConfig(params)
+			if err != nil {
+				t.Fatalf("PopulateConfig failed: %v", err)
+			}
+
+			err = assemble.Assemble(config)
+			if err != nil {
+				t.Fatalf("Assemble failed: %v", err)
+			}
+
+			rawBytes, err := os.ReadFile(outputFile)
+			if err != nil {
+				t.Fatalf("Failed to read output file: %v", err)
+			}
+
+			// Parse as generic JSON to inspect $schema field
+			var rawJSON map[string]interface{}
+			if err := json.Unmarshal(rawBytes, &rawJSON); err != nil {
+				t.Fatalf("Failed to parse output as generic JSON: %v", err)
+			}
+
+			schemaURL, ok := rawJSON["$schema"].(string)
+			if !ok {
+				t.Fatalf("$schema field missing or not a string in output")
+			}
+
+			if schemaURL != tc.expectedSchema {
+				t.Errorf("$schema mismatch: expected %q, got %q", tc.expectedSchema, schemaURL)
+			} else {
+				t.Logf("✓ $schema correctly set to %s for --outputSpecVersion=%s", schemaURL, tc.outputSpecVer)
+			}
+		})
+	}
 }
 
 // containsSubstring is a helper to check if a string contains a substring
