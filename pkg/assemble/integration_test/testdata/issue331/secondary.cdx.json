@@ -1,0 +1,19 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:33333333-3333-3333-3333-333333333333",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "js-bundle",
+      "bom-ref": "js-bundle"
+    }
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "js-bundle"
+    }
+  ]
+}

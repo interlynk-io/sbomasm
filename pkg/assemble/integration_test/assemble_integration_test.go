@@ -293,6 +293,120 @@ func Test_AugmentMerge_OutputSpecVersion_SchemaURL(t *testing.T) {
 	}
 }
 
+// Test_AssemblyMergeWithPrimary_DocLicense tests that --doc-license is respected
+// when using --assemblyMerge --primary. Regression test for:
+// https://github.com/interlynk-io/sbomasm/issues/331
+func Test_AssemblyMergeWithPrimary_DocLicense(t *testing.T) {
+	testCases := []struct {
+		name            string
+		primaryFile     string
+		docLicense      string
+		expectLicense   string
+		expectNoLicense bool
+	}{
+		{
+			name:          "No-license primary + --doc-license Apache-2.0",
+			primaryFile:   "primary-no-license.cdx.json",
+			docLicense:    "Apache-2.0",
+			expectLicense: "Apache-2.0",
+		},
+		{
+			name:          "No-license primary + no --doc-license (default CC0-1.0)",
+			primaryFile:   "primary-no-license.cdx.json",
+			docLicense:    "",
+			expectLicense: "CC0-1.0",
+		},
+		{
+			name:            "No-license primary + --doc-license none",
+			primaryFile:     "primary-no-license.cdx.json",
+			docLicense:      "none",
+			expectNoLicense: true,
+		},
+		{
+			name:          "Licensed primary (MIT) + no --doc-license (preserve primary)",
+			primaryFile:   "primary-with-license.cdx.json",
+			docLicense:    "",
+			expectLicense: "MIT",
+		},
+		{
+			name:          "Licensed primary (MIT) + --doc-license Apache-2.0 (override)",
+			primaryFile:   "primary-with-license.cdx.json",
+			docLicense:    "Apache-2.0",
+			expectLicense: "Apache-2.0",
+		},
+		{
+			name:            "Licensed primary (MIT) + --doc-license none",
+			primaryFile:     "primary-with-license.cdx.json",
+			docLicense:      "none",
+			expectNoLicense: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			outputFile := filepath.Join(t.TempDir(), "issue331-output.cdx.json")
+
+			testDataDir := filepath.Join(getTestDataDir(), "issue331")
+			primaryPath := filepath.Join(testDataDir, tc.primaryFile)
+			secondaryPath := filepath.Join(testDataDir, "secondary.cdx.json")
+
+			ctx := logger.WithLogger(context.Background())
+			params := assemble.NewParams()
+			params.Ctx = &ctx
+			params.Input = []string{secondaryPath}
+			params.Output = outputFile
+			params.AssemblyMerge = true
+			params.PrimaryFile = primaryPath
+			params.Json = true
+			params.OutputSpec = "cyclonedx"
+			params.DocLicense = tc.docLicense
+
+			config, err := assemble.PopulateConfig(params)
+			if err != nil {
+				t.Fatalf("PopulateConfig failed: %v", err)
+			}
+
+			err = assemble.Assemble(config)
+			if err != nil {
+				t.Fatalf("Assemble failed: %v", err)
+			}
+
+			// Parse output
+			f, err := os.Open(outputFile)
+			if err != nil {
+				t.Fatalf("Failed to open output file: %v", err)
+			}
+			defer f.Close()
+
+			bom := new(cydx.BOM)
+			decoder := cydx.NewBOMDecoder(f, cydx.BOMFileFormatJSON)
+			if err := decoder.Decode(bom); err != nil {
+				t.Fatalf("Failed to parse output JSON: %v", err)
+			}
+
+			if tc.expectNoLicense {
+				if bom.Metadata != nil && bom.Metadata.Licenses != nil && len(*bom.Metadata.Licenses) > 0 {
+					t.Errorf("Expected no licenses, but found %d license(s)", len(*bom.Metadata.Licenses))
+				} else {
+					t.Logf("✓ No license present as expected")
+				}
+				return
+			}
+
+			if bom.Metadata == nil || bom.Metadata.Licenses == nil || len(*bom.Metadata.Licenses) == 0 {
+				t.Fatalf("Expected license %q, but no licenses found", tc.expectLicense)
+			}
+
+			actualLicense := (*bom.Metadata.Licenses)[0].License.ID
+			if actualLicense != tc.expectLicense {
+				t.Errorf("License mismatch: expected %q, got %q", tc.expectLicense, actualLicense)
+			} else {
+				t.Logf("✓ License correctly set to %s", actualLicense)
+			}
+		})
+	}
+}
+
 // containsSubstring is a helper to check if a string contains a substring
 func containsSubstring(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
