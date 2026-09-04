@@ -19,7 +19,9 @@ package spdx
 import (
 	"context"
 	"errors"
+	"strings"
 
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -122,7 +124,7 @@ type MergeSettings struct {
 
 func Merge(ms *MergeSettings) error {
 
-	if len(ms.Output.Spec) > 0 && ms.Output.Spec != "spdx" {
+	if len(ms.Output.Spec) > 0 && !strings.EqualFold(ms.Output.Spec, string(sbom.SBOMSpecSPDX)) {
 		return errors.New("invalid output spec")
 	}
 

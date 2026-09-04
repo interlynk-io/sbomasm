@@ -53,7 +53,7 @@ func (m *merge) combinedMerge() error {
 	log := logger.FromContext(*m.settings.Ctx)
 	log.Debugf("starting merge with settings: %v", m.settings)
 
-	doc, err := genSpdxDocument(m)
+	doc, err := genSpdxDocumentMetadata(m)
 	if err != nil {
 		return err
 	}
@@ -120,23 +120,48 @@ func (m *merge) combinedMerge() error {
 
 	if m.settings.Assemble.FlatMerge {
 		log.Debugf("flat merge is applied")
-		// we skip the contains relationship and remove all relationships except describes
-		rels = []*spdx.Relationship{}
+
+		// Add DEPENDS_ON from root to each input SBOMs primary component
+		for _, dp := range describedPkgs {
+			currentPkgId := pkgMapper[dp]
+			topLevelRels = append(topLevelRels, &spdx.Relationship{
+				RefA:                common.MakeDocElementID("", string(primaryPkg.PackageSPDXIdentifier)),
+				RefB:                common.MakeDocElementID("", currentPkgId),
+				Relationship:        common.TypeRelationshipDependsOn,
+				RelationshipComment: "sbomasm created depends_on relationship to support flat merge",
+			})
+		}
 	} else if m.settings.Assemble.AssemblyMerge {
 		log.Debugf("assembly merge is applied")
-		// we retain all relationships but we will not add a contains relationship
-	} else {
-		log.Debugf("hierarchical merge is applied")
-		// Default to hierarchical merge
-		// Add relationships between primary package and described packages from merge sets
+
+		// Add CONTAINS from root to each input SBOMs primary component
 		for _, dp := range describedPkgs {
 			currentPkgId := pkgMapper[dp]
 			topLevelRels = append(topLevelRels, &spdx.Relationship{
 				RefA:                common.MakeDocElementID("", string(primaryPkg.PackageSPDXIdentifier)),
 				RefB:                common.MakeDocElementID("", currentPkgId),
 				Relationship:        common.TypeRelationshipContains,
-				RelationshipComment: "sbomasm created contains relationship to support hierarchical merge",
+				RelationshipComment: "sbomasm created contains relationship to support assembly merge",
 			})
+		}
+	} else {
+		log.Debugf("hierarchical merge is applied")
+
+		// Add DEPENDS_ON from root to each input SBOMs primary component
+		for _, dp := range describedPkgs {
+			currentPkgId := pkgMapper[dp]
+			topLevelRels = append(topLevelRels, &spdx.Relationship{
+				RefA:                common.MakeDocElementID("", string(primaryPkg.PackageSPDXIdentifier)),
+				RefB:                common.MakeDocElementID("", currentPkgId),
+				Relationship:        common.TypeRelationshipDependsOn,
+				RelationshipComment: "sbomasm created depends_on relationship to support hierarchical merge",
+			})
+		}
+
+		// Add nesteding hierarchy via CONTAINS relationshipType if not already present
+		hierarchicalContains := genHierarchicalContains(m, pkgMapper, rels)
+		if len(hierarchicalContains) > 0 {
+			rels = append(rels, hierarchicalContains...)
 		}
 	}
 

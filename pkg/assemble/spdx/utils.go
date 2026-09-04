@@ -277,7 +277,7 @@ func genOtherLicenses(docs []*v2_3.Document) []*v2_3.OtherLicense {
 	})
 }
 
-func genSpdxDocument(ms *merge) (*v2_3.Document, error) {
+func genSpdxDocumentMetadata(ms *merge) (*v2_3.Document, error) {
 	if ms == nil {
 		return nil, fmt.Errorf("settings is required")
 	}
@@ -614,4 +614,70 @@ func getDocumentNamespace(docName string, ms *merge) string {
 	}
 
 	return ""
+}
+
+// genHierarchicalContains generates CONTAINS relationships between each input SBOM's
+// primary package and its non-primary packages. This is required because SPDX has no
+// native component nesting — therefore hierarchy is expressed through
+// CONTAINS(primary, child) relationships.
+func genHierarchicalContains(ms *merge, pkgMapper map[string]string, existingRels []*spdx.Relationship) []*spdx.Relationship {
+	log := logger.FromContext(*ms.settings.Ctx)
+
+	// Build a set of existing (RefA, RefB) CONTAINS pairs to avoid duplicates
+	existingPairs := make(map[string]bool)
+	for _, rel := range existingRels {
+		if rel.Relationship == common.TypeRelationshipContains {
+			pairKey := fmt.Sprintf("%s->%s", rel.RefA.ElementRefID, rel.RefB.ElementRefID)
+			existingPairs[pairKey] = true
+		}
+	}
+
+	var newRels []*spdx.Relationship
+
+	for _, doc := range ms.in {
+		// Find primary package of this SBOM via DESCRIBES
+		var primaryPkgID string
+		for _, rel := range doc.Relationships {
+			if rel.Relationship == common.TypeRelationshipDescribe && rel.RefB.ElementRefID != "" {
+				lookupKey := createLookupKey(doc.DocumentNamespace, string(rel.RefB.ElementRefID))
+				if mappedID, found := pkgMapper[lookupKey]; found {
+					primaryPkgID = mappedID
+				}
+				break
+			}
+		}
+
+		if primaryPkgID == "" {
+			log.Warnf("could not find primary package for document %s, skipping CONTAINS generation", doc.DocumentName)
+			continue
+		}
+
+		for _, pkg := range doc.Packages {
+			pkgLookupKey := createLookupKey(doc.DocumentNamespace, string(pkg.PackageSPDXIdentifier))
+			childPkgID, found := pkgMapper[pkgLookupKey]
+			if !found {
+				continue
+			}
+
+			if childPkgID == primaryPkgID {
+				continue
+			}
+
+			// Skip if a CONTAINS already exists
+			pairKey := fmt.Sprintf("%s->%s", common.ElementID(primaryPkgID), common.ElementID(childPkgID))
+			if existingPairs[pairKey] {
+				continue
+			}
+
+			newRels = append(newRels, &spdx.Relationship{
+				RefA:                common.MakeDocElementID("", primaryPkgID),
+				RefB:                common.MakeDocElementID("", childPkgID),
+				Relationship:        common.TypeRelationshipContains,
+				RelationshipComment: "sbomasm created contains relationship for hierarchical merge",
+			})
+		}
+	}
+
+	log.Debugf("generated %d CONTAINS relationships for hierarchical merge", len(newRels))
+	return newRels
 }
