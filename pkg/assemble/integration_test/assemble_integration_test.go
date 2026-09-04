@@ -28,6 +28,8 @@ import (
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/assemble"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	spdx_json "github.com/spdx/tools-golang/json"
+	"github.com/spdx/tools-golang/spdx/v2/v2_3"
 )
 
 var testLoggerOnce sync.Once
@@ -419,4 +421,318 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// ---- SPDX Merge Strategy Integration Tests (Issue #344) ----
+
+// spdxFindRel looks up for a relationship in an SPDX document.
+func spdxFindRel(doc *v2_3.Document, refA, refB, relType string) *v2_3.Relationship {
+	for _, rel := range doc.Relationships {
+		if string(rel.RefA.ElementRefID) == refA && string(rel.RefB.ElementRefID) == refB && rel.Relationship == relType {
+			return rel
+		}
+	}
+	return nil
+}
+
+// Test_SPDX_HierarchicalMerge_Relationships verifies that hierarchical merge
+// produces DEPENDS_ON from root to primaries and generates CONTAINS for internal hierarchy.
+func Test_SPDX_HierarchicalMerge_Relationships(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "issue344-hierarchical.spdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue344")
+	frontendFile := filepath.Join(testDataDir, "frontend.spdx.json")
+	backendFile := filepath.Join(testDataDir, "backend.spdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{frontendFile, backendFile}
+	params.Output = outputFile
+	params.Json = true
+	params.OutputSpec = "spdx"
+	params.Name = "MyApp"
+	params.Version = "1.0.0"
+	params.Type = "application"
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	// Parse output SPDX
+	f, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to open output file: %v", err)
+	}
+	defer f.Close()
+
+	doc, err := spdx_json.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to parse output SPDX: %v", err)
+	}
+
+	// Find root package (the one DESCRIBED by DOCUMENT)
+	var rootPkgID string
+	for _, rel := range doc.Relationships {
+		if rel.Relationship == "DESCRIBES" && string(rel.RefA.ElementRefID) == "DOCUMENT" {
+			rootPkgID = string(rel.RefB.ElementRefID)
+			break
+		}
+	}
+	if rootPkgID == "" {
+		t.Fatal("could not find root package via DESCRIBES")
+	}
+
+	// Find remapped Frontend and Backend package IDs
+	var frontendID, backendID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "Frontend" {
+			frontendID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Backend" {
+			backendID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if frontendID == "" || backendID == "" {
+		t.Fatalf("Frontend or Backend package not found in output")
+	}
+
+	// Assert root -> Frontend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, frontendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s)", rootPkgID, frontendID)
+	}
+
+	// Assert root -> Backend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, backendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s)", rootPkgID, backendID)
+	}
+
+	// Assert root -> Frontend is NOT CONTAINS
+	if spdxFindRel(doc, rootPkgID, frontendID, "CONTAINS") != nil {
+		t.Errorf("hierarchical merge: root should not CONTAINS primary %s", frontendID)
+	}
+
+	// Find React and Axios IDs
+	var reactID, axiosID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "React" {
+			reactID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Axios" {
+			axiosID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+
+	// Assert CONTAINS(Frontend -> React) generated for hierarchy
+	if reactID != "" && spdxFindRel(doc, frontendID, reactID, "CONTAINS") == nil {
+		t.Errorf("expected generated CONTAINS(%s -> %s)", frontendID, reactID)
+	}
+
+	// Assert CONTAINS(Frontend -> Axios) generated for hierarchy
+	if axiosID != "" && spdxFindRel(doc, frontendID, axiosID, "CONTAINS") == nil {
+		t.Errorf("expected generated CONTAINS(%s -> %s)", frontendID, axiosID)
+	}
+
+	// Assert existing DEPENDS_ON(Frontend -> React) preserved
+	if reactID != "" && spdxFindRel(doc, frontendID, reactID, "DEPENDS_ON") == nil {
+		t.Errorf("expected preserved DEPENDS_ON(%s -> %s)", frontendID, reactID)
+	}
+
+	t.Logf("✓ Hierarchical merge relationships verified")
+}
+
+// Test_SPDX_AssemblyMerge_Relationships verifies that assembly merge
+// produces CONTAINS from root to primaries.
+func Test_SPDX_AssemblyMerge_Relationships(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "issue344-assembly.spdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue344")
+	frontendFile := filepath.Join(testDataDir, "frontend.spdx.json")
+	backendFile := filepath.Join(testDataDir, "backend.spdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{frontendFile, backendFile}
+	params.Output = outputFile
+	params.AssemblyMerge = true
+	params.Json = true
+	params.OutputSpec = "spdx"
+	params.Name = "MyApp"
+	params.Version = "1.0.0"
+	params.Type = "application"
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	f, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to open output file: %v", err)
+	}
+	defer f.Close()
+
+	doc, err := spdx_json.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to parse output SPDX: %v", err)
+	}
+
+	var rootPkgID string
+	for _, rel := range doc.Relationships {
+		if rel.Relationship == "DESCRIBES" && string(rel.RefA.ElementRefID) == "DOCUMENT" {
+			rootPkgID = string(rel.RefB.ElementRefID)
+			break
+		}
+	}
+	if rootPkgID == "" {
+		t.Fatal("could not find root package")
+	}
+
+	var frontendID, backendID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "Frontend" {
+			frontendID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Backend" {
+			backendID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if frontendID == "" || backendID == "" {
+		t.Fatalf("Frontend or Backend package not found")
+	}
+
+	// Assert root -> Frontend is CONTAINS
+	if spdxFindRel(doc, rootPkgID, frontendID, "CONTAINS") == nil {
+		t.Errorf("expected CONTAINS(%s -> %s) for assembly merge", rootPkgID, frontendID)
+	}
+
+	// Assert root -> Backend is CONTAINS
+	if spdxFindRel(doc, rootPkgID, backendID, "CONTAINS") == nil {
+		t.Errorf("expected CONTAINS(%s -> %s) for assembly merge", rootPkgID, backendID)
+	}
+
+	// Assert root -> Frontend is NOT DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, frontendID, "DEPENDS_ON") != nil {
+		t.Errorf("assembly merge: root should not DEPENDS_ON primary %s", frontendID)
+	}
+
+	// Assert existing internal DEPENDS_ON preserved
+	var reactID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "React" {
+			reactID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if reactID != "" && spdxFindRel(doc, frontendID, reactID, "DEPENDS_ON") == nil {
+		t.Errorf("expected preserved DEPENDS_ON(%s -> %s)", frontendID, reactID)
+	}
+
+	t.Logf("✓ Assembly merge relationships verified")
+}
+
+// Test_SPDX_FlatMerge_Relationships verifies that flat merge
+// produces DEPENDS_ON from root to primaries and preserves cloned relationships.
+func Test_SPDX_FlatMerge_Relationships(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "issue344-flat.spdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue344")
+	frontendFile := filepath.Join(testDataDir, "frontend.spdx.json")
+	backendFile := filepath.Join(testDataDir, "backend.spdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{frontendFile, backendFile}
+	params.Output = outputFile
+	params.FlatMerge = true
+	params.Json = true
+	params.OutputSpec = "spdx"
+	params.Name = "MyApp"
+	params.Version = "1.0.0"
+	params.Type = "application"
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	f, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to open output file: %v", err)
+	}
+	defer f.Close()
+
+	doc, err := spdx_json.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to parse output SPDX: %v", err)
+	}
+
+	var rootPkgID string
+	for _, rel := range doc.Relationships {
+		if rel.Relationship == "DESCRIBES" && string(rel.RefA.ElementRefID) == "DOCUMENT" {
+			rootPkgID = string(rel.RefB.ElementRefID)
+			break
+		}
+	}
+	if rootPkgID == "" {
+		t.Fatal("could not find root package")
+	}
+
+	var frontendID, backendID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "Frontend" {
+			frontendID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Backend" {
+			backendID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if frontendID == "" || backendID == "" {
+		t.Fatalf("Frontend or Backend package not found")
+	}
+
+	// Assert root -> Frontend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, frontendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s) for flat merge", rootPkgID, frontendID)
+	}
+
+	// Assert root -> Backend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, backendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s) for flat merge", rootPkgID, backendID)
+	}
+
+	// Assert root -> Frontend is NOT CONTAINS
+	if spdxFindRel(doc, rootPkgID, frontendID, "CONTAINS") != nil {
+		t.Errorf("flat merge: root should not CONTAINS primary %s", frontendID)
+	}
+
+	// Assert existing internal relationships preserved
+	var reactID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "React" {
+			reactID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if reactID != "" && spdxFindRel(doc, frontendID, reactID, "DEPENDS_ON") == nil {
+		t.Errorf("expected preserved DEPENDS_ON(%s -> %s) in flat merge", frontendID, reactID)
+	}
+
+	t.Logf("✓ Flat merge relationships verified")
 }

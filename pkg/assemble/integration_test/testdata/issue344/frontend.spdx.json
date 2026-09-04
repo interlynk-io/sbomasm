@@ -1,0 +1,51 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "frontend",
+  "documentNamespace": "https://example.com/frontend",
+  "creationInfo": {
+    "created": "2025-01-01T00:00:00Z",
+    "creators": ["Tool: test"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Frontend",
+      "name": "Frontend",
+      "downloadLocation": "NOASSERTION",
+      "versionInfo": "1.0.0",
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-React",
+      "name": "React",
+      "downloadLocation": "NOASSERTION",
+      "versionInfo": "18.0.0",
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-Axios",
+      "name": "Axios",
+      "downloadLocation": "NOASSERTION",
+      "versionInfo": "1.0.0",
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Frontend",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Frontend",
+      "relatedSpdxElement": "SPDXRef-React",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Frontend",
+      "relatedSpdxElement": "SPDXRef-Axios",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}
