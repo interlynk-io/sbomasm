@@ -43,8 +43,10 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Debug extracted tags
+        env:
+          DOCKER_TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          echo "Tags: ${{ steps.meta.outputs.tags }}"
+          echo "Tags: ${DOCKER_TAGS}"
 
       - name: Build and push
         id: push
