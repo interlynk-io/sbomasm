@@ -581,10 +581,12 @@ func writeSBOM(doc *v2_3.Document, m *merge) error {
 	} else {
 		var err error
 		outName = m.settings.Output.File
-		f, err = os.Create(m.settings.Output.File)
+		file, err := os.Create(m.settings.Output.File)
 		if err != nil {
 			return err
 		}
+		defer file.Close()
+		f = file
 	}
 
 	buf, err := json.MarshalIndent(doc, "", " ")
