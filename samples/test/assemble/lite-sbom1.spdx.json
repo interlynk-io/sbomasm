@@ -1,0 +1,108 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "lite-sbom1",
+  "documentNamespace": "https://interlynk.io/sbomasm/samples/lite-sbom1",
+  "creationInfo": {
+    "created": "2025-04-25T00:42:27Z",
+    "creators": ["Tool: sbomasm-sample-generator"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-Kyverno",
+      "name": "github.com/kyverno/kyverno",
+      "versionInfo": "v1.14.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "APPLICATION",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/kyverno/kyverno@v1.14.0"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:/golang/github.com/kyverno/kyverno:v1.14.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-OCI",
+      "name": "github.com/fluxcd/pkg/oci",
+      "versionInfo": "v0.45.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:2.3:a:fluxcd:oci:v0.45.0:*:*:*:*:*:*:*"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-AzCore",
+      "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+      "versionInfo": "v1.17.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "834119270cfbc645d0899008e718bd7f75961580655f508f4eb47e3434e84644"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:/golang/github.com/azure/azure-sdk-for-go/sdk/azcore:v1.17.0"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-Kyverno",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Kyverno",
+      "relatedSpdxElement": "SPDXRef-Package-OCI",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-OCI",
+      "relatedSpdxElement": "SPDXRef-Package-AzCore",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}
