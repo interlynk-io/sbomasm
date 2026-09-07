@@ -3,7 +3,7 @@ module github.com/interlynk-io/sbomasm/v2
 go 1.25.7
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.11.0
+	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/fatih/color v1.19.0
 	github.com/github/go-spdx/v2 v2.7.0
 	github.com/google/uuid v1.6.0
