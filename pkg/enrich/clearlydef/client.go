@@ -220,7 +220,10 @@ func queueHarvest(ctx context.Context, retryClient *retryablehttp.Client, coordi
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	// The ClearlyDefined harvest endpoint answers 200 OK when the item was
+	// already queued/known and 201 Created when a new harvest job was
+	// created for it. Both are successful outcomes (see issue #270).
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("unexpected status code for harvest: %d", resp.StatusCode)
 	}
 
