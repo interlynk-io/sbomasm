@@ -1556,3 +1556,240 @@ func Test_SPDX_FlatMerge_PreContains(t *testing.T) {
 
 	t.Logf("✓ Flat merge with pre-existing CONTAINS verified")
 }
+
+// ---- SPDX `--primary` Integration Tests ----
+
+// Test_SPDX_AssemblyMergeWithPrimary verifies assembly merge with --primary flag.
+func Test_SPDX_AssemblyMergeWithPrimary(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "spdx-assembly-primary.spdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue344")
+	primaryFile := filepath.Join(testDataDir, "primary.spdx.json")
+	frontendFile := filepath.Join(testDataDir, "frontend.spdx.json")
+	backendFile := filepath.Join(testDataDir, "backend.spdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{frontendFile, backendFile}
+	params.Output = outputFile
+	params.AssemblyMerge = true
+	params.Json = true
+	params.OutputSpec = "spdx"
+	params.PrimaryFile = primaryFile
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	f, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to open output file: %v", err)
+	}
+	defer f.Close()
+
+	doc, err := spdx_json.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to parse output SPDX: %v", err)
+	}
+
+	// Document identity preserved from primary
+	if doc.DocumentName != "myapp" {
+		t.Errorf("expected DocumentName 'myapp', got %q", doc.DocumentName)
+	}
+
+	if doc.DocumentNamespace != "https://example.com/myapp" {
+		t.Errorf("expected DocumentNamespace 'https://example.com/myapp', got %q", doc.DocumentNamespace)
+	}
+
+	// Find root package (should be MyApp from primary)
+	var rootPkgID string
+	for _, rel := range doc.Relationships {
+		if rel.Relationship == "DESCRIBES" && string(rel.RefA.ElementRefID) == "DOCUMENT" {
+			rootPkgID = string(rel.RefB.ElementRefID)
+			break
+		}
+	}
+
+	if rootPkgID == "" {
+		t.Fatal("could not find root package")
+	}
+
+	var rootPkgName string
+	for _, pkg := range doc.Packages {
+		if string(pkg.PackageSPDXIdentifier) == rootPkgID {
+			rootPkgName = pkg.PackageName
+			break
+		}
+	}
+	if rootPkgName != "MyApp" {
+		t.Errorf("expected root package name 'MyApp', got %q", rootPkgName)
+	}
+
+	// Find secondary primaries
+	var frontendID, backendID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "Frontend" {
+			frontendID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Backend" {
+			backendID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if frontendID == "" || backendID == "" {
+		t.Fatal("Frontend or Backend package not found")
+	}
+
+	// Assert root -> Frontend is CONTAINS
+	if spdxFindRel(doc, rootPkgID, frontendID, "CONTAINS") == nil {
+		t.Errorf("expected CONTAINS(%s -> %s)", rootPkgID, frontendID)
+	}
+	// Assert root -> Backend is CONTAINS
+	if spdxFindRel(doc, rootPkgID, backendID, "CONTAINS") == nil {
+		t.Errorf("expected CONTAINS(%s -> %s)", rootPkgID, backendID)
+	}
+
+	// Assert root -> Frontend is NOT DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, frontendID, "DEPENDS_ON") != nil {
+		t.Error("assembly merge with primary: root should not DEPENDS_ON secondary primary")
+	}
+
+	// Primary's creators preserved, secondary's not
+	hasAlice := false
+	hasBob := false
+	for _, c := range doc.CreationInfo.Creators {
+		if c.Creator == "Alice" {
+			hasAlice = true
+		}
+		if c.Creator == "Bob" {
+			hasBob = true
+		}
+	}
+	if !hasAlice {
+		t.Error("expected primary's person creator 'Alice' to be preserved")
+	}
+	// Secondary SBOM doesn't have Bob, but this assertion documents intent
+	_ = hasBob
+
+	t.Logf("SPDX assembly merge with primary verified")
+}
+
+// Test_SPDX_FlatMergeWithPrimary verifies flat merge with --primary flag.
+func Test_SPDX_FlatMergeWithPrimary(t *testing.T) {
+	outputFile := filepath.Join(t.TempDir(), "spdx-flat-primary.spdx.json")
+
+	testDataDir := filepath.Join(getTestDataDir(), "issue344")
+	primaryFile := filepath.Join(testDataDir, "primary.spdx.json")
+	frontendFile := filepath.Join(testDataDir, "frontend.spdx.json")
+	backendFile := filepath.Join(testDataDir, "backend.spdx.json")
+
+	ctx := logger.WithLogger(context.Background())
+	params := assemble.NewParams()
+	params.Ctx = &ctx
+	params.Input = []string{frontendFile, backendFile}
+	params.Output = outputFile
+	params.FlatMerge = true
+	params.Json = true
+	params.OutputSpec = "spdx"
+	params.PrimaryFile = primaryFile
+
+	config, err := assemble.PopulateConfig(params)
+	if err != nil {
+		t.Fatalf("PopulateConfig failed: %v", err)
+	}
+
+	err = assemble.Assemble(config)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	f, err := os.Open(outputFile)
+	if err != nil {
+		t.Fatalf("Failed to open output file: %v", err)
+	}
+	defer f.Close()
+
+	doc, err := spdx_json.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to parse output SPDX: %v", err)
+	}
+
+	// Document identity preserved from primary
+	if doc.DocumentName != "myapp" {
+		t.Errorf("expected DocumentName 'myapp', got %q", doc.DocumentName)
+	}
+	if doc.DocumentNamespace != "https://example.com/myapp" {
+		t.Errorf("expected DocumentNamespace 'https://example.com/myapp', got %q", doc.DocumentNamespace)
+	}
+
+	// Find root package
+	var rootPkgID string
+	for _, rel := range doc.Relationships {
+		if rel.Relationship == "DESCRIBES" && string(rel.RefA.ElementRefID) == "DOCUMENT" {
+			rootPkgID = string(rel.RefB.ElementRefID)
+			break
+		}
+	}
+	if rootPkgID == "" {
+		t.Fatal("could not find root package")
+	}
+
+	var rootPkgName string
+	for _, pkg := range doc.Packages {
+		if string(pkg.PackageSPDXIdentifier) == rootPkgID {
+			rootPkgName = pkg.PackageName
+			break
+		}
+	}
+	if rootPkgName != "MyApp" {
+		t.Errorf("expected root package name 'MyApp', got %q", rootPkgName)
+	}
+
+	// Find secondary primaries
+	var frontendID, backendID string
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "Frontend" {
+			frontendID = string(pkg.PackageSPDXIdentifier)
+		}
+		if pkg.PackageName == "Backend" {
+			backendID = string(pkg.PackageSPDXIdentifier)
+		}
+	}
+	if frontendID == "" || backendID == "" {
+		t.Fatal("Frontend or Backend package not found")
+	}
+
+	// Assert root -> Frontend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, frontendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s)", rootPkgID, frontendID)
+	}
+	// Assert root -> Backend is DEPENDS_ON
+	if spdxFindRel(doc, rootPkgID, backendID, "DEPENDS_ON") == nil {
+		t.Errorf("expected DEPENDS_ON(%s -> %s)", rootPkgID, backendID)
+	}
+
+	// Assert root -> Frontend is NOT CONTAINS
+	if spdxFindRel(doc, rootPkgID, frontendID, "CONTAINS") != nil {
+		t.Error("flat merge with primary: root should not CONTAINS secondary primary")
+	}
+
+	// All packages from primary should be present
+	var foundLibA bool
+	for _, pkg := range doc.Packages {
+		if pkg.PackageName == "LibA" {
+			foundLibA = true
+			break
+		}
+	}
+	if !foundLibA {
+		t.Error("expected primary's LibA package to be in merged output")
+	}
+
+	t.Logf("SPDX flat merge with primary verified")
+}

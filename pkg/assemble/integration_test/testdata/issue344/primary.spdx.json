@@ -1,0 +1,39 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "myapp",
+  "documentNamespace": "https://example.com/myapp",
+  "creationInfo": {
+    "created": "2025-01-01T00:00:00Z",
+    "creators": ["Tool: primary-tool-1.0", "Person: Alice"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-MyApp",
+      "name": "MyApp",
+      "downloadLocation": "NOASSERTION",
+      "versionInfo": "1.0.0",
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-LibA",
+      "name": "LibA",
+      "downloadLocation": "NOASSERTION",
+      "versionInfo": "1.0.0",
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-MyApp",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-MyApp",
+      "relatedSpdxElement": "SPDXRef-LibA",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}

@@ -112,6 +112,8 @@ type assemble struct {
 	PrimaryFile                string
 	MergeMode                  string // if-missing-or-empty, overwrite
 	DocLicense                 string
+	IsAssemblyMergeWithPrimary bool
+	IsFlatMergeWithPrimary     bool
 }
 
 type MergeSettings struct {
@@ -139,6 +141,9 @@ func Merge(ms *MergeSettings) error {
 	}
 
 	merger := newMerge(ms)
+	if ms.Assemble.IsAssemblyMergeWithPrimary || ms.Assemble.IsFlatMergeWithPrimary {
+		ms.Input.Files = append([]string{ms.Assemble.PrimaryFile}, ms.Input.Files...)
+	}
 	merger.loadBoms()
 	return merger.combinedMerge()
 }
