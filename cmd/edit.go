@@ -55,7 +55,13 @@ Advanced Example:
 	$ sbomasm edit --subject primary-component --hash "MD5 (hash1)" --hash "SHA256 (hash2)" in-sbom-5.json
 	`,
 	SilenceUsage: true,
-	Args:         cobra.ExactArgs(1),
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+			cmd.Println(cmd.UsageString())
+			return err
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		debug, _ := cmd.Flags().GetBool("debug")
 		if debug {
