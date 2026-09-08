@@ -19,7 +19,9 @@ package spdx
 import (
 	"context"
 	"errors"
+	"strings"
 
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -110,6 +112,8 @@ type assemble struct {
 	PrimaryFile                string
 	MergeMode                  string // if-missing-or-empty, overwrite
 	DocLicense                 string
+	IsAssemblyMergeWithPrimary bool
+	IsFlatMergeWithPrimary     bool
 }
 
 type MergeSettings struct {
@@ -122,7 +126,7 @@ type MergeSettings struct {
 
 func Merge(ms *MergeSettings) error {
 
-	if len(ms.Output.Spec) > 0 && ms.Output.Spec != "spdx" {
+	if len(ms.Output.Spec) > 0 && !strings.EqualFold(ms.Output.Spec, string(sbom.SBOMSpecSPDX)) {
 		return errors.New("invalid output spec")
 	}
 
@@ -137,6 +141,9 @@ func Merge(ms *MergeSettings) error {
 	}
 
 	merger := newMerge(ms)
+	if ms.Assemble.IsAssemblyMergeWithPrimary || ms.Assemble.IsFlatMergeWithPrimary {
+		ms.Input.Files = append([]string{ms.Assemble.PrimaryFile}, ms.Input.Files...)
+	}
 	merger.loadBoms()
 	return merger.combinedMerge()
 }

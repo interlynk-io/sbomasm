@@ -1,0 +1,139 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "lite-sbom2",
+  "documentNamespace": "https://interlynk.io/sbomasm/samples/lite-sbom2",
+  "creationInfo": {
+    "created": "2025-04-25T00:42:27Z",
+    "creators": ["Tool: sbomasm-sample-generator"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-Cosign",
+      "name": "github.com/sigstore/cosign",
+      "versionInfo": "v1.21.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "APPLICATION",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/sigstore/cosign@v1.21.0"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:/golang/github.com/sigstore/cosign:v1.21.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Httpsnoop",
+      "name": "github.com/felixge/httpsnoop",
+      "versionInfo": "v1.0.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "3454d5d998f56cbe2673db2a5800976d01550418365b718fbeaa7cfc4492d968"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/felixge/httpsnoop@v1.0.4"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:2.3:a:felixge:httpsnoop:v1.0.4:*:*:*:*:*:*:*"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Fulcio",
+      "name": "github.com/sigstore/fulcio",
+      "versionInfo": "v1.7.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "45ca16db4373e3d206799caedf2f50621cb257764a43ce53f855cf2a4bc4f9a4"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/sigstore/fulcio@v1.7.1"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:2.3:a:sigstore:fulcio:v1.7.1:*:*:*:*:*:*:*"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Rekor",
+      "name": "github.com/sigstore/rekor",
+      "versionInfo": "v1.3.9",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335"
+      },
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:golang/github.com/sigstore/rekor@v1.3.9"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceType": "cpe23Type",
+          "referenceLocator": "cpe:/golang/github.com/sigstore/rekor:v1.3.9"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-Cosign",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosign",
+      "relatedSpdxElement": "SPDXRef-Package-Fulcio",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Cosign",
+      "relatedSpdxElement": "SPDXRef-Package-Rekor",
+      "relationshipType": "DEPENDS_ON"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Fulcio",
+      "relatedSpdxElement": "SPDXRef-Package-Httpsnoop",
+      "relationshipType": "DEPENDS_ON"
+    }
+  ]
+}

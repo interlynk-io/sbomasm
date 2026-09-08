@@ -164,6 +164,8 @@ func toSpdxMergerSettings(c *config) *spdx.MergeSettings {
 	ms.Assemble.IncludeComponents = c.Assemble.IncludeComponents
 	ms.Assemble.IncludeDuplicateComponents = c.Assemble.includeDuplicateComponents
 	ms.Assemble.IncludeDependencyGraph = c.Assemble.IncludeDependencyGraph
+	ms.Assemble.IsAssemblyMergeWithPrimary = c.Assemble.IsAssemblyMergeWithPrimary
+	ms.Assemble.IsFlatMergeWithPrimary = c.Assemble.IsFlatMergeWithPrimary
 
 	ms.Input.Files = []string{}
 	ms.Input.Files = append(ms.Input.Files, c.input.files...)
