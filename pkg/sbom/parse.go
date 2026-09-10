@@ -41,12 +41,12 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := Detect(f)
+	spec, format, version, err := Detect(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	log.Debugf("detected SBOM format: %s, spec: %s", format, spec)
+	log.Debugf("detected SBOM format: %s, spec: %s, version: %s", format, spec, version)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -54,14 +54,14 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	}
 
 	// parse into SBOM object
-	sbomDoc, err := ParseSBOM(f, spec, format)
+	sbomDoc, err := ParseSBOM(f, spec, format, version)
 	if err != nil {
 		return nil, err
 	}
 	return sbomDoc, nil
 }
 
-func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, error) {
+func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersion) (SBOMDocument, error) {
 	if f == nil {
 		return nil, fmt.Errorf("no SBOM file provided")
 	}
@@ -69,6 +69,10 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, erro
 
 	switch spec {
 	case SBOMSpecSPDX:
+		if isSpdx3Version(string(version)) {
+			// TODO: Parse SPDX 3.0 using spdx_zen
+			return nil, fmt.Errorf("SPDX 3.0 parsing not yet implemented")
+		}
 		return ParseSPDXSBOM(f, format)
 	case SBOMSpecCDX:
 		return ParseCDXSBOM(f, format)

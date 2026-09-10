@@ -67,7 +67,7 @@ func (c *combiner) canCombine() error {
 	specs := []string{}
 
 	for _, doc := range c.c.input.files {
-		spec, _, err := sbom.DetectSbom(doc)
+		spec, _, _, err := sbom.DetectSbom(doc)
 		if err != nil {
 			return fmt.Errorf("unable to detect sbom format for %s: %v", doc, err)
 		}

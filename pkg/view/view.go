@@ -685,7 +685,7 @@ func specVersionToString(sv cydx.SpecVersion) string {
 // LoadSBOM loads an SBOM from a file path
 func LoadSBOM(path string) (*ComponentGraph, error) {
 	// Detect the SBOM format
-	spec, format, err := sbom.DetectSbom(path)
+	spec, format, _, err := sbom.DetectSbom(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
 	}

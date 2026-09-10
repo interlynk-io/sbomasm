@@ -106,14 +106,14 @@ func loadCdxBom(ctx context.Context, path string) (*cydx.BOM, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := sbom.Detect(f)
+	spec, format, _, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
-	sbomDoc, err := sbom.ParseSBOM(f, spec, format)
+	sbomDoc, err := sbom.ParseSBOM(f, spec, format, "")
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func writeCdxBom(bom *cydx.BOM, c *configParams) error {
 	}
 	defer inf.Close()
 
-	_, format, err := sbom.Detect(inf)
+	_, format, _, err := sbom.Detect(inf)
 	if err != nil {
 		return err
 	}

@@ -65,7 +65,7 @@ func Edit(eParams *EditParams) error {
 	}
 	log.Debugf("config %+v", c)
 
-	spec, format, err := sbom.DetectSbom(eParams.Input)
+	spec, format, _, err := sbom.DetectSbom(eParams.Input)
 	if err != nil {
 		return err
 	}

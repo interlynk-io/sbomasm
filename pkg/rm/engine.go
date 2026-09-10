@@ -52,7 +52,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	defer f.Close()
 
 	// detect sbom format
-	spec, format, err := sbom.Detect(f)
+	spec, format, _, err := sbom.Detect(f)
 	if err != nil {
 		return fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
@@ -65,7 +65,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	}
 
 	// parse into SBOM object
-	sbomDoc, err := sbom.ParseSBOM(f, spec, format)
+	sbomDoc, err := sbom.ParseSBOM(f, spec, format, "")
 	if err != nil {
 		return err
 	}

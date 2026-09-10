@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,8 +47,17 @@ const (
 	FileFormatUnknown  FileFormat = "unknown"
 )
 
+// FormatVersion represents the version string of an SBOM specification
+type FormatVersion string
+
 type spdxbasic struct {
-	ID string `json:"SPDXID" yaml:"SPDXID"`
+	ID      string `json:"SPDXID" yaml:"SPDXID"`
+	Version string `json:"spdxVersion" yaml:"spdxVersion"`
+}
+
+// spdx3Basic is used to detect SPDX 3.0 JSON-LD format
+type spdx3Basic struct {
+	Context interface{} `json:"@context"` // Can be string or array
 }
 
 type cdxbasic struct {
@@ -56,15 +65,34 @@ type cdxbasic struct {
 	BOMFormat string `json:"bomFormat" xml:"-"`
 }
 
-func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
+func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, FormatVersion, error) {
 	defer f.Seek(0, io.SeekStart)
+
+	f.Seek(0, io.SeekStart)
+
+	// Check for SPDX 3.0 first (JSON-LD format with @context)
+	var s3 spdx3Basic
+	if err := json.NewDecoder(f).Decode(&s3); err == nil {
+		contextStr := extractContextString(s3.Context)
+		if strings.Contains(contextStr, "spdx.org/rdf/3.0") {
+			version := ""
+			if strings.Contains(contextStr, "3.0.1") {
+				version = "SPDX-3.0.1"
+			} else if strings.Contains(contextStr, "/3.0/") || strings.HasSuffix(contextStr, "/3.0") {
+				version = "SPDX-3.0"
+			}
+			if version != "" {
+				return SBOMSpecSPDX, FileFormatJSON, FormatVersion(version), nil
+			}
+		}
+	}
 
 	f.Seek(0, io.SeekStart)
 
 	var s spdxbasic
 	if err := json.NewDecoder(f).Decode(&s); err == nil {
 		if strings.HasPrefix(s.ID, "SPDX") {
-			return SBOMSpecSPDX, FileFormatJSON, nil
+			return SBOMSpecSPDX, FileFormatJSON, FormatVersion(s.Version), nil
 		}
 	}
 
@@ -73,7 +101,7 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
 	var cdx cdxbasic
 	if err := json.NewDecoder(f).Decode(&cdx); err == nil {
 		if cdx.BOMFormat == "CycloneDX" {
-			return SBOMSpecCDX, FileFormatJSON, nil
+			return SBOMSpecCDX, FileFormatJSON, "", nil
 		}
 	}
 
@@ -81,14 +109,14 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
 
 	if err := xml.NewDecoder(f).Decode(&cdx); err == nil {
 		if strings.HasPrefix(cdx.XMLNS, "http://cyclonedx.org") {
-			return SBOMSpecCDX, FileFormatXML, nil
+			return SBOMSpecCDX, FileFormatXML, "", nil
 		}
 	}
 	f.Seek(0, io.SeekStart)
 
 	if sc := bufio.NewScanner(f); sc.Scan() {
 		if strings.HasPrefix(sc.Text(), "SPDX") {
-			return SBOMSpecSPDX, FileFormatTagValue, nil
+			return SBOMSpecSPDX, FileFormatTagValue, "", nil
 		}
 	}
 
@@ -97,23 +125,53 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, error) {
 	var y spdxbasic
 	if err := yaml.NewDecoder(f).Decode(&y); err == nil {
 		if strings.HasPrefix(y.ID, "SPDX") {
-			return SBOMSpecSPDX, FileFormatYAML, nil
+			return SBOMSpecSPDX, FileFormatYAML, FormatVersion(y.Version), nil
 		}
 	}
 
-	return SBOMSpecUnknown, FileFormatUnknown, fmt.Errorf("unknown spec or format")
+	return SBOMSpecUnknown, FileFormatUnknown, "", fmt.Errorf("unknown spec or format")
 }
 
-func DetectSbom(path string) (SBOMSpec, FileFormat, error) {
+// isSpdx3Version checks if the version string indicates a supported SPDX 3.x version
+func isSpdx3Version(version string) bool {
+	// Handle formats like "SPDX-3.0", "SPDX-3.0.1", "3.0", "3.0.1"
+	v := strings.ToLower(version)
+	v = strings.TrimPrefix(v, "spdx-")
+
+	// Only support SPDX 3.0.x versions (3.0, 3.0.1, etc.)
+	return strings.HasPrefix(v, "3.0")
+}
+
+// extractContextString extracts the SPDX context string from SPDX 3.0 JSON-LD
+func extractContextString(context interface{}) string {
+	if context == nil {
+		return ""
+	}
+
+	switch v := context.(type) {
+	case string:
+		return v
+	case []interface{}:
+		// Scan all contexts and return the first SPDX context
+		for _, item := range v {
+			if s, ok := item.(string); ok && strings.Contains(s, "spdx.org/rdf/3.0") {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func DetectSbom(path string) (SBOMSpec, FileFormat, FormatVersion, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer f.Close()
 
-	spec, format, err := Detect(f)
+	spec, format, version, err := Detect(f)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return spec, format, nil
+	return spec, format, version, nil
 }
