@@ -58,7 +58,7 @@ nfpms:
     vendor: Interlynk
     homepage: https://interlynk.io
     maintainer: Interlynk Authors <hello@interlynk.io>
-    description: SBOM Assembler - A tool to edit SBOM or assemble multiple sboms into a single sbom.
+    description: sbomasm - The Complete SBOM Management Toolkit.
     license: Apache-2.0
     formats:
       - apk
