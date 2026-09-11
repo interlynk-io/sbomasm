@@ -17,6 +17,7 @@
 package sbom
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/spdx-zen/parse"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx/common"
@@ -70,8 +72,7 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersi
 	switch spec {
 	case SBOMSpecSPDX:
 		if isSpdx3Version(string(version)) {
-			// TODO: Parse SPDX 3.0 using spdx_zen
-			return nil, fmt.Errorf("SPDX 3.0 parsing not yet implemented")
+			return ParseSPDX3(f, version)
 		}
 		return ParseSPDXSBOM(f, format)
 	case SBOMSpecCDX:
@@ -124,4 +125,26 @@ func ParseCDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	}
 
 	return &CycloneDXDocument{BOM: bom}, nil
+}
+
+// ParseSPDX3 parses an SPDX 3.0 JSON-LD document using spdx_zen.
+// It reads all content into memory so the underlying file can be reused.
+func ParseSPDX3(f io.ReadSeeker, version FormatVersion) (*SPDX3Document, error) {
+	// spdx_zen parses from an io.Reader; read all bytes to avoid consuming the file
+	rawContent, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SPDX 3.0 content: %w", err)
+	}
+
+	reader := parse.NewReader()
+	doc, err := reader.FromReader(bytes.NewReader(rawContent))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse SPDX 3.0 document: %w", err)
+	}
+
+	return &SPDX3Document{
+		Doc:     doc,
+		Version: version,
+		Format:  FileFormatJSON,
+	}, nil
 }

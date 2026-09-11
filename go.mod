@@ -12,6 +12,7 @@ require (
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
+	github.com/interlynk-io/spdx-zen v0.1.5
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pingcap/log v1.1.0
