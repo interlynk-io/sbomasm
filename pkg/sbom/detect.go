@@ -36,6 +36,24 @@ const (
 	SBOMSpecUnknown SBOMSpec = "unknown"
 )
 
+// SPDX version constants for detection and parsing
+const (
+	spdxVersion30     = "3.0"
+	spdxVersion301    = "3.0.1"
+	spdxVersionPrefix = "SPDX-"
+	spdxContextURL    = "spdx.org/rdf/3.0"
+	spdxVersion20     = "SPDX-2.3"
+	spdxVersion22     = "SPDX-2.2"
+)
+
+// Supported SPDX 3.x versions
+type Spdx3Version string
+
+const (
+	SpdxVersion30  Spdx3Version = spdxVersion30
+	SpdxVersion301 Spdx3Version = spdxVersion301
+)
+
 type FileFormat string
 
 const (
@@ -74,12 +92,13 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, FormatVersion, error) {
 	var s3 spdx3Basic
 	if err := json.NewDecoder(f).Decode(&s3); err == nil {
 		contextStr := extractContextString(s3.Context)
-		if strings.Contains(contextStr, "spdx.org/rdf/3.0") {
+
+		if strings.Contains(contextStr, spdxContextURL) {
 			version := ""
-			if strings.Contains(contextStr, "3.0.1") {
-				version = "SPDX-3.0.1"
-			} else if strings.Contains(contextStr, "/3.0/") || strings.HasSuffix(contextStr, "/3.0") {
-				version = "SPDX-3.0"
+			if strings.Contains(contextStr, spdxVersion301) {
+				version = spdxVersionPrefix + spdxVersion301
+			} else if strings.Contains(contextStr, "/"+spdxVersion30+"/") || strings.HasSuffix(contextStr, "/"+spdxVersion30) {
+				version = spdxVersionPrefix + spdxVersion30
 			}
 			if version != "" {
 				return SBOMSpecSPDX, FileFormatJSON, FormatVersion(version), nil
@@ -136,10 +155,10 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, FormatVersion, error) {
 func isSpdx3Version(version string) bool {
 	// Handle formats like "SPDX-3.0", "SPDX-3.0.1", "3.0", "3.0.1"
 	v := strings.ToLower(version)
-	v = strings.TrimPrefix(v, "spdx-")
+	v = strings.TrimPrefix(v, strings.ToLower(spdxVersionPrefix))
 
 	// Only support SPDX 3.0.x versions (3.0, 3.0.1, etc.)
-	return strings.HasPrefix(v, "3.0")
+	return strings.HasPrefix(v, spdxVersion30)
 }
 
 // extractContextString extracts the SPDX context string from SPDX 3.0 JSON-LD
@@ -154,7 +173,7 @@ func extractContextString(context interface{}) string {
 	case []interface{}:
 		// Scan all contexts and return the first SPDX context
 		for _, item := range v {
-			if s, ok := item.(string); ok && strings.Contains(s, "spdx.org/rdf/3.0") {
+			if s, ok := item.(string); ok && strings.Contains(s, spdxContextURL) {
 				return s
 			}
 		}
