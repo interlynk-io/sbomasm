@@ -156,6 +156,8 @@ clean-all: clean ## Clean all artifacts including caches
 update-deps: ## Update all dependencies
 	@echo "Updating dependencies..."
 	@go get -u ./...
+	# Pinned: keep indirect dep stable (used by anchore/syft)
+	@go get github.com/anchore/go-struct-converter@v0.1.0
 	@go mod tidy
 
 .PHONY: tidy

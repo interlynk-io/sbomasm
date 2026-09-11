@@ -1,6 +1,6 @@
 # Use buildx for multi-platform builds
 # Build stage
-FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 LABEL org.opencontainers.image.source="https://github.com/interlynk-io/sbomasm"
 
 RUN apk add --no-cache make git
@@ -16,7 +16,7 @@ RUN make build && chmod +x ./build/sbomasm
 # Final stage
 FROM alpine:3.19
 LABEL org.opencontainers.image.source="https://github.com/interlynk-io/sbomasm"
-LABEL org.opencontainers.image.description="Assembler for your sboms"
+LABEL org.opencontainers.image.description="The Complete SBOM Management Toolkit"
 LABEL org.opencontainers.image.licenses=Apache-2.0
 
 # Copy our static executable
