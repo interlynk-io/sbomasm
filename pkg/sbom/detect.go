@@ -28,6 +28,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// SBOMSpec identifies the SBOM specification family.
 type SBOMSpec string
 
 const (
@@ -46,7 +47,7 @@ const (
 	spdxVersion22     = "SPDX-2.2"
 )
 
-// Supported SPDX 3.x versions
+// Spdx3Version enumerates the supported SPDX 3.x versions.
 type Spdx3Version string
 
 const (
@@ -54,6 +55,7 @@ const (
 	SpdxVersion301 Spdx3Version = spdxVersion301
 )
 
+// FileFormat identifies the serialization format of an SBOM file.
 type FileFormat string
 
 const (
@@ -65,24 +67,31 @@ const (
 	FileFormatUnknown  FileFormat = "unknown"
 )
 
-// FormatVersion represents the version string of an SBOM specification
+// FormatVersion represents the version string of an SBOM specification (e.g.
+// "SPDX-2.3", "SPDX-3.0.1").
 type FormatVersion string
 
+// spdxbasic is a minimal struct for detecting SPDX 2.x JSON and YAML files.
 type spdxbasic struct {
 	ID      string `json:"SPDXID" yaml:"SPDXID"`
 	Version string `json:"spdxVersion" yaml:"spdxVersion"`
 }
 
-// spdx3Basic is used to detect SPDX 3.0 JSON-LD format
+// spdx3Basic is used to detect SPDX 3.0 JSON-LD format.
 type spdx3Basic struct {
 	Context interface{} `json:"@context"` // Can be string or array
 }
 
+// cdxbasic is a minimal struct for detecting CycloneDX JSON and XML files.
 type cdxbasic struct {
 	XMLNS     string `json:"-" xml:"xmlns,attr"`
 	BOMFormat string `json:"bomFormat" xml:"-"`
 }
 
+// Detect inspects the contents of f and returns the detected SBOM spec, file
+// format, and version. The caller must provide a seekable reader; the function
+// rewinds to the start on exit. Returns SBOMSpecUnknown and an error if the
+// format cannot be identified.
 func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, FormatVersion, error) {
 	defer f.Seek(0, io.SeekStart)
 
@@ -151,8 +160,9 @@ func Detect(f io.ReadSeeker) (SBOMSpec, FileFormat, FormatVersion, error) {
 	return SBOMSpecUnknown, FileFormatUnknown, "", fmt.Errorf("unknown spec or format")
 }
 
-// isSpdx3Version checks if the version string indicates a supported SPDX 3.x version
-func isSpdx3Version(version string) bool {
+// IsSpdx3Version reports whether the given version string represents an SPDX
+// 3.0.x format (e.g. "SPDX-3.0", "SPDX-3.0.1", "3.0", "3.0.1").
+func IsSpdx3Version(version string) bool {
 	// Handle formats like "SPDX-3.0", "SPDX-3.0.1", "3.0", "3.0.1"
 	v := strings.ToLower(version)
 	v = strings.TrimPrefix(v, strings.ToLower(spdxVersionPrefix))
@@ -181,6 +191,8 @@ func extractContextString(context interface{}) string {
 	return ""
 }
 
+// DetectSbom opens the file at path and detects its SBOM spec, format, and
+// version. It is a convenience wrapper around Detect.
 func DetectSbom(path string) (SBOMSpec, FileFormat, FormatVersion, error) {
 	f, err := os.Open(path)
 	if err != nil {

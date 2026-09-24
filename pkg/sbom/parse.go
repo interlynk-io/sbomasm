@@ -33,6 +33,8 @@ import (
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
 )
 
+// Parser detects the format of sbomFile, parses it into the appropriate typed
+// document (SPDX, SPDX 3.0, or CycloneDX), and returns it as an SBOMDocument.
 func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("Parsing SBOM file: %s", sbomFile)
@@ -63,6 +65,8 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	return sbomDoc, nil
 }
 
+// ParseSBOM parses an already-opened SBOM file given its detected spec, format,
+// and version. It routes to the appropriate parser based on the spec.
 func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersion) (SBOMDocument, error) {
 	if f == nil {
 		return nil, fmt.Errorf("no SBOM file provided")
@@ -71,7 +75,7 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersi
 
 	switch spec {
 	case SBOMSpecSPDX:
-		if isSpdx3Version(string(version)) {
+		if IsSpdx3Version(string(version)) {
 			return ParseSPDX3(f, version)
 		}
 		return ParseSPDXSBOM(f, format)
@@ -83,6 +87,9 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersi
 	}
 }
 
+// ParseSPDXSBOM parses an SPDX 2.x document from f using the format-specific
+// decoder (JSON, tag-value, YAML, or RDF). Returns an *SPDXDocument wrapping
+// the parsed result.
 func ParseSPDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	var d common.AnyDocument
 	var err error
@@ -103,6 +110,8 @@ func ParseSPDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	return &SPDXDocument{Doc: d}, err
 }
 
+// ParseCDXSBOM parses a CycloneDX BOM from f using the format-specific decoder
+// (JSON or XML). Returns a *CycloneDXDocument wrapping the parsed result.
 func ParseCDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	var err error
 	var bom *cydx.BOM

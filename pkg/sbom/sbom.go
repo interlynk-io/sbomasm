@@ -22,17 +22,23 @@ import (
 	"github.com/spdx/tools-golang/spdx/common"
 )
 
+// SBOMDocument is the common interface for all parsed SBOM documents.
+// It provides uniform access to the underlying spec type and raw document.
 type SBOMDocument interface {
 	SpecType() string
 	Document() any
 }
 
+// SPDXDocument wraps an SPDX 2.x/2.3 document parsed by spdx/tools-golang.
 type SPDXDocument struct {
 	Doc common.AnyDocument
 }
 
+// SpecType returns the SBOM spec identifier for this document.
 func (s *SPDXDocument) SpecType() string { return "spdx" }
-func (s *SPDXDocument) Document() any    { return s.Doc }
+
+// Document returns the underlying spdx/tools-golang document.
+func (s *SPDXDocument) Document() any { return s.Doc }
 
 // SPDX3Document wraps spdx_zen's parsed SPDX 3.0 document.
 // The *parse.Document is kept alive for mutation and serialization.
@@ -42,12 +48,19 @@ type SPDX3Document struct {
 	Format  FileFormat
 }
 
+// SpecType returns the SBOM spec identifier for this document.
 func (s *SPDX3Document) SpecType() string { return "spdx" }
-func (s *SPDX3Document) Document() any    { return s.Doc }
 
+// Document returns the underlying spdx_zen document.
+func (s *SPDX3Document) Document() any { return s.Doc }
+
+// CycloneDXDocument wraps a parsed CycloneDX BOM.
 type CycloneDXDocument struct {
 	BOM *cydx.BOM
 }
 
+// SpecType returns the SBOM spec identifier for this document.
 func (c *CycloneDXDocument) SpecType() string { return "cdx" }
-func (c *CycloneDXDocument) Document() any    { return c.BOM }
+
+// Document returns the underlying CycloneDX BOM.
+func (c *CycloneDXDocument) Document() any { return c.BOM }
