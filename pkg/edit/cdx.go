@@ -173,7 +173,7 @@ func writeCdxBom(bom *cydx.BOM, c *configParams) error {
 }
 
 func cdxFindComponent(b *cydx.BOM, c *configParams) *cydx.Component {
-	if c.search.subject != "component-name-version" {
+	if c.search.subject != SubjectComponentNameVersion {
 		return nil
 	}
 

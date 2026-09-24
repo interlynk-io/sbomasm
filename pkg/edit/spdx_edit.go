@@ -53,7 +53,7 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 	doc.bom = bom
 	doc.c = c
 
-	if c.search.subject == "primary-component" {
+	if c.search.subject == SubjectPrimaryComponent {
 		pkg, err := spdxFindPkg(bom, c, true)
 		if err == nil {
 			doc.pkg = pkg
@@ -63,7 +63,7 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 		}
 	}
 
-	if c.search.subject == "component-name-version" {
+	if c.search.subject == SubjectComponentNameVersion {
 
 		pkg, err := spdxFindPkg(bom, c, false)
 		if err == nil {
@@ -88,7 +88,7 @@ func (d *spdxEditDoc) update() {
 		{"version", d.version},
 		{"supplier", d.supplier},
 		{"authors", d.authors},
-		{"purl", d.purl},
+		{ExtIDTypePurl, d.purl},
 		{"cpe", d.cpe},
 		{"licenses", d.licenses},
 		{"hashes", d.hashes},
@@ -119,7 +119,7 @@ func (d *spdxEditDoc) name() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -139,7 +139,7 @@ func (d *spdxEditDoc) version() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -161,7 +161,7 @@ func (d *spdxEditDoc) supplier() error {
 	comment := ""
 	comment += fmt.Sprintf("%s (%s)", d.c.supplier.name, d.c.supplier.value)
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		// add creator comment
 		if d.bom.CreationInfo == nil {
 			d.bom.CreationInfo = &spdx.CreationInfo{
@@ -246,19 +246,19 @@ func (d *spdxEditDoc) purl() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
 	purl := spdx.PackageExternalReference{
 		Category: "PACKAGE-MANAGER",
-		RefType:  "purl",
+		RefType:  ExtIDTypePurl,
 		Locator:  d.c.purl,
 	}
 
 	foundPurlWithKeyAndValue := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == "purl" && ref.Locator == d.c.purl {
+		if ref.RefType == ExtIDTypePurl && ref.Locator == d.c.purl {
 			foundPurlWithKeyAndValue = true
 		}
 	}
@@ -285,7 +285,7 @@ func (d *spdxEditDoc) purl() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == "purl"
+				return strings.ToLower(x.RefType) == ExtIDTypePurl
 			})
 
 			if extRef == nil {
@@ -303,19 +303,19 @@ func (d *spdxEditDoc) cpe() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
 	cpe := spdx.PackageExternalReference{
 		Category: "SECURITY",
-		RefType:  "cpe23Type",
+		RefType:  ExtIDTypeCpe23,
 		Locator:  d.c.cpe,
 	}
 
 	foundCpe := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == "cpe23Type" {
+		if ref.RefType == ExtIDTypeCpe23 {
 			foundCpe = true
 		}
 	}
@@ -363,7 +363,7 @@ func (d *spdxEditDoc) licenses() error {
 	license := spdxConstructLicenses(d.bom, d.c)
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.DataLicense == "" {
 				d.bom.DataLicense = license
 			}
@@ -373,7 +373,7 @@ func (d *spdxEditDoc) licenses() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.DataLicense = license
 		} else {
 			d.pkg.PackageLicenseConcluded = license
@@ -387,7 +387,7 @@ func (d *spdxEditDoc) hashes() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -512,7 +512,7 @@ func (d *spdxEditDoc) copyright() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -533,7 +533,7 @@ func (d *spdxEditDoc) description() error {
 	}
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.DocumentComment == "" {
 				d.bom.DocumentComment = d.c.description
 			}
@@ -543,7 +543,7 @@ func (d *spdxEditDoc) description() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.DocumentComment = d.c.description
 		} else {
 			d.pkg.PackageDescription = d.c.description
@@ -558,7 +558,7 @@ func (d *spdxEditDoc) repository() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -578,7 +578,7 @@ func (d *spdxEditDoc) typ() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -617,7 +617,7 @@ func (d *spdxEditDoc) lifeCycles() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
+	if d.c.search.subject != SubjectDocument {
 		return errNotSupported
 	}
 

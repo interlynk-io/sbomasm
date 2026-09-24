@@ -27,6 +27,27 @@ var (
 	errInvalidInput    = errors.New("invalid input data")
 )
 
+// Subject constants for the --subject flag. Using constants prevents typos
+// and makes refactoring safe across all edit implementations.
+const (
+	SubjectDocument            = "document"
+	SubjectPrimaryComponent      = "primary-component"
+	SubjectComponentNameVersion  = "component-name-version"
+)
+
+// ExternalIdentifierType constants for SPDX 3.0 external identifiers.
+// These match the SPDX 3.0 JSON schema enum values (NOT SPDX 2.3 values).
+const (
+	ExtIDTypePurl  = "packageUrl"
+	ExtIDTypeCpe23 = "cpe23"
+	ExtIDTypeEmail = "email"
+)
+
+// RelationshipType constants for SPDX 3.0 relationships.
+const (
+	RelTypeHasConcludedLicense = "hasConcludedLicense"
+)
+
 func utcNowTime() string {
 	location, _ := time.LoadLocation("UTC")
 	locationTime := time.Now().In(location)
