@@ -389,30 +389,151 @@ func (editor *spdx3EditDoc) updateDocumentAuthors() error {
 		}
 	}
 
-	newAgents := editor.buildAuthorAgents()
-
-	if editor.config.onMissing() && len(editor.ci.CreatedBy) > 0 {
+	// Check missing BEFORE any side effects.  If a Person already exists in
+	// CreatedBy and --missing was requested, skip.  An Organization or other
+	// non-Person agent does not count as an author.
+	if editor.config.onMissing() && editor.hasPersonInCreatedBy() {
 		return nil
 	}
-	if editor.config.onAppend() {
+
+	var newAgents []spdx3.Agent
+
+	if editor.config.onAppend() || editor.config.onMissing() {
+		// Append / missing: create new Person elements and add them alongside
+		// existing CreatedBy entries.  Organizations, Tools, etc. are preserved.
+		// Skip duplicates — a Person already in CreatedBy is not added again.
+		for _, author := range editor.config.authors {
+			person := editor.findOrCreatePerson(author.name, author.value)
+			if editor.isInCreatedBy(person.SpdxID) {
+				continue // already referenced, skip
+			}
+			agent := spdx3.Agent{}
+			agent.SpdxID = person.SpdxID
+			newAgents = append(newAgents, agent)
+		}
 		editor.ci.CreatedBy = append(editor.ci.CreatedBy, newAgents...)
 	} else {
-		editor.ci.CreatedBy = newAgents
+		// Overwrite mode: replace only Person entries in CreatedBy.  Reuse
+		// SpdxIDs from existing Person elements when possible, and preserve
+		// non-Person agents (Organization, Tool, etc.).
+		oldIDs := editor.collectCreatedByIDs()
+		for _, author := range editor.config.authors {
+			person := editor.findOrUpdatePerson(author.name, author.value, oldIDs)
+			agent := spdx3.Agent{}
+			agent.SpdxID = person.SpdxID
+			newAgents = append(newAgents, agent)
+			delete(oldIDs, person.SpdxID) // mark as reused
+		}
+		// Preserve non-Person agents from the old CreatedBy.
+		var preserved []spdx3.Agent
+		for _, agent := range editor.ci.CreatedBy {
+			if !editor.isPersonAgent(agent) {
+				preserved = append(preserved, agent)
+			}
+		}
+		editor.ci.CreatedBy = append(preserved, newAgents...)
+		// Remove Person elements whose SpdxIDs were in the old CreatedBy
+		// but were not reused for the new authors.
+		editor.removeOrphanedPersons(oldIDs)
 	}
+
 	return nil
 }
 
-// buildAuthorAgents creates Agent values for each configured author,
-// creating Person elements in the document when necessary.
-func (editor *spdx3EditDoc) buildAuthorAgents() []spdx3.Agent {
-	var agents []spdx3.Agent
-	for _, author := range editor.config.authors {
-		person := editor.findOrCreatePerson(author.name, author.value)
-		agent := spdx3.Agent{}
-		agent.SpdxID = person.SpdxID
-		agents = append(agents, agent)
+// collectCreatedByIDs returns a set of SpdxIDs referenced by the current
+// CreationInfo.CreatedBy slice.
+func (editor *spdx3EditDoc) collectCreatedByIDs() map[string]struct{} {
+	ids := make(map[string]struct{}, len(editor.ci.CreatedBy))
+	for _, agent := range editor.ci.CreatedBy {
+		if agent.SpdxID != "" {
+			ids[agent.SpdxID] = struct{}{}
+		}
 	}
-	return agents
+	return ids
+}
+
+// removeOrphanedPersons deletes Person elements whose SpdxIDs are in the
+// provided set and are no longer referenced by CreationInfo.CreatedBy.
+func (editor *spdx3EditDoc) removeOrphanedPersons(orphanIDs map[string]struct{}) {
+	if len(orphanIDs) == 0 {
+		return
+	}
+	// Build a set of IDs still referenced by the current CreatedBy.
+	referenced := make(map[string]struct{}, len(editor.ci.CreatedBy))
+	for _, agent := range editor.ci.CreatedBy {
+		if agent.SpdxID != "" {
+			referenced[agent.SpdxID] = struct{}{}
+		}
+	}
+	var kept []*spdx3.Person
+	for _, person := range editor.doc.Persons {
+		if _, isOrphan := orphanIDs[person.SpdxID]; isOrphan {
+			if _, stillReferenced := referenced[person.SpdxID]; !stillReferenced {
+				continue // drop this orphaned Person
+			}
+		}
+		kept = append(kept, person)
+	}
+	editor.doc.Persons = kept
+}
+
+// hasPersonInCreatedBy returns true if any Agent in CreationInfo.CreatedBy
+// references a Person element in the document.
+func (editor *spdx3EditDoc) hasPersonInCreatedBy() bool {
+	for _, agent := range editor.ci.CreatedBy {
+		if agent.SpdxID == "" {
+			continue
+		}
+		for _, person := range editor.doc.Persons {
+			if person.SpdxID == agent.SpdxID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isInCreatedBy returns true if the given SpdxID is already referenced by the
+// current CreationInfo.CreatedBy slice.
+func (editor *spdx3EditDoc) isInCreatedBy(spdxID string) bool {
+	for _, agent := range editor.ci.CreatedBy {
+		if agent.SpdxID == spdxID {
+			return true
+		}
+	}
+	return false
+}
+
+// isPersonAgent returns true if the Agent's SpdxID references a Person element
+// in the document.
+func (editor *spdx3EditDoc) isPersonAgent(agent spdx3.Agent) bool {
+	for _, person := range editor.doc.Persons {
+		if person.SpdxID == agent.SpdxID {
+			return true
+		}
+	}
+	return false
+}
+
+// findOrUpdatePerson searches for an existing Person in the document.  If
+// overwriteIDs is non-empty, it first tries to find a Person whose SpdxID
+// is in that set (meaning it was previously an author) and updates its
+// name/email in place.  Otherwise it falls back to normal find-or-create
+// logic.
+func (editor *spdx3EditDoc) findOrUpdatePerson(name, email string, overwriteIDs map[string]struct{}) *spdx3.Person {
+	// Try to reuse a Person that was previously in CreatedBy.
+	for _, person := range editor.doc.Persons {
+		if _, ok := overwriteIDs[person.SpdxID]; ok {
+			// Update in place so the SpdxID is preserved.
+			person.Name = name
+			person.ExternalIdentifier = []spdx3.ExternalIdentifier{
+				{ExternalIdentifierType: ExtIDTypeEmail, Identifier: email},
+			}
+			return person
+		}
+	}
+	// No existing author Person to reuse; fall back to normal lookup.
+	return editor.findOrCreatePerson(name, email)
 }
 
 // updateTools sets or appends document tools by mutating the
@@ -937,11 +1058,16 @@ func (editor *spdx3EditDoc) generateElementSpdxID(prefix string) string {
 // document elements) and falls back to the doc-level pointer only when the
 // SpdxDocument is absent.
 func (editor *spdx3EditDoc) documentCreationInfo() spdx3.CreationInfo {
-	if editor.doc.SpdxDocument != nil {
-		return editor.doc.SpdxDocument.CreationInfo
-	}
+	// New elements (Person, Tool, etc.) should share the base CreationInfo,
+	// not the SpdxDocument's potentially-mutated one.  If we return the
+	// SpdxDocument's CreationInfo here, newly-created elements capture an
+	// intermediate state (e.g. already includes previously-appended authors)
+	// and the serializer emits an extra blank node that appears orphaned.
 	if editor.doc.CreationInfo != nil {
 		return *editor.doc.CreationInfo
+	}
+	if editor.doc.SpdxDocument != nil {
+		return editor.doc.SpdxDocument.CreationInfo
 	}
 	return spdx3.CreationInfo{}
 }
