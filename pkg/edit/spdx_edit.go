@@ -648,10 +648,16 @@ func (d *spdxEditDoc) lifeCycles() error {
 		// Empty comment — set lifecycle directly.
 		d.bom.CreationInfo.CreatorComment = lifecycles
 	} else if strings.Contains(d.bom.CreationInfo.CreatorComment, "lifecycle:") {
-		// Comment already has a lifecycle line — replace it.
+		if d.c.onMissing() {
+			return nil // lifecycle already present, skip silently
+		}
+		// Overwrite mode — replace existing lifecycle line.
 		re := regexp.MustCompile(`(?m)^lifecycle:.*$`)
 		d.bom.CreationInfo.CreatorComment = re.ReplaceAllString(d.bom.CreationInfo.CreatorComment, lifecycles)
 	} else {
+		if d.c.onMissing() {
+			return nil // should not happen (missing guard above), but defensive
+		}
 		// Comment has other text (e.g. supplier) — append lifecycle on a new line.
 		d.bom.CreationInfo.CreatorComment += "\n\n" + lifecycles
 	}
