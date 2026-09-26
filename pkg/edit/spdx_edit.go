@@ -173,9 +173,12 @@ func (d *spdxEditDoc) supplier() error {
 			} else {
 				if !strings.Contains(d.bom.CreationInfo.CreatorComment, SupplierPrefixComment) {
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf("\n\n"+SupplierPrefixComment+"%s", comment)
-				} else if !strings.Contains(d.bom.CreationInfo.CreatorComment, comment) {
-					// Only append if this exact supplier is not already in the comment.
+				} else if d.c.onAppend() && !strings.Contains(d.bom.CreationInfo.CreatorComment, comment) {
+					// Append mode: add new supplier if not already present.
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf(", "+"%s", comment)
+				} else {
+					// Overwrite mode: replace the entire supplier text with the new one.
+					d.bom.CreationInfo.CreatorComment = SupplierPrefixComment + comment
 				}
 			}
 		}

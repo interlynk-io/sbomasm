@@ -309,9 +309,12 @@ func (editor *spdx3EditDoc) updateDocumentSupplier() error {
 		editor.ci.Comment = prefix + comment
 	} else if !strings.Contains(editor.ci.Comment, prefix) {
 		editor.ci.Comment += "\n\n" + prefix + comment
-	} else if !strings.Contains(editor.ci.Comment, comment) {
-		// Only append if this exact supplier is not already in the comment.
+	} else if editor.config.onAppend() && !strings.Contains(editor.ci.Comment, comment) {
+		// Append mode: add new supplier if not already present.
 		editor.ci.Comment += ", " + comment
+	} else {
+		// Overwrite mode: replace the entire supplier text with the new one.
+		editor.ci.Comment = prefix + comment
 	}
 	return nil
 }
