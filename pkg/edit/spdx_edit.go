@@ -18,6 +18,7 @@ package edit
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/interlynk-io/sbomasm/v2/internal/version"
@@ -639,18 +640,20 @@ func (d *spdxEditDoc) lifeCycles() error {
 		lifecycles = fmt.Sprintf("lifecycle: %s", d.c.lifecycles[0])
 	}
 
-	if d.c.onMissing() {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
-		if d.bom.CreationInfo.CreatorComment == "" {
-			d.bom.CreationInfo.CreatorComment = lifecycles
-		}
-	} else {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
+	if d.bom.CreationInfo == nil {
+		d.bom.CreationInfo = &spdx.CreationInfo{}
+	}
+
+	if d.bom.CreationInfo.CreatorComment == "" {
+		// Empty comment — set lifecycle directly.
 		d.bom.CreationInfo.CreatorComment = lifecycles
+	} else if strings.Contains(d.bom.CreationInfo.CreatorComment, "lifecycle:") {
+		// Comment already has a lifecycle line — replace it.
+		re := regexp.MustCompile(`(?m)^lifecycle:.*$`)
+		d.bom.CreationInfo.CreatorComment = re.ReplaceAllString(d.bom.CreationInfo.CreatorComment, lifecycles)
+	} else {
+		// Comment has other text (e.g. supplier) — append lifecycle on a new line.
+		d.bom.CreationInfo.CreatorComment += "\n\n" + lifecycles
 	}
 	return nil
 }
