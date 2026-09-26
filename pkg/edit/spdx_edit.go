@@ -173,7 +173,8 @@ func (d *spdxEditDoc) supplier() error {
 			} else {
 				if !strings.Contains(d.bom.CreationInfo.CreatorComment, SupplierPrefixComment) {
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf("\n\n"+SupplierPrefixComment+"%s", comment)
-				} else {
+				} else if !strings.Contains(d.bom.CreationInfo.CreatorComment, comment) {
+					// Only append if this exact supplier is not already in the comment.
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf(", "+"%s", comment)
 				}
 			}
