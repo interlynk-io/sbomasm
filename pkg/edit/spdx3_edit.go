@@ -683,7 +683,13 @@ func (editor *spdx3EditDoc) updateHashes() error {
 		return nil
 	}
 	if editor.config.onAppend() {
-		editor.pkg.VerifiedUsing = append(editor.pkg.VerifiedUsing, newHashes...)
+		for _, nh := range newHashes {
+			if hash, ok := nh.(spdx3.Hash); ok {
+				if !editor.hasHash(editor.pkg.VerifiedUsing, string(hash.Algorithm), hash.HashValue) {
+					editor.pkg.VerifiedUsing = append(editor.pkg.VerifiedUsing, hash)
+				}
+			}
+		}
 	} else {
 		editor.pkg.VerifiedUsing = newHashes
 	}
@@ -703,6 +709,19 @@ func (editor *spdx3EditDoc) buildHashList() []interface{} {
 		hashes = append(hashes, hash)
 	}
 	return hashes
+}
+
+// hasHash returns true if a hash with the same algorithm and value already
+// exists in the given slice.
+func (editor *spdx3EditDoc) hasHash(existing []interface{}, alg, val string) bool {
+	for _, h := range existing {
+		if hash, ok := h.(spdx3.Hash); ok {
+			if strings.EqualFold(string(hash.Algorithm), alg) && hash.HashValue == val {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // updatePurl replaces or appends the purl external identifier on the package.

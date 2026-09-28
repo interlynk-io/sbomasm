@@ -596,7 +596,11 @@ func (d *cdxEditDoc) hashes() error {
 		}
 	} else if d.c.onAppend() {
 		if d.comp.Hashes != nil {
-			*d.comp.Hashes = append(*d.comp.Hashes, *h...)
+			for _, nh := range *h {
+				if !d.hasHash(*d.comp.Hashes, string(nh.Algorithm), nh.Value) {
+					*d.comp.Hashes = append(*d.comp.Hashes, nh)
+				}
+			}
 		} else {
 			d.comp.Hashes = h
 		}
@@ -605,6 +609,17 @@ func (d *cdxEditDoc) hashes() error {
 	}
 
 	return nil
+}
+
+// hasHash returns true if a hash with the same algorithm and value already
+// exists in the given slice.
+func (d *cdxEditDoc) hasHash(existing []cydx.Hash, alg, val string) bool {
+	for _, h := range existing {
+		if strings.EqualFold(string(h.Algorithm), alg) && h.Value == val {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *cdxEditDoc) licenses() error {

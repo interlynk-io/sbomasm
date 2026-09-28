@@ -312,13 +312,13 @@ func (d *spdxEditDoc) cpe() error {
 
 	cpe := spdx.PackageExternalReference{
 		Category: "SECURITY",
-		RefType:  ExtIDTypeCpe23,
+		RefType:  "cpe23Type",
 		Locator:  d.c.cpe,
 	}
 
 	foundCpe := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == ExtIDTypeCpe23 {
+		if strings.EqualFold(ref.RefType, "cpe23Type") {
 			foundCpe = true
 		}
 	}
@@ -336,8 +336,6 @@ func (d *spdxEditDoc) cpe() error {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
-		} else {
-			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		}
 	} else {
 		if d.pkg.PackageExternalReferences == nil {
@@ -345,7 +343,7 @@ func (d *spdxEditDoc) cpe() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == "cpe23type"
+				return strings.EqualFold(x.RefType, "cpe23Type")
 			})
 
 			if extRef == nil {
@@ -404,13 +402,28 @@ func (d *spdxEditDoc) hashes() error {
 		if d.pkg.PackageChecksums == nil {
 			d.pkg.PackageChecksums = hashes
 		} else {
-			d.pkg.PackageChecksums = append(d.pkg.PackageChecksums, hashes...)
+			for _, h := range hashes {
+				if !d.hasChecksum(d.pkg.PackageChecksums, string(h.Algorithm), h.Value) {
+					d.pkg.PackageChecksums = append(d.pkg.PackageChecksums, h)
+				}
+			}
 		}
 	} else {
 		d.pkg.PackageChecksums = hashes
 	}
 
 	return nil
+}
+
+// hasChecksum returns true if a checksum with the same algorithm and value
+// already exists in the given slice.
+func (d *spdxEditDoc) hasChecksum(existing []spdx.Checksum, alg, val string) bool {
+	for _, cs := range existing {
+		if strings.EqualFold(string(cs.Algorithm), alg) && cs.Value == val {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *spdxEditDoc) tools() error {
