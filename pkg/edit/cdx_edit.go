@@ -627,13 +627,13 @@ func (d *cdxEditDoc) licenses() error {
 	} else if d.c.onAppend() {
 		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Licenses != nil {
-				*d.bom.Metadata.Licenses = append(*d.bom.Metadata.Licenses, lics...)
+				*d.bom.Metadata.Licenses = d.mergeLicenses(*d.bom.Metadata.Licenses, lics)
 			} else {
 				d.bom.Metadata.Licenses = &lics
 			}
 		} else {
 			if d.comp.Licenses != nil {
-				*d.comp.Licenses = append(*d.comp.Licenses, lics...)
+				*d.comp.Licenses = d.mergeLicenses(*d.comp.Licenses, lics)
 			} else {
 				d.comp.Licenses = &lics
 			}
@@ -646,6 +646,43 @@ func (d *cdxEditDoc) licenses() error {
 		}
 	}
 	return nil
+}
+
+// mergeLicenses appends new licenses to the existing slice, skipping any
+// duplicates.  A license is considered a duplicate if its Name or Id matches
+// an existing entry.
+func (d *cdxEditDoc) mergeLicenses(existing, incoming []cydx.LicenseChoice) []cydx.LicenseChoice {
+	result := existing
+	for _, in := range incoming {
+		if !d.hasLicense(existing, in) {
+			result = append(result, in)
+		}
+	}
+	return result
+}
+
+// hasLicense returns true if the given license already exists in the slice.
+func (d *cdxEditDoc) hasLicense(licenses []cydx.LicenseChoice, lic cydx.LicenseChoice) bool {
+	inName := ""
+	if lic.License != nil {
+		inName = lic.License.Name
+		if inName == "" {
+			inName = lic.License.ID
+		}
+	}
+	for _, existing := range licenses {
+		existingName := ""
+		if existing.License != nil {
+			existingName = existing.License.Name
+			if existingName == "" {
+				existingName = existing.License.ID
+			}
+		}
+		if existingName == inName && inName != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *cdxEditDoc) purl() error {
