@@ -255,18 +255,67 @@ func (editor *spdx3EditDoc) updateType() error {
 	return nil
 }
 
-// updateRepository sets the download location on the package.
+// updateRepository sets the repository URL on either the SpdxDocument (via
+// externalRef with type "vcs") or the package (via downloadLocation).
 func (editor *spdx3EditDoc) updateRepository() error {
 	if !editor.config.shouldRepository() {
 		return errNoConfiguration
 	}
 	if editor.config.search.subject == SubjectDocument {
-		return errNotSupported
+		return editor.updateDocumentRepository()
 	}
 	if editor.config.onMissing() && editor.pkg.DownloadLocation != "" {
 		return nil
 	}
 	editor.pkg.DownloadLocation = editor.config.repository
+	return nil
+}
+
+// updateDocumentRepository adds a VCS external reference to the SpdxDocument.
+// SPDX 3.0 SpdxDocument inherits externalRef from Element; "vcs" is the
+// closest ExternalRefType for a repository URL.
+func (editor *spdx3EditDoc) updateDocumentRepository() error {
+	if editor.doc.SpdxDocument == nil {
+		return fmt.Errorf("document contains no SpdxDocument")
+	}
+
+	newRef := spdx3.ExternalRef{
+		ExternalRefType: ExtRefTypeVcs,
+		Locator:         []string{editor.config.repository},
+	}
+
+	hasVcs := false
+	for _, ref := range editor.doc.SpdxDocument.ExternalRef {
+		if ref.ExternalRefType == ExtRefTypeVcs {
+			hasVcs = true
+			break
+		}
+	}
+
+	if editor.config.onMissing() {
+		if hasVcs {
+			return nil
+		}
+		editor.doc.SpdxDocument.ExternalRef = append(editor.doc.SpdxDocument.ExternalRef, newRef)
+		return nil
+	}
+
+	if editor.config.onAppend() {
+		// Add if no vcs ref exists (avoid duplicates)
+		if !hasVcs {
+			editor.doc.SpdxDocument.ExternalRef = append(editor.doc.SpdxDocument.ExternalRef, newRef)
+		}
+		return nil
+	}
+
+	// Overwrite: replace all existing vcs refs with the new one
+	var filtered []spdx3.ExternalRef
+	for _, ref := range editor.doc.SpdxDocument.ExternalRef {
+		if ref.ExternalRefType != ExtRefTypeVcs {
+			filtered = append(filtered, ref)
+		}
+	}
+	editor.doc.SpdxDocument.ExternalRef = append(filtered, newRef)
 	return nil
 }
 
@@ -794,15 +843,45 @@ func (editor *spdx3EditDoc) removeLicenseExpressionByID(spdxID string) {
 
 // updatePackageLicense creates or updates the hasConcludedLicense
 // relationship for the target package, pointing to the given license
-// expression.
+// expression. If the relationship previously referenced a different
+// LicenseExpression, the old one is removed if it is no longer referenced
+// by any other relationship.
 func (editor *spdx3EditDoc) updatePackageLicense(licExpr *spdx3.LicenseExpression) error {
 	rel := editor.findLicenseRelationship()
 	if rel == nil {
 		editor.createLicenseRelationship(licExpr)
-	} else {
-		rel.To = []spdx3.Element{{SpdxID: licExpr.SpdxID}}
+		return nil
+	}
+
+	// Capture the old license ID before updating.
+	oldLicID := ""
+	if len(rel.To) > 0 {
+		oldLicID = rel.To[0].SpdxID
+	}
+
+	rel.To = []spdx3.Element{{SpdxID: licExpr.SpdxID}}
+
+	// Clean up the old LicenseExpression if it exists and is no longer
+	// referenced by any relationship.
+	if oldLicID != "" && oldLicID != licExpr.SpdxID {
+		if !editor.isLicenseExpressionReferenced(oldLicID) {
+			editor.removeLicenseExpressionByID(oldLicID)
+		}
 	}
 	return nil
+}
+
+// isLicenseExpressionReferenced returns true if any relationship in the
+// document references the given LicenseExpression SpdxID.
+func (editor *spdx3EditDoc) isLicenseExpressionReferenced(spdxID string) bool {
+	for _, rel := range editor.doc.Relationships {
+		for _, to := range rel.To {
+			if to.SpdxID == spdxID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // buildLicenseExpression joins configured license names with " OR ".

@@ -46,8 +46,10 @@ const (
 // ExternalRefType constants for SPDX 3.0 external references.
 // The SPDX 3.0 spec has no dedicated "homepage" type; "other" is the
 // recommended fallback for an organization's primary website URL.
+// "vcs" is used for version control / repository references.
 const (
 	ExtRefTypeOther = "other"
+	ExtRefTypeVcs   = "vcs"
 )
 
 // RelationshipType constants for SPDX 3.0 relationships.
