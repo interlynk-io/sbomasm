@@ -43,6 +43,13 @@ const (
 	ExtIDTypeEmail = "email"
 )
 
+// ExternalRefType constants for SPDX 3.0 external references.
+// The SPDX 3.0 spec has no dedicated "homepage" type; "other" is the
+// recommended fallback for an organization's primary website URL.
+const (
+	ExtRefTypeOther = "other"
+)
+
 // RelationshipType constants for SPDX 3.0 relationships.
 const (
 	RelTypeHasConcludedLicense = "hasConcludedLicense"

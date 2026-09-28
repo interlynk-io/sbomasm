@@ -372,18 +372,27 @@ func (editor *spdx3EditDoc) mutateExistingSupplier() error {
 }
 
 // buildOrganizationFromConfig creates a new Organization element from the
-// configured supplier name. If the supplier value looks like an email, it
-// is stored as an external identifier (per SPDX 3.0 convention).
+// configured supplier name. Email values are stored as external identifiers;
+// URL values are stored as external references using type "other" (the SPDX
+// 3.0 spec has no dedicated homepage type, see Core/Vocabularies/ExternalRefType).
 func (editor *spdx3EditDoc) buildOrganizationFromConfig() *spdx3.Organization {
 	orgID := editor.generateElementSpdxID("org")
 	org := &spdx3.Organization{}
 	org.SpdxID = orgID
 	org.Name = editor.config.supplier.name
-	if strings.Contains(editor.config.supplier.value, "@") {
+	val := editor.config.supplier.value
+	if strings.Contains(val, "@") {
 		org.ExternalIdentifier = []spdx3.ExternalIdentifier{
 			{
 				ExternalIdentifierType: ExtIDTypeEmail,
-				Identifier:             editor.config.supplier.value,
+				Identifier:             val,
+			},
+		}
+	} else if strings.HasPrefix(val, "http://") || strings.HasPrefix(val, "https://") {
+		org.ExternalRef = []spdx3.ExternalRef{
+			{
+				ExternalRefType: ExtRefTypeOther,
+				Locator:         []string{val},
 			},
 		}
 	}
