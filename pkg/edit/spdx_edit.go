@@ -105,7 +105,7 @@ func (d *spdxEditDoc) update() {
 	for _, item := range updateFuncs {
 		if err := item.f(); err != nil {
 			if err == errNotSupported {
-				log.Infof(fmt.Sprintf("SPDX error updating %s: %s", item.name, err))
+				log.Infof(notSupportedMsg(item.name, string(d.c.search.subject)))
 			}
 
 			if err == errInvalidInput {

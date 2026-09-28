@@ -114,7 +114,7 @@ func (d *cdxEditDoc) update() {
 	for _, item := range updateFuncs {
 		if err := item.f(); err != nil {
 			if err == errNotSupported {
-				log.Infof(fmt.Sprintf("CDX error updating %s: %s", item.name, err))
+				log.Infof(notSupportedMsg(item.name, string(d.c.search.subject)))
 			}
 			if err == errInvalidInput {
 				log.Infof(fmt.Sprintf("%s: %s", item.name, err))

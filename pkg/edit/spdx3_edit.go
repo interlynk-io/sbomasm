@@ -96,6 +96,23 @@ func (editor *spdx3EditDoc) mutations() []mutation {
 	}
 }
 
+// documentOnlyFields lists field names that apply to the document, not components.
+var documentOnlyFields = map[string]bool{
+	"authors":     true,
+	"tools":       true,
+	"lifeCycles":  true,
+	"timeStamp":   true,
+}
+
+// notSupportedMsg returns a clear, actionable message explaining why a field
+// was skipped for the current subject.
+func notSupportedMsg(field, subject string) string {
+	if documentOnlyFields[field] {
+		return fmt.Sprintf("skipping %s: this field applies to the document, not components. Use --subject document", field)
+	}
+	return fmt.Sprintf("skipping %s: this field applies to components, not the document. Use --subject primary-component or --subject component-name-version", field)
+}
+
 // handleMutationError logs the result of a single mutation based on its error
 // value. No-configuration and not-supported are expected; everything else is
 // surfaced as an informational message.
@@ -104,7 +121,7 @@ func (editor *spdx3EditDoc) handleMutationError(log *zap.SugaredLogger, name str
 	case errNoConfiguration:
 		// field not requested; skip silently
 	case errNotSupported:
-		log.Infof("SPDX 3.0: %s not supported for subject %q", name, editor.config.search.subject)
+		log.Infof(notSupportedMsg(name, editor.config.search.subject))
 	case errInvalidInput:
 		log.Infof("SPDX 3.0: %s: %s", name, err)
 	default:
