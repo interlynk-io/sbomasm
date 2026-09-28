@@ -694,6 +694,21 @@ func (editor *spdx3EditDoc) updateLicenses() error {
 		return errNoConfiguration
 	}
 
+	// Bug fix: check missing BEFORE any side effects (creating LicenseExpression
+	// elements).  If the target already has a license and --missing was requested,
+	// skip the entire mutation silently.
+	if editor.config.onMissing() {
+		if editor.config.search.subject == SubjectDocument {
+			if editor.doc.SpdxDocument != nil && editor.doc.SpdxDocument.DataLicense != nil {
+				return nil
+			}
+		} else {
+			if editor.findLicenseRelationship() != nil {
+				return nil
+			}
+		}
+	}
+
 	licenseExpr := editor.buildLicenseExpression()
 	licExpr := editor.findOrCreateLicenseExpression(licenseExpr)
 
