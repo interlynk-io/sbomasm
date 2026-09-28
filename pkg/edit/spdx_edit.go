@@ -257,13 +257,13 @@ func (d *spdxEditDoc) purl() error {
 
 	purl := spdx.PackageExternalReference{
 		Category: "PACKAGE-MANAGER",
-		RefType:  ExtIDTypePurl,
+		RefType:  "purl",
 		Locator:  d.c.purl,
 	}
 
 	foundPurlWithKeyAndValue := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == ExtIDTypePurl && ref.Locator == d.c.purl {
+		if strings.EqualFold(ref.RefType, "purl") && ref.Locator == d.c.purl {
 			foundPurlWithKeyAndValue = true
 		}
 	}
@@ -281,8 +281,6 @@ func (d *spdxEditDoc) purl() error {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
-		} else {
-			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		}
 	} else {
 		if d.pkg.PackageExternalReferences == nil {
@@ -290,7 +288,7 @@ func (d *spdxEditDoc) purl() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == ExtIDTypePurl
+				return strings.EqualFold(x.RefType, "purl")
 			})
 
 			if extRef == nil {

@@ -748,7 +748,10 @@ func (editor *spdx3EditDoc) applyExternalIdentifier(extType string, newID spdx3.
 	case editor.config.onMissing() && editor.hasExternalIdentifier(extType):
 		// already exists; do nothing
 	case editor.config.onAppend():
-		editor.pkg.ExternalIdentifier = append(editor.pkg.ExternalIdentifier, newID)
+		// append only if the exact same identifier is not already present
+		if !editor.hasExternalIdentifierWithValue(newID) {
+			editor.pkg.ExternalIdentifier = append(editor.pkg.ExternalIdentifier, newID)
+		}
 	default:
 		// overwrite: keep identifiers of other types, replace this type
 		filtered := editor.filterExternalIdentifiers(extType)
@@ -1120,6 +1123,18 @@ func (editor *spdx3EditDoc) findOrCreateTool(name, version string) *spdx3.Tool {
 func (editor *spdx3EditDoc) hasExternalIdentifier(extType string) bool {
 	for _, ext := range editor.pkg.ExternalIdentifier {
 		if string(ext.ExternalIdentifierType) == extType {
+			return true
+		}
+	}
+	return false
+}
+
+// hasExternalIdentifierWithValue returns true if the package already has an
+// external identifier that matches both the type and the identifier value.
+func (editor *spdx3EditDoc) hasExternalIdentifierWithValue(newID spdx3.ExternalIdentifier) bool {
+	for _, ext := range editor.pkg.ExternalIdentifier {
+		if string(ext.ExternalIdentifierType) == string(newID.ExternalIdentifierType) &&
+			ext.Identifier == newID.Identifier {
 			return true
 		}
 	}
