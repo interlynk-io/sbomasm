@@ -719,7 +719,9 @@ func (editor *spdx3EditDoc) updateLicenses() error {
 }
 
 // updateDocumentLicense sets the SpdxDocument's DataLicense to reference
-// the given LicenseExpression element.
+// the given LicenseExpression element.  If a previous DataLicense existed,
+// the old LicenseExpression element is removed from the document so it does
+// not become orphaned.
 func (editor *spdx3EditDoc) updateDocumentLicense(licExpr *spdx3.LicenseExpression) error {
 	if editor.doc.SpdxDocument == nil {
 		return fmt.Errorf("document contains no SpdxDocument")
@@ -729,10 +731,39 @@ func (editor *spdx3EditDoc) updateDocumentLicense(licExpr *spdx3.LicenseExpressi
 		return nil
 	}
 
+	// Capture the old license SpdxID before we overwrite it.
+	oldLicID := ""
+	if editor.doc.SpdxDocument.DataLicense != nil {
+		oldLicID = editor.doc.SpdxDocument.DataLicense.SpdxID
+	}
+
 	editor.doc.SpdxDocument.DataLicense = &spdx3.AnyLicenseInfo{
 		Element: spdx3.Element{SpdxID: licExpr.SpdxID},
 	}
+
+	// Remove the old LicenseExpression element if it exists and is different
+	// from the new one.
+	if oldLicID != "" && oldLicID != licExpr.SpdxID {
+		editor.removeLicenseExpressionByID(oldLicID)
+	}
+
 	return nil
+}
+
+// removeLicenseExpressionByID removes the LicenseExpression with the given
+// SpdxID from the document's LicenseExpressions slice.
+func (editor *spdx3EditDoc) removeLicenseExpressionByID(spdxID string) {
+	var kept []*spdx3.LicenseExpression
+	for _, le := range editor.doc.LicenseExpressions {
+		if le.SpdxID != spdxID {
+			kept = append(kept, le)
+		}
+	}
+	editor.doc.LicenseExpressions = kept
+	// Also clean up the by-ID map if it exists.
+	if editor.doc.LicenseExpressionsByID != nil {
+		delete(editor.doc.LicenseExpressionsByID, spdxID)
+	}
 }
 
 // updatePackageLicense creates or updates the hasConcludedLicense
