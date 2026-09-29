@@ -18,6 +18,7 @@ package edit
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -38,6 +39,16 @@ type spdxEditDoc struct {
 	bom *spdx.Document
 	pkg *spdx.Package
 	c   *configParams
+}
+
+// warnIfAppendNotApplicable prints a warning when --append is used on a
+// single-value field for SPDX 2.3. The edit proceeds as an overwrite.
+func (d *spdxEditDoc) skipIfAppendNotApplicable(field string) bool {
+	if d.c.onAppend() {
+		fmt.Fprintf(os.Stderr, "WARN: --append is not applicable to --%s for SPDX 2.3 (single-value field). Skipping. Use --missing to add only if empty, or omit --append to overwrite.\n", field)
+		return true
+	}
+	return false
 }
 
 var supportedSPDXMetadataLifeCycle map[string]bool = map[string]bool{
@@ -123,6 +134,9 @@ func (d *spdxEditDoc) name() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("name") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.pkg.PackageName == "" {
@@ -142,6 +156,9 @@ func (d *spdxEditDoc) version() error {
 
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("version") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -183,6 +200,9 @@ func (d *spdxEditDoc) supplier() error {
 				}
 			}
 		}
+		return nil
+	}
+	if d.skipIfAppendNotApplicable("supplier") {
 		return nil
 	}
 
@@ -360,6 +380,9 @@ func (d *spdxEditDoc) licenses() error {
 	if !d.c.shouldLicenses() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("license") {
+		return nil
+	}
 
 	license := spdxConstructLicenses(d.bom, d.c)
 
@@ -531,6 +554,9 @@ func (d *spdxEditDoc) copyright() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("copyright") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.pkg.PackageCopyrightText == "" {
@@ -546,6 +572,9 @@ func (d *spdxEditDoc) copyright() error {
 func (d *spdxEditDoc) description() error {
 	if !d.c.shouldDescription() {
 		return errNoConfiguration
+	}
+	if d.skipIfAppendNotApplicable("description") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -577,6 +606,9 @@ func (d *spdxEditDoc) repository() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("repository") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.pkg.PackageDownloadLocation == "" {
@@ -596,6 +628,9 @@ func (d *spdxEditDoc) typ() error {
 
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("type") {
+		return nil
 	}
 
 	purpose := spdx_strings_to_types[strings.ToLower(d.c.typ)]
@@ -618,6 +653,9 @@ func (d *spdxEditDoc) typ() error {
 func (d *spdxEditDoc) timeStamp() error {
 	if !d.c.shouldTimeStamp() {
 		return errNoConfiguration
+	}
+	if d.skipIfAppendNotApplicable("timestamp") {
+		return nil
 	}
 
 	if d.bom.CreationInfo == nil {

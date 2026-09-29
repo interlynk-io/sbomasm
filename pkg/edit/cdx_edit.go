@@ -18,6 +18,7 @@ package edit
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -45,6 +46,17 @@ type cdxEditDoc struct {
 	bom  *cydx.BOM
 	comp *cydx.Component
 	c    *configParams
+}
+
+// skipIfAppendNotApplicable prints a warning when --append is used on a
+// single-value field for CycloneDX and returns true if the mutation should be
+// skipped (i.e. the existing value is preserved).
+func (d *cdxEditDoc) skipIfAppendNotApplicable(field string) bool {
+	if d.c.onAppend() {
+		fmt.Fprintf(os.Stderr, "WARN: --append is not applicable to --%s for CycloneDX (single-value field). Skipping. Use --missing to add only if empty, or omit --append to overwrite.\n", field)
+		return true
+	}
+	return false
 }
 
 var supportedCDXMetadataLifeCycle map[string]bool = map[string]bool{
@@ -127,6 +139,9 @@ func (d *cdxEditDoc) timeStamp() error {
 	if !d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("timestamp") {
+		return nil
+	}
 
 	d.ensureMetadata()
 	d.bom.Metadata.Timestamp = utcNowTime()
@@ -177,6 +192,9 @@ func (d *cdxEditDoc) lifeCycles() error {
 func (d *cdxEditDoc) typ() error {
 	if !d.c.shouldTyp() {
 		return errNoConfiguration
+	}
+	if d.skipIfAppendNotApplicable("type") {
+		return nil
 	}
 
 	newType := strings.ToLower(d.c.typ)
@@ -296,6 +314,9 @@ func (d *cdxEditDoc) description() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("description") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.comp.Description == "" {
@@ -315,6 +336,9 @@ func (d *cdxEditDoc) copyright() error {
 
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("copyright") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -708,6 +732,9 @@ func (d *cdxEditDoc) purl() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("purl") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.comp.PackageURL == "" || d.comp.PackageURL != d.c.purl {
@@ -728,6 +755,9 @@ func (d *cdxEditDoc) cpe() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("cpe") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.comp.CPE == "" {
@@ -746,6 +776,9 @@ func (d *cdxEditDoc) name() error {
 
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("name") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -766,6 +799,9 @@ func (d *cdxEditDoc) version() error {
 	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if d.skipIfAppendNotApplicable("version") {
+		return nil
+	}
 
 	if d.c.onMissing() {
 		if d.comp.Version == "" {
@@ -783,6 +819,9 @@ func (d *cdxEditDoc) supplier() error {
 	}
 
 	d.ensureMetadata()
+	if d.skipIfAppendNotApplicable("supplier") {
+		return nil
+	}
 
 	supplier := cdxConstructSupplier(d.bom, d.c)
 

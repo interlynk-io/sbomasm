@@ -6,6 +6,7 @@ package edit
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -21,7 +22,18 @@ type spdx3EditDoc struct {
 	doc    *parse.Document     // the full parsed SPDX 3.0 document
 	pkg    *spdx3.Package      // the target package being mutated
 	ci     *spdx3.CreationInfo // the document's CreationInfo (shared reference)
-	config *configParams        // the user's edit configuration
+	config *configParams       // the user's edit configuration
+}
+
+// skipIfAppendNotApplicable prints a warning when --append is used on a
+// single-value field for SPDX 3.0 and returns true if the mutation should be
+// skipped (i.e. the existing value is preserved).
+func (editor *spdx3EditDoc) skipIfAppendNotApplicable(field string) bool {
+	if editor.config.onAppend() {
+		fmt.Fprintf(os.Stderr, "WARN: --append is not applicable to --%s for SPDX 3.0 (single-value field). Skipping. Use --missing to add only if empty, or omit --append to overwrite.\n", field)
+		return true
+	}
+	return false
 }
 
 // NewSpdx3EditDoc creates an edit document by locating the target package
@@ -98,10 +110,10 @@ func (editor *spdx3EditDoc) mutations() []mutation {
 
 // documentOnlyFields lists field names that apply to the document, not components.
 var documentOnlyFields = map[string]bool{
-	"authors":     true,
-	"tools":       true,
-	"lifeCycles":  true,
-	"timeStamp":   true,
+	"authors":    true,
+	"tools":      true,
+	"lifeCycles": true,
+	"timeStamp":  true,
 }
 
 // notSupportedMsg returns a clear, actionable message explaining why a field
@@ -141,6 +153,9 @@ func (editor *spdx3EditDoc) updateName() error {
 	if editor.config.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if editor.skipIfAppendNotApplicable("name") {
+		return nil
+	}
 	if editor.config.onMissing() && editor.pkg.Name != "" {
 		return nil
 	}
@@ -156,6 +171,9 @@ func (editor *spdx3EditDoc) updateVersion() error {
 	if editor.config.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if editor.skipIfAppendNotApplicable("version") {
+		return nil
+	}
 	if editor.config.onMissing() && editor.pkg.PackageVersion != "" {
 		return nil
 	}
@@ -169,6 +187,9 @@ func (editor *spdx3EditDoc) updateDescription() error {
 		return errNoConfiguration
 	}
 
+	if editor.skipIfAppendNotApplicable("description") {
+		return nil
+	}
 	if editor.config.search.subject == SubjectDocument {
 		if editor.config.onMissing() && editor.doc.SpdxDocument.Description != "" {
 			return nil
@@ -192,6 +213,9 @@ func (editor *spdx3EditDoc) updateCopyright() error {
 	if editor.config.search.subject == SubjectDocument {
 		return errNotSupported
 	}
+	if editor.skipIfAppendNotApplicable("copyright") {
+		return nil
+	}
 	if editor.config.onMissing() && editor.pkg.CopyrightText != "" {
 		return nil
 	}
@@ -203,34 +227,34 @@ func (editor *spdx3EditDoc) updateCopyright() error {
 // enum values (lowercase camelCase per the JSON schema).
 var spdx3PurposeMap = map[string]string{
 	"application":      "application",
-	"framework":          "framework",
-	"library":            "library",
-	"container":          "container",
-	"operating-system":   "operatingSystem",
-	"device":             "device",
-	"firmware":           "firmware",
-	"source":             "source",
-	"archive":            "archive",
-	"file":               "file",
-	"install":            "install",
-	"other":              "other",
-	"bom":                "bom",
-	"configuration":      "configuration",
-	"data":               "data",
-	"device-driver":      "deviceDriver",
-	"disk-image":         "diskImage",
-	"documentation":      "documentation",
-	"evidence":           "evidence",
-	"executable":         "executable",
-	"filesystem-image":   "filesystemImage",
-	"manifest":           "manifest",
-	"model":              "model",
-	"module":             "module",
-	"patch":              "patch",
-	"platform":           "platform",
-	"requirement":        "requirement",
-	"specification":      "specification",
-	"test":               "test",
+	"framework":        "framework",
+	"library":          "library",
+	"container":        "container",
+	"operating-system": "operatingSystem",
+	"device":           "device",
+	"firmware":         "firmware",
+	"source":           "source",
+	"archive":          "archive",
+	"file":             "file",
+	"install":          "install",
+	"other":            "other",
+	"bom":              "bom",
+	"configuration":    "configuration",
+	"data":             "data",
+	"device-driver":    "deviceDriver",
+	"disk-image":       "diskImage",
+	"documentation":    "documentation",
+	"evidence":         "evidence",
+	"executable":       "executable",
+	"filesystem-image": "filesystemImage",
+	"manifest":         "manifest",
+	"model":            "model",
+	"module":           "module",
+	"patch":            "patch",
+	"platform":         "platform",
+	"requirement":      "requirement",
+	"specification":    "specification",
+	"test":             "test",
 }
 
 // updateType sets the primary purpose on the package using SPDX 3.0
@@ -241,6 +265,9 @@ func (editor *spdx3EditDoc) updateType() error {
 	}
 	if editor.config.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if editor.skipIfAppendNotApplicable("type") {
+		return nil
 	}
 
 	purpose := spdx3.SoftwarePurpose(spdx3PurposeMap[strings.ToLower(editor.config.typ)])
@@ -255,8 +282,9 @@ func (editor *spdx3EditDoc) updateType() error {
 	return nil
 }
 
-// updateRepository sets the repository URL on either the SpdxDocument (via
-// externalRef with type "vcs") or the package (via downloadLocation).
+// updateRepository sets the repository URL on either the SpdxDocument or the
+// package via externalRef with type "vcs". SPDX 3.0 uses externalRef, not
+// downloadLocation, for repository URLs.
 func (editor *spdx3EditDoc) updateRepository() error {
 	if !editor.config.shouldRepository() {
 		return errNoConfiguration
@@ -264,11 +292,62 @@ func (editor *spdx3EditDoc) updateRepository() error {
 	if editor.config.search.subject == SubjectDocument {
 		return editor.updateDocumentRepository()
 	}
-	if editor.config.onMissing() && editor.pkg.DownloadLocation != "" {
-		return nil
+	return editor.updatePackageRepository()
+}
+
+// updatePackageRepository adds or replaces a VCS externalRef on the package.
+// SPDX 3.0 stores repository URLs in externalRef[type=vcs], not
+// downloadLocation.
+func (editor *spdx3EditDoc) updatePackageRepository() error {
+	newRef := spdx3.ExternalRef{
+		ExternalRefType: ExtRefTypeVcs,
+		Locator:         []string{editor.config.repository},
 	}
-	editor.pkg.DownloadLocation = editor.config.repository
+
+	// Check existing VCS refs.
+	hasVcs := false
+	for _, ref := range editor.pkg.ExternalRef {
+		if ref.ExternalRefType == ExtRefTypeVcs {
+			hasVcs = true
+			break
+		}
+	}
+
+	if editor.config.onMissing() {
+		if !hasVcs {
+			editor.pkg.ExternalRef = append(editor.pkg.ExternalRef, newRef)
+		}
+	} else if editor.config.onAppend() {
+		// Append: add VCS ref if not already present (dedup by locator).
+		if !editor.hasExternalRefWithLocator(editor.pkg.ExternalRef, ExtRefTypeVcs, editor.config.repository) {
+			editor.pkg.ExternalRef = append(editor.pkg.ExternalRef, newRef)
+		}
+	} else {
+		// Overwrite: replace existing VCS refs with the new one.
+		var kept []spdx3.ExternalRef
+		for _, ref := range editor.pkg.ExternalRef {
+			if ref.ExternalRefType != ExtRefTypeVcs {
+				kept = append(kept, ref)
+			}
+		}
+		editor.pkg.ExternalRef = append(kept, newRef)
+	}
 	return nil
+}
+
+// hasExternalRefWithLocator returns true if an externalRef with the given type
+// and locator already exists in the slice.
+func (editor *spdx3EditDoc) hasExternalRefWithLocator(refs []spdx3.ExternalRef, refType string, locator string) bool {
+	for _, ref := range refs {
+		if string(ref.ExternalRefType) == refType {
+			for _, loc := range ref.Locator {
+				if loc == locator {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // updateDocumentRepository adds a VCS external reference to the SpdxDocument.
@@ -301,8 +380,8 @@ func (editor *spdx3EditDoc) updateDocumentRepository() error {
 	}
 
 	if editor.config.onAppend() {
-		// Add if no vcs ref exists (avoid duplicates)
-		if !hasVcs {
+		// Add VCS ref if not already present (dedup by locator).
+		if !editor.hasExternalRefWithLocator(editor.doc.SpdxDocument.ExternalRef, ExtRefTypeVcs, editor.config.repository) {
 			editor.doc.SpdxDocument.ExternalRef = append(editor.doc.SpdxDocument.ExternalRef, newRef)
 		}
 		return nil
@@ -331,6 +410,9 @@ func (editor *spdx3EditDoc) updateDocumentTimeStamp() error {
 	if editor.doc.SpdxDocument == nil {
 		return fmt.Errorf("document contains no SpdxDocument")
 	}
+	if editor.skipIfAppendNotApplicable("timestamp") {
+		return nil
+	}
 
 	// Ensure ci points to the SpdxDocument's inline CreationInfo so the
 	// serializer sees the change.
@@ -353,14 +435,16 @@ func (editor *spdx3EditDoc) updateSupplier() error {
 	if editor.config.search.subject == SubjectDocument {
 		return editor.updateDocumentSupplier()
 	}
+	if editor.skipIfAppendNotApplicable("supplier") {
+		return nil
+	}
 	return editor.updatePackageSupplier()
 }
 
-// updateDocumentSupplier adds supplier information to the CreationInfo
-// comment, mirroring the SPDX 2.3 behavior.
+// updateDocumentSupplier creates an Organization element for the supplier and
+// adds its SpdxID to CreationInfo.createdBy. In SPDX 3.0, document-level
+// suppliers are proper Agent references, not text comments.
 func (editor *spdx3EditDoc) updateDocumentSupplier() error {
-	comment := fmt.Sprintf("%s (%s)", editor.config.supplier.name, editor.config.supplier.value)
-
 	if editor.ci == nil {
 		if editor.doc.SpdxDocument != nil {
 			editor.ci = &editor.doc.SpdxDocument.CreationInfo
@@ -370,19 +454,68 @@ func (editor *spdx3EditDoc) updateDocumentSupplier() error {
 		}
 	}
 
-	const prefix = "The supplier of this document are "
-	if editor.ci.Comment == "" {
-		editor.ci.Comment = prefix + comment
-	} else if !strings.Contains(editor.ci.Comment, prefix) {
-		editor.ci.Comment += "\n\n" + prefix + comment
-	} else if editor.config.onAppend() && !strings.Contains(editor.ci.Comment, comment) {
-		// Append mode: add new supplier if not already present.
-		editor.ci.Comment += ", " + comment
+	// Build the Organization element from config.
+	org := editor.buildOrganizationFromConfig()
+
+	// Ensure the Organization exists in the document.
+	editor.doc.Organizations = append(editor.doc.Organizations, org)
+
+	// Prepare the new createdBy entry.
+	newEntry := spdx3.Agent{}
+	newEntry.SpdxID = org.SpdxID
+
+	if editor.config.onMissing() {
+		// Only add if createdBy is empty.
+		if len(editor.ci.CreatedBy) == 0 {
+			editor.ci.CreatedBy = []spdx3.Agent{newEntry}
+		}
+	} else if editor.config.onAppend() {
+		// Append: add to createdBy if not already present.
+		if !editor.hasCreatedByEntry(org.SpdxID) {
+			editor.ci.CreatedBy = append(editor.ci.CreatedBy, newEntry)
+		}
 	} else {
-		// Overwrite mode: replace the entire supplier text with the new one.
-		editor.ci.Comment = prefix + comment
+		// Overwrite: replace createdBy with just this supplier.
+		// Preserve any existing Person entries (authors) by merging.
+		editor.ci.CreatedBy = editor.mergeSupplierIntoCreatedBy(editor.ci.CreatedBy, newEntry)
 	}
 	return nil
+}
+
+// hasCreatedByEntry returns true if the given SpdxID already exists in
+// CreationInfo.createdBy.
+func (editor *spdx3EditDoc) hasCreatedByEntry(spdxID string) bool {
+	for _, agent := range editor.ci.CreatedBy {
+		if agent.SpdxID == spdxID {
+			return true
+		}
+	}
+	return false
+}
+
+// mergeSupplierIntoCreatedBy replaces any existing Organization entries in
+// createdBy with the new supplier while preserving Person (author) entries.
+func (editor *spdx3EditDoc) mergeSupplierIntoCreatedBy(existing []spdx3.Agent, supplier spdx3.Agent) []spdx3.Agent {
+	var result []spdx3.Agent
+	for _, agent := range existing {
+		// Preserve Person entries (authors); skip old Organization entries.
+		if editor.isPersonAgent(agent.SpdxID) {
+			result = append(result, agent)
+		}
+	}
+	result = append(result, supplier)
+	return result
+}
+
+// isPersonAgent returns true if the given SpdxID refers to a Person element
+// in the document.
+func (editor *spdx3EditDoc) isPersonAgent(spdxID string) bool {
+	for _, p := range editor.doc.Persons {
+		if p.SpdxID == spdxID {
+			return true
+		}
+	}
+	return false
 }
 
 // updatePackageSupplier follows the SuppliedBy reference and updates the
@@ -506,7 +639,7 @@ func (editor *spdx3EditDoc) updateDocumentAuthors() error {
 		// Preserve non-Person agents from the old CreatedBy.
 		var preserved []spdx3.Agent
 		for _, agent := range editor.ci.CreatedBy {
-			if !editor.isPersonAgent(agent) {
+			if !editor.isPersonAgent(agent.SpdxID) {
 				preserved = append(preserved, agent)
 			}
 		}
@@ -577,17 +710,6 @@ func (editor *spdx3EditDoc) hasPersonInCreatedBy() bool {
 func (editor *spdx3EditDoc) isInCreatedBy(spdxID string) bool {
 	for _, agent := range editor.ci.CreatedBy {
 		if agent.SpdxID == spdxID {
-			return true
-		}
-	}
-	return false
-}
-
-// isPersonAgent returns true if the Agent's SpdxID references a Person element
-// in the document.
-func (editor *spdx3EditDoc) isPersonAgent(agent spdx3.Agent) bool {
-	for _, person := range editor.doc.Persons {
-		if person.SpdxID == agent.SpdxID {
 			return true
 		}
 	}
@@ -789,6 +911,9 @@ func (editor *spdx3EditDoc) applyExternalIdentifier(extType string, newID spdx3.
 func (editor *spdx3EditDoc) updateLicenses() error {
 	if !editor.config.shouldLicenses() {
 		return errNoConfiguration
+	}
+	if editor.skipIfAppendNotApplicable("license") {
+		return nil
 	}
 
 	// Bug fix: check missing BEFORE any side effects (creating LicenseExpression
