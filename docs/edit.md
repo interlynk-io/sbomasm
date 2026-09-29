@@ -88,6 +88,10 @@ flat `@graph` element structure:
 - **Hash**: Stored in `verifiedUsing[]` as typed `Hash` elements with lowercase
   algorithm names (`sha256`, `md5`, …). Append mode deduplicates by
   algorithm + hash value.
+- **Repository**: Both document-level and component-level repository URLs are
+  stored as `externalRef[type=vcs]`, not `downloadLocation`. This aligns with
+  SPDX 3.0 semantics and allows multiple repository URLs per component via
+  `--append`.
 
 ## Edit Targets
 
@@ -170,7 +174,33 @@ sbomasm edit \
 
 ### Append Mode
 
-Adds to existing values (for fields that support multiple values):
+Adds to existing values. Only fields that are natively multi-valued in a format
+support `--append`; using `--append` on a single-value field prints a warning
+and skips the mutation so existing data is preserved.
+
+#### Appendable Fields by Format
+
+| Field | SPDX 2.3 | SPDX 3.0 | CycloneDX | Notes |
+|-------|----------|----------|-----------|-------|
+| `--author` | ✅ Append | ✅ Append | ✅ Append | Multi-value in all formats |
+| `--tool` | ✅ Append | ✅ Append | ✅ Append | Multi-value in all formats |
+| `--hash` | ✅ Append | ✅ Append | ✅ Append | Deduplicated by algorithm+value |
+| `--lifecycle` | ✅ Append | ✅ Append | ✅ Append | Multi-value in all formats |
+| `--license` | ❌ Overwrite | ❌ Overwrite | ✅ Append | SPDX: single concluded license |
+| `--purl` | ✅ Append | ✅ Append | ❌ Overwrite | CDX: single purl per component |
+| `--cpe` | ✅ Append | ✅ Append | ❌ Overwrite | CDX: single cpe per component |
+| `--repository` | ❌ Overwrite | ✅ Append | ✅ Append | SPDX 2.3: single downloadLocation |
+| `--name` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--version` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--type` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--description` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--copyright` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--supplier` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+| `--timestamp` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
+
+**Key:**
+- **Append** — `--append` adds the new value alongside existing values
+- **Overwrite** — `--append` is ignored; a warning is printed and the field is left unchanged. Use overwrite (default) or `--missing` instead.
 
 ```bash
 # Add another author without removing existing ones
@@ -384,6 +414,8 @@ sbomasm edit \
 | Component cpe | component.cpe |
 | Component licenses | component.licenses |
 
+> See [Append Mode](#append-mode) for which fields support `--append` in CycloneDX.
+
 ### SPDX 2.3 Field Mapping
 
 | Parameter | SPDX 2.3 Location |
@@ -398,6 +430,8 @@ sbomasm edit \
 | Component purl | package.externalRefs[packageManager] |
 | Component cpe | package.externalRefs[security] |
 | Component licenses | package.licenseConcluded |
+
+> See [Append Mode](#append-mode) for which fields support `--append` in SPDX 2.3.
 
 ### SPDX 3.0 Field Mapping
 
@@ -425,6 +459,7 @@ reuses these elements automatically.
 | `--purl` | `software_Package.externalIdentifier[type=packageUrl]` | |
 | `--cpe` | `software_Package.externalIdentifier[type=cpe23]` | |
 | `--hash` | `software_Package.verifiedUsing[]` (`Hash` elements) | Algorithm normalised to lowercase (`sha256`, `md5`, etc.) |
+| `--repository` | `software_Package.externalRef[type=vcs]` | VCS URL stored as external reference; supports multiple repos via `--append` |
 | `--license` | `hasConcludedLicense` relationship → `LicenseExpression` | Creates `simplelicensing_LicenseExpression` element; replaces existing relationship |
 
 > **Note:** In SPDX 3.0, document-level author and supplier both go into
@@ -436,6 +471,9 @@ reuses these elements automatically.
 > When overwriting a component license, the old `LicenseExpression`
 > element is automatically removed from the `@graph` if it is no longer
 > referenced. Append mode deduplicates hashes by algorithm+value.
+>
+> See [Append Mode](#append-mode) for a complete table of which fields
+> support `--append` in each format.
 
 ## Best Practices
 
