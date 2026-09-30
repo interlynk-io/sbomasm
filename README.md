@@ -304,6 +304,25 @@ sbomasm edit \
   input.json
 ```
 
+#### SPDX 3.0 JSON-LD Editing
+
+```bash
+# Add document metadata to an SPDX 3.0 SBOM (creates Person/Organization elements)
+sbomasm edit \
+  --subject document \
+  --author "Security Team (security@example.com)" \
+  --tool "sbomasm (v0.1.0)" \
+  --timestamp \
+  input.spdx3.json -o enriched.spdx3.json
+
+# Add component identifiers (stored as externalIdentifier + verifiedUsing)
+sbomasm edit \
+  --subject primary-component \
+  --purl "pkg:golang/github.com/example/app@v1.0.0" \
+  --hash "SHA256 (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)" \
+  enriched.spdx3.json -o final.spdx3.json
+```
+
 ### Removing Components
 
 Remove internal or sensitive components before sharing:
