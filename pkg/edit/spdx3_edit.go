@@ -1,6 +1,18 @@
-// Copyright 2025 Interlynk.io
+// Copyright 2026 Interlynk.io
 //
 // SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package edit
 
@@ -757,15 +769,18 @@ func (editor *spdx3EditDoc) updateDocumentTools() error {
 		}
 	}
 
+	// Skip early in missing mode if tools already exist — avoids creating
+	// orphaned Tool elements in the document.
+	if editor.config.onMissing() && len(editor.ci.CreatedUsing) > 0 {
+		return nil
+	}
+
 	newTools := editor.buildToolList()
 
 	// Inject sbomasm tool if not already present
 	sbomasmTool := editor.findOrCreateTool(SBOMASM, SBOMASM_VERSION)
 	newTools = editor.mergeTools(newTools, []spdx3.Tool{*sbomasmTool})
 
-	if editor.config.onMissing() && len(editor.ci.CreatedUsing) > 0 {
-		return nil
-	}
 	if editor.config.onAppend() {
 		editor.ci.CreatedUsing = editor.mergeTools(editor.ci.CreatedUsing, newTools)
 	} else {
