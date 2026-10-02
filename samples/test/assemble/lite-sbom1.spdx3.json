@@ -1,0 +1,71 @@
+{
+  "@context" : "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph" : [ {
+    "@id" : "_:creationinfo",
+    "type" : "CreationInfo",
+    "specVersion" : "3.0.1",
+    "createdBy" : [ "https://example.org/org1" ],
+    "createdUsing" : [ "https://example.org/tool1" ],
+    "created" : "2024-01-15T10:00:00Z"
+  }, {
+    "spdxId" : "https://example.org/doc1",
+    "type" : "SpdxDocument",
+    "name" : "Lite SBOM 1",
+    "creationInfo" : "_:creationinfo",
+    "rootElement" : [ "https://example.org/kyverno" ],
+    "profileConformance" : [ "core", "software" ]
+  }, {
+    "spdxId" : "https://example.org/org1",
+    "type" : "Organization",
+    "name" : "Example Organization",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/tool1",
+    "type" : "Tool",
+    "name" : "sbom-tool",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/kyverno",
+    "type" : "software_Package",
+    "name" : "github.com/kyverno/kyverno",
+    "software_packageVersion" : "1.12.0",
+    "software_primaryPurpose" : "application",
+    "suppliedBy" : "https://example.org/org1",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/oci",
+    "type" : "software_Package",
+    "name" : "github.com/fluxcd/pkg/oci",
+    "software_packageVersion" : "0.1.0",
+    "software_primaryPurpose" : "library",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/azcore",
+    "type" : "software_Package",
+    "name" : "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+    "software_packageVersion" : "1.0.0",
+    "software_primaryPurpose" : "library",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel1",
+    "type" : "Relationship",
+    "relationshipType" : "describes",
+    "from" : "https://example.org/doc1",
+    "to" : [ "https://example.org/kyverno" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel2",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/kyverno",
+    "to" : [ "https://example.org/oci" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel3",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/oci",
+    "to" : [ "https://example.org/azcore" ],
+    "creationInfo" : "_:creationinfo"
+  } ]
+}
