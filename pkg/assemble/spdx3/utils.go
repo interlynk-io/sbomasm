@@ -319,21 +319,26 @@ func initCreationInfoFromPrimarySBOM(m *merge, primaryDoc *parse.Document) (*spd
 	var creators []spdx3model.Agent
 	if primaryDoc.CreationInfo != nil {
 		for _, agent := range primaryDoc.CreationInfo.CreatedBy {
-			if agent.Name == "" {
+			// Accept agents that have either a Name or a SpdxID
+			if agent.Name == "" && agent.SpdxID == "" {
 				continue
 			}
 			creators = append(creators, agent)
 		}
 	}
 
-	// Deduplicate creators by name
+	// Deduplicate creators by name (fall back to SpdxID if name is empty)
 	seen := make(map[string]bool)
 	var finalCreators []spdx3model.Agent
 	for _, c := range creators {
-		if _, ok := seen[c.Name]; ok {
+		key := c.Name
+		if key == "" {
+			key = c.SpdxID
+		}
+		if _, ok := seen[key]; ok {
 			continue
 		}
-		seen[c.Name] = true
+		seen[key] = true
 		finalCreators = append(finalCreators, c)
 	}
 
@@ -540,8 +545,9 @@ func elementsKey(els []spdx3model.Element) string {
 }
 
 // genAgentList merges agents (Organizations, Persons, Tools) from all input documents.
-func genAgentList(ms *merge) (*agentCollection, error) {
+func genAgentList(ms *merge) (*agentCollection, map[string]string, error) {
 	agents := &agentCollection{}
+	agentMapper := make(map[string]string)
 	seenOrgs := make(map[string]bool)
 	seenPersons := make(map[string]bool)
 	seenTools := make(map[string]bool)
@@ -558,9 +564,13 @@ func genAgentList(ms *merge) (*agentCollection, error) {
 			seenOrgs[key] = true
 			clone := &spdx3model.Organization{}
 			if err := cloneElement(org, clone); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			originalID := org.SpdxID
 			clone.SpdxID = fmt.Sprintf("https://interlynk.io/organization/%s-%s", sanitizeForID(org.Name), uuid.New().String())
+			if originalID != "" {
+				agentMapper[originalID] = clone.SpdxID
+			}
 			if ms.out != nil && ms.out.CreationInfo != nil {
 				clone.CreationInfo = *ms.out.CreationInfo
 			}
@@ -578,9 +588,13 @@ func genAgentList(ms *merge) (*agentCollection, error) {
 			seenPersons[key] = true
 			clone := &spdx3model.Person{}
 			if err := cloneElement(person, clone); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			originalID := person.SpdxID
 			clone.SpdxID = fmt.Sprintf("https://interlynk.io/person/%s-%s", sanitizeForID(person.Name), uuid.New().String())
+			if originalID != "" {
+				agentMapper[originalID] = clone.SpdxID
+			}
 			if ms.out != nil && ms.out.CreationInfo != nil {
 				clone.CreationInfo = *ms.out.CreationInfo
 			}
@@ -598,9 +612,13 @@ func genAgentList(ms *merge) (*agentCollection, error) {
 			seenTools[key] = true
 			clone := &spdx3model.Tool{}
 			if err := cloneElement(tool, clone); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
+			originalID := tool.SpdxID
 			clone.SpdxID = fmt.Sprintf("https://interlynk.io/tool/%s-%s", sanitizeForID(tool.Name), uuid.New().String())
+			if originalID != "" {
+				agentMapper[originalID] = clone.SpdxID
+			}
 			if ms.out != nil && ms.out.CreationInfo != nil {
 				clone.CreationInfo = *ms.out.CreationInfo
 			}
@@ -608,7 +626,82 @@ func genAgentList(ms *merge) (*agentCollection, error) {
 		}
 	}
 
-	return agents, nil
+	return agents, agentMapper, nil
+}
+
+// fixStaleAgentRefs updates agent references (suppliedBy, createdBy, createdUsing)
+// in the output document after agents have been deduplicated and rewritten.
+func fixStaleAgentRefs(doc *parse.Document, agentMapper map[string]string) {
+	if len(agentMapper) == 0 {
+		return
+	}
+
+	// Update suppliedBy on packages
+	for _, pkg := range doc.Packages {
+		if pkg == nil || pkg.SuppliedBy == nil {
+			continue
+		}
+		if newID, ok := agentMapper[pkg.SuppliedBy.SpdxID]; ok {
+			pkg.SuppliedBy.SpdxID = newID
+		}
+	}
+
+	// Helper to update CreationInfo references
+	fixCI := func(ci *spdx3model.CreationInfo) {
+		if ci == nil {
+			return
+		}
+		for i := range ci.CreatedBy {
+			if newID, ok := agentMapper[ci.CreatedBy[i].SpdxID]; ok {
+				ci.CreatedBy[i].SpdxID = newID
+			}
+		}
+		for i := range ci.CreatedUsing {
+			if newID, ok := agentMapper[ci.CreatedUsing[i].SpdxID]; ok {
+				ci.CreatedUsing[i].SpdxID = newID
+			}
+		}
+	}
+
+	// Update CreationInfo on all elements
+	if doc.SpdxDocument != nil {
+		fixCI(&doc.SpdxDocument.CreationInfo)
+	}
+	for _, pkg := range doc.Packages {
+		if pkg != nil {
+			fixCI(&pkg.CreationInfo)
+		}
+	}
+	for _, file := range doc.Files {
+		if file != nil {
+			fixCI(&file.CreationInfo)
+		}
+	}
+	for _, rel := range doc.Relationships {
+		if rel != nil {
+			fixCI(&rel.CreationInfo)
+		}
+	}
+	for _, org := range doc.Organizations {
+		if org != nil {
+			fixCI(&org.CreationInfo)
+		}
+	}
+	for _, person := range doc.Persons {
+		if person != nil {
+			fixCI(&person.CreationInfo)
+		}
+	}
+	for _, tool := range doc.Tools {
+		if tool != nil {
+			fixCI(&tool.CreationInfo)
+		}
+	}
+	for _, sa := range doc.SoftwareAgents {
+		if sa != nil {
+			fixCI(&sa.CreationInfo)
+		}
+	}
 }
 
 // genHierarchicalContains generates CONTAINS relationships between each input SBOM's

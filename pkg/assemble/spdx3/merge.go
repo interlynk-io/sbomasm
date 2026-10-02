@@ -112,7 +112,7 @@ func (m *merge) combinedMerge() error {
 		return err
 	}
 
-	mergedAgents, err := genAgentList(m)
+	mergedAgents, agentMapper, err := genAgentList(m)
 	if err != nil {
 		return err
 	}
@@ -124,6 +124,9 @@ func (m *merge) combinedMerge() error {
 	doc.Organizations = mergedAgents.Organizations
 	doc.Persons = mergedAgents.Persons
 	doc.Tools = mergedAgents.Tools
+
+	// Fix stale agent references after deduplication/rewriting
+	fixStaleAgentRefs(doc, agentMapper)
 
 	// Add top-level relationships
 	topLevelRels := []*spdx3model.Relationship{}
@@ -293,7 +296,7 @@ func (m *merge) mergeWithPrimary() error {
 	}
 
 	// Merge agents
-	mergedAgents, err := genAgentList(m)
+	mergedAgents, agentMapper, err := genAgentList(m)
 	if err != nil {
 		return err
 	}
@@ -305,6 +308,9 @@ func (m *merge) mergeWithPrimary() error {
 	doc.Organizations = mergedAgents.Organizations
 	doc.Persons = mergedAgents.Persons
 	doc.Tools = mergedAgents.Tools
+
+	// Fix stale agent references after deduplication/rewriting
+	fixStaleAgentRefs(doc, agentMapper)
 
 	topLevelRels := []*spdx3model.Relationship{}
 
