@@ -101,10 +101,11 @@ func genCreationInfo(ms *merge) (*spdx3model.CreationInfo, error) {
 	ci.SpecVersion = spdx3model.SpecVersion
 	ci.Created = utcNowTime()
 
-	// Build creators list
-	var creators []spdx3model.Agent
+	// Build createdBy (Agents only: Persons + Organizations)
+	var createdBy []spdx3model.Agent
+	seenCreators := make(map[string]bool)
 
-	// Add authors from CLI settings
+	// Add authors from CLI settings as Persons
 	for _, author := range ms.settings.App.Authors {
 		if author.Name == "" {
 			continue
@@ -112,32 +113,33 @@ func genCreationInfo(ms *merge) (*spdx3model.CreationInfo, error) {
 		person := &spdx3model.Person{}
 		person.SpdxID = fmt.Sprintf("https://interlynk.io/person/%s-%s", sanitizeForID(author.Name), uuid.New().String())
 		person.Name = author.Name
-		creators = append(creators, spdx3model.Agent{Element: person.Element})
+		createdBy = append(createdBy, spdx3model.Agent{Element: person.Element})
+		seenCreators[author.Name] = true
 	}
 
-	// Merge creators from input documents
-	seenCreators := make(map[string]bool)
+	// Merge creators from input documents' CreationInfo
 	for _, inDoc := range ms.in {
-		if inDoc.SpdxDocument == nil {
+		if inDoc.CreationInfo == nil {
 			continue
 		}
-		inCI := &inDoc.SpdxDocument.CreationInfo
-		for _, agent := range inCI.CreatedBy {
+		for _, agent := range inDoc.CreationInfo.CreatedBy {
 			key := agent.Name
+			if key == "" {
+				key = agent.SpdxID
+			}
 			if _, exists := seenCreators[key]; !exists {
 				seenCreators[key] = true
-				creators = append(creators, agent)
+				createdBy = append(createdBy, agent)
 			}
 		}
 	}
 
-	// Add sbomasm tool
+	ci.CreatedBy = createdBy
+
+	// Build createdUsing (Tools only)
 	tool := &spdx3model.Tool{}
 	tool.SpdxID = fmt.Sprintf("https://interlynk.io/tool/sbomasm-%s", version.GetVersionInfo().GitVersion)
 	tool.Name = "sbomasm"
-	creators = append(creators, spdx3model.Agent{Element: tool.Element})
-
-	ci.CreatedBy = creators
 	ci.CreatedUsing = []spdx3model.Tool{*tool}
 
 	// Generate comment referencing all merged documents
@@ -313,22 +315,16 @@ func initCreationInfoFromPrimarySBOM(m *merge, primaryDoc *parse.Document) (*spd
 		ci.Comment = sbomasmComment
 	}
 
-	// Preserve primary's creators
+	// Preserve primary's creators (Agents only)
 	var creators []spdx3model.Agent
-	if primaryDoc.SpdxDocument != nil {
-		for _, agent := range primaryDoc.SpdxDocument.CreationInfo.CreatedBy {
+	if primaryDoc.CreationInfo != nil {
+		for _, agent := range primaryDoc.CreationInfo.CreatedBy {
 			if agent.Name == "" {
 				continue
 			}
 			creators = append(creators, agent)
 		}
 	}
-
-	// Add sbomasm tool
-	tool := &spdx3model.Tool{}
-	tool.SpdxID = fmt.Sprintf("https://interlynk.io/tool/sbomasm-%s", version.GetVersionInfo().GitVersion)
-	tool.Name = "sbomasm"
-	creators = append(creators, spdx3model.Agent{Element: tool.Element})
 
 	// Deduplicate creators by name
 	seen := make(map[string]bool)
@@ -342,6 +338,11 @@ func initCreationInfoFromPrimarySBOM(m *merge, primaryDoc *parse.Document) (*spd
 	}
 
 	ci.CreatedBy = finalCreators
+
+	// Build createdUsing (Tools only)
+	tool := &spdx3model.Tool{}
+	tool.SpdxID = fmt.Sprintf("https://interlynk.io/tool/sbomasm-%s", version.GetVersionInfo().GitVersion)
+	tool.Name = "sbomasm"
 	ci.CreatedUsing = []spdx3model.Tool{*tool}
 
 	return &ci, nil
