@@ -116,3 +116,63 @@ sbomasm assemble --flatMerge \
 - All components from both SBOMs are in the flat `components` section (no nesting)
 - Primary SBOM's serial number, metadata, and tools are preserved, sbomasm is appended in the tools.
 - The primary's dependencies include the secondary primary
+
+---
+
+## SPDX 3.0 Examples
+
+All merge strategies also work with SPDX 3.0 JSON-LD format.
+
+### Test Files
+
+- `lite-sbom1.spdx3.json` — Primary SBOM with 3 packages (kyverno, oci, azcore)
+- `lite-sbom2.spdx3.json` — Secondary SBOM with 4 packages (cosign, httpsnoop, fulcio, rekor)
+
+### 1. Flat Merge (SPDX 3.0)
+
+```bash
+sbomasm assemble -n "foo" -v "v1.0.0" -t "library" \
+  --flatMerge \
+  samples/test/assemble/lite-sbom1.spdx3.json samples/test/assemble/lite-sbom2.spdx3.json \
+  -o flat-merge.spdx3.json
+```
+
+### 2. Assembly Merge (SPDX 3.0)
+
+```bash
+sbomasm assemble -n "foo" -v "v1.0.0" -t "library" \
+  --assemblyMerge \
+  samples/test/assemble/lite-sbom1.spdx3.json samples/test/assemble/lite-sbom2.spdx3.json \
+  -o assembly-merge.spdx3.json
+```
+
+### 3. Hierarchical Merge (SPDX 3.0)
+
+```bash
+sbomasm assemble -n "foo" -v "v1.0.0" -t "library" \
+  --hierMerge \
+  samples/test/assemble/lite-sbom1.spdx3.json samples/test/assemble/lite-sbom2.spdx3.json \
+  -o hier-merge.spdx3.json
+```
+
+### 4. Assembly Merge with Primary (SPDX 3.0)
+
+```bash
+sbomasm assemble --assemblyMerge \
+  --primary samples/test/assemble/lite-sbom1.spdx3.json \
+  samples/test/assemble/lite-sbom2.spdx3.json \
+  -o assembly-with-primary.spdx3.json
+```
+
+### 5. Flat Merge with Primary (SPDX 3.0)
+
+```bash
+sbomasm assemble --flatMerge \
+  --primary samples/test/assemble/lite-sbom1.spdx3.json \
+  samples/test/assemble/lite-sbom2.spdx3.json \
+  -o flat-with-primary.spdx3.json
+```
+
+### 6. Augment Merge (SPDX 3.0)
+
+See `samples/test/assemble/augment-merge-tests/README.md` for augment merge examples.

@@ -199,6 +199,7 @@ and skips the mutation so existing data is preserved.
 | `--timestamp` | ❌ Overwrite | ❌ Overwrite | ❌ Overwrite | Single-value field |
 
 **Key:**
+
 - **Append** — `--append` adds the new value alongside existing values
 - **Overwrite** — `--append` is ignored; a warning is printed and the field is left unchanged. Use overwrite (default) or `--missing` instead.
 
