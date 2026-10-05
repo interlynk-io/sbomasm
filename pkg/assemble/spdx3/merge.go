@@ -125,6 +125,17 @@ func (m *merge) combinedMerge() error {
 	doc.Persons = mergedAgents.Persons
 	doc.Tools = mergedAgents.Tools
 
+	// Add sbomasm tool from CreationInfo.CreatedUsing to document so it appears
+	// as a proper element in the @graph (SPDX 3.0 requires all referenced elements
+	// to exist in the graph).
+	if doc.CreationInfo != nil {
+		for _, tool := range doc.CreationInfo.CreatedUsing {
+			t := tool
+			t.CreationInfo = *doc.CreationInfo
+			doc.Tools = append(doc.Tools, &t)
+		}
+	}
+
 	// Fix stale agent references after deduplication/rewriting
 	fixStaleAgentRefs(doc, agentMapper)
 
@@ -308,6 +319,17 @@ func (m *merge) mergeWithPrimary() error {
 	doc.Organizations = mergedAgents.Organizations
 	doc.Persons = mergedAgents.Persons
 	doc.Tools = mergedAgents.Tools
+
+	// Add sbomasm tool from CreationInfo.CreatedUsing to document so it appears
+	// as a proper element in the @graph (SPDX 3.0 requires all referenced elements
+	// to exist in the graph).
+	if doc.CreationInfo != nil {
+		for _, tool := range doc.CreationInfo.CreatedUsing {
+			t := tool
+			t.CreationInfo = *doc.CreationInfo
+			doc.Tools = append(doc.Tools, &t)
+		}
+	}
 
 	// Fix stale agent references after deduplication/rewriting
 	fixStaleAgentRefs(doc, agentMapper)

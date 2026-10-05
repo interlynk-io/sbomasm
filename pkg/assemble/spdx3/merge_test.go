@@ -638,3 +638,352 @@ func TestAugmentMerge_OverwriteMode(t *testing.T) {
 		t.Errorf("React description = %q, want %q (overwrite mode)", desc, "New description")
 	}
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CreationInfo Correctness Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// TestFlatMerge_CreationInfoHasCorrectAgents verifies that the merged CreationInfo:
+// - createdBy contains only Agents (orgs/persons), NOT the sbomasm tool
+// - createdUsing contains only Tools
+func TestFlatMerge_CreationInfoHasCorrectAgents(t *testing.T) {
+	ctx := context.Background()
+
+	// SBOM with org1 as creator
+	doc1 := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"], "createdUsing": ["https://example.org/tool1"]},
+			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+			{"type": "Tool", "spdxId": "https://example.org/tool1", "name": "tool1", "creationInfo": "_:ci"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+		]
+	}`
+
+	// SBOM with org2 as creator
+	doc2 := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/b"]},
+			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"], "createdUsing": ["https://example.org/tool2"]},
+			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
+			{"type": "Tool", "spdxId": "https://example.org/tool2", "name": "tool2", "creationInfo": "_:ci2"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/b", "name": "PkgB", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
+		]
+	}`
+
+	file1 := writeTestDoc(t, doc1)
+	file2 := writeTestDoc(t, doc2)
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
+		Input:    input{Files: []string{file1, file2}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{FlatMerge: true},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(outFile)
+	var doc map[string]interface{}
+	json.Unmarshal(data, &doc)
+
+	// Find the merged CreationInfo (should be the one with sbomasm comment)
+	var mergedCI map[string]interface{}
+	for _, item := range doc["@graph"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if m["type"] == "CreationInfo" {
+			if comment, ok := m["comment"].(string); ok && len(comment) > 0 {
+				mergedCI = m
+				break
+			}
+		}
+	}
+	if mergedCI == nil {
+		t.Fatal("merged CreationInfo not found")
+	}
+
+	// Verify createdBy exists and is not empty/null
+	createdBy, ok := mergedCI["createdBy"].([]interface{})
+	if !ok || len(createdBy) == 0 {
+		t.Fatalf("createdBy should be a non-empty list, got: %v", mergedCI["createdBy"])
+	}
+
+	// Verify createdBy contains orgs (not tools)
+	for _, ref := range createdBy {
+		refStr, _ := ref.(string)
+		if refStr == "" {
+			t.Errorf("createdBy entry should not be empty")
+			continue
+		}
+		// Check it's an Organization, not a Tool
+		isTool := false
+		for _, item := range doc["@graph"].([]interface{}) {
+			elem := item.(map[string]interface{})
+			if elem["spdxId"] == refStr && elem["type"] == "Tool" {
+				isTool = true
+				break
+			}
+		}
+		if isTool {
+			t.Errorf("createdBy should NOT contain Tool references, got: %s", refStr)
+		}
+	}
+
+	// Verify createdUsing exists and contains the sbomasm tool
+	createdUsing, ok := mergedCI["createdUsing"].([]interface{})
+	if !ok || len(createdUsing) == 0 {
+		t.Fatalf("createdUsing should contain sbomasm tool, got: %v", mergedCI["createdUsing"])
+	}
+	foundTool := false
+	for _, ref := range createdUsing {
+		refStr, _ := ref.(string)
+		if refStr == "" {
+			continue
+		}
+		for _, item := range doc["@graph"].([]interface{}) {
+			elem := item.(map[string]interface{})
+			if elem["spdxId"] == refStr && elem["type"] == "Tool" {
+				foundTool = true
+				break
+			}
+		}
+	}
+	if !foundTool {
+		t.Error("createdUsing should contain the sbomasm tool")
+	}
+}
+
+// TestFlatMerge_CreationInfoMergesBothOrgs verifies that createdBy includes
+// creators from both input SBOMs (not just the first one).
+func TestFlatMerge_CreationInfoMergesBothOrgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Both SBOMs have same org name but different IDs (simulates two different orgs)
+	doc1 := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
+			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+		]
+	}`
+
+	doc2 := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/b"]},
+			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
+			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/b", "name": "PkgB", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
+		]
+	}`
+
+	file1 := writeTestDoc(t, doc1)
+	file2 := writeTestDoc(t, doc2)
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
+		Input:    input{Files: []string{file1, file2}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{FlatMerge: true},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(outFile)
+	var doc map[string]interface{}
+	json.Unmarshal(data, &doc)
+
+	// Find merged CreationInfo
+	var mergedCI map[string]interface{}
+	for _, item := range doc["@graph"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if m["type"] == "CreationInfo" {
+			if comment, ok := m["comment"].(string); ok && len(comment) > 0 {
+				mergedCI = m
+				break
+			}
+		}
+	}
+	if mergedCI == nil {
+		t.Fatal("merged CreationInfo not found")
+	}
+
+	// Count orgs in createdBy
+	createdBy, _ := mergedCI["createdBy"].([]interface{})
+	orgCount := 0
+	for _, ref := range createdBy {
+		refStr, _ := ref.(string)
+		if refStr == "" {
+			continue
+		}
+		for _, item := range doc["@graph"].([]interface{}) {
+			elem := item.(map[string]interface{})
+			if elem["spdxId"] == refStr && elem["type"] == "Organization" {
+				orgCount++
+				break
+			}
+		}
+	}
+
+	if orgCount < 2 {
+		t.Errorf("createdBy should contain both orgs from both SBOMs, got %d org(s)", orgCount)
+	}
+}
+
+// TestFlatMerge_StaleSuppliedByIsRewritten verifies that after agents are
+// deduplicated and rewritten, package suppliedBy references are updated.
+func TestFlatMerge_StaleSuppliedByIsRewritten(t *testing.T) {
+	ctx := context.Background()
+
+	doc1 := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"], "createdUsing": ["https://example.org/tool1"]},
+			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+			{"type": "Tool", "spdxId": "https://example.org/tool1", "name": "tool1", "creationInfo": "_:ci"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "suppliedBy": "https://example.org/org1", "creationInfo": "_:ci"}
+		]
+	}`
+
+	file1 := writeTestDoc(t, doc1)
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
+		Input:    input{Files: []string{file1}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{FlatMerge: true},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	// Read output
+	data, _ := os.ReadFile(outFile)
+	var doc map[string]interface{}
+	json.Unmarshal(data, &doc)
+
+	// Find PkgA and its suppliedBy
+	var pkgA, orgInGraph map[string]interface{}
+	for _, item := range doc["@graph"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if m["type"] == "software_Package" && m["name"] == "PkgA" {
+			pkgA = m
+		}
+		if m["type"] == "Organization" && m["name"] == "Org1" {
+			orgInGraph = m
+		}
+	}
+	if pkgA == nil {
+		t.Fatal("PkgA not found in output")
+	}
+	if orgInGraph == nil {
+		t.Fatal("Org1 not found in output")
+	}
+
+	// Verify suppliedBy points to the rewritten org, not the original
+	suppliedBy, _ := pkgA["suppliedBy"].(string)
+	orgSpdxId, _ := orgInGraph["spdxId"].(string)
+	if suppliedBy != orgSpdxId {
+		t.Errorf("suppliedBy should point to rewritten org ID %s, got %s", orgSpdxId, suppliedBy)
+	}
+
+	// Verify the org ID was actually rewritten (not the original)
+	if orgSpdxId == "https://example.org/org1" {
+		t.Error("org1 should have been rewritten to a new interlynk.io URI")
+	}
+}
+
+// TestFlatMergeWithPrimary_CreatedByNotNull verifies that primary merge mode
+// creates a valid createdBy list (not null/empty).
+func TestFlatMergeWithPrimary_CreatedByNotNull(t *testing.T) {
+	ctx := context.Background()
+
+	// Primary SBOM with org1
+	primaryDoc := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/frontend"]},
+			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
+			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/frontend", "name": "Frontend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+		]
+	}`
+
+	// Secondary SBOM with org2
+	secondaryDoc := `{
+		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+		"@graph": [
+			{"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/backend"]},
+			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
+			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
+			{"type": "software_Package", "spdxId": "https://example.org/pkg/backend", "name": "Backend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
+		]
+	}`
+
+	primaryFile := writeTestDoc(t, primaryDoc)
+	secondaryFile := writeTestDoc(t, secondaryDoc)
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
+		Input:    input{Files: []string{secondaryFile}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{
+			FlatMerge:              true,
+			IsFlatMergeWithPrimary: true,
+			PrimaryFile:            primaryFile,
+		},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	// Read output
+	data, _ := os.ReadFile(outFile)
+	var doc map[string]interface{}
+	json.Unmarshal(data, &doc)
+
+	// Find the new merged CreationInfo (has sbomasm comment)
+	var mergedCI map[string]interface{}
+	for _, item := range doc["@graph"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if m["type"] == "CreationInfo" {
+			if comment, ok := m["comment"].(string); ok && len(comment) > 0 {
+				mergedCI = m
+				break
+			}
+		}
+	}
+	if mergedCI == nil {
+		t.Fatal("merged CreationInfo not found")
+	}
+
+	// Verify createdBy is not null and not empty
+	createdBy, ok := mergedCI["createdBy"]
+	if !ok || createdBy == nil {
+		t.Fatal("createdBy should not be null in primary merge")
+	}
+
+	createdByList, ok := createdBy.([]interface{})
+	if !ok || len(createdByList) == 0 {
+		t.Fatalf("createdBy should be a non-empty list, got: %v", createdBy)
+	}
+}
