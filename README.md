@@ -151,7 +151,7 @@ Modern software development involves complex supply chains with multiple compone
 - 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
 - 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
-- 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
+- 📋 **Format Agnostic**: Supports SPDX 2.3, SPDX 3.0 JSON-LD, and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
 
@@ -192,6 +192,36 @@ sbomasm assemble \
   --type "container" \
   -o final-container.spdx.json \
   alpine-base.spdx.json app-deps.spdx.json
+```
+
+#### SPDX 3.0 JSON-LD Assembly
+
+sbomasm supports SPDX 3.0 JSON-LD format with flat `@graph` structure. All merge strategies work with SPDX 3.0:
+
+```bash
+# Flat merge SPDX 3.0 SBOMs (default mode)
+sbomasm assemble \
+  -n "my-app" -v "1.0.0" -t "application" \
+  frontend.spdx3.json backend.spdx3.json \
+  -o merged.spdx3.json
+
+# Assembly merge with primary (nest secondary SBOMs into primary)
+sbomasm assemble --assemblyMerge \
+  --primary container.spdx3.json \
+  app1.spdx3.json app2.spdx3.json \
+  -o complete.spdx3.json
+
+# Augment merge (enrich primary with secondary fields)
+sbomasm assemble --augmentMerge \
+  --primary base.spdx3.json \
+  scan-results.spdx3.json \
+  -o enriched.spdx3.json
+
+# Flat merge with primary (preserve primary as root)
+sbomasm assemble --flatMerge \
+  --primary primary.spdx3.json \
+  secondary.spdx3.json \
+  -o combined.spdx3.json
 ```
 
 #### Document License

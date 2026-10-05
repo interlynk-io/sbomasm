@@ -12,7 +12,7 @@ require (
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
-	github.com/interlynk-io/spdx-zen v0.1.5
+	github.com/interlynk-io/spdx-zen v0.1.6
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pingcap/log v1.1.0
@@ -52,5 +52,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/interlynk-io/spdx-zen => ../spdx-zen
