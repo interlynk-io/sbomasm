@@ -60,4 +60,5 @@ type RmParams struct {
 	AllComponents      bool
 	Ctx                *context.Context
 	RemovedCount       int
+	SpecKey            string // "spdx", "spdx3", or "cdx" — used for handler registry keys
 }

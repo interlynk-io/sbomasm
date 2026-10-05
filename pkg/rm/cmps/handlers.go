@@ -25,6 +25,8 @@ import (
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
+	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/spdx/tools-golang/spdx"
 	v2_3 "github.com/spdx/tools-golang/spdx/v2/v2_3"
 )
@@ -36,6 +38,31 @@ func RemoveDependencies(ctx context.Context, sbomDoc sbom.SBOMDocument, selected
 	var totalRemovedDependencies int
 
 	switch doc := sbomDoc.Document().(type) {
+	case *parse.Document:
+		toRemove := make(map[string]bool)
+		for _, dep := range selectedDependencies {
+			if depRef, ok := dep.(string); ok {
+				toRemove[depRef] = true
+			}
+		}
+
+		var filtered []*spdx3.Relationship
+		for _, rel := range doc.Relationships {
+			// Remove relationships where the target (To) is being removed
+			shouldRemove := false
+			for _, to := range rel.To {
+				if toRemove[to.SpdxID] {
+					shouldRemove = true
+					break
+				}
+			}
+			if !shouldRemove {
+				filtered = append(filtered, rel)
+			}
+			totalRemovedDependencies++
+		}
+		doc.Relationships = filtered
+
 	case *spdx.Document:
 
 		toRemove := make(map[string]bool)
@@ -95,6 +122,32 @@ func RemoveComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedCo
 	var totalRemovedComponents int
 
 	switch doc := sbomDoc.Document().(type) {
+	case *parse.Document:
+		var filtered []*spdx3.Package
+		toRemove := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if pkg, ok := comp.(*spdx3.Package); ok {
+				totalSelectedComponents++
+				toRemove[pkg.SpdxID] = true
+			}
+		}
+		for _, p := range doc.Packages {
+			if !toRemove[p.SpdxID] {
+				filtered = append(filtered, p)
+			}
+			totalRemovedComponents++
+		}
+		doc.Packages = filtered
+
+		// Also clean up SoftwareArtifacts slice if the package is referenced there
+		var filteredArtifacts []*spdx3.SoftwareArtifact
+		for _, sa := range doc.SoftwareArtifacts {
+			if !toRemove[sa.SpdxID] {
+				filteredArtifacts = append(filteredArtifacts, sa)
+			}
+		}
+		doc.SoftwareArtifacts = filteredArtifacts
+
 	case *spdx.Document:
 		var filtered []*v2_3.Package
 		toRemove := make(map[string]bool)
@@ -154,6 +207,36 @@ func FindAllDependenciesForComponents(ctx context.Context, doc sbom.SBOMDocument
 	var dependencies []interface{}
 
 	switch sbomDoc := doc.Document().(type) {
+	case *parse.Document:
+		pkgIDs := make(map[string]bool)
+		for _, comp := range selectedComponents {
+			if pkg, ok := comp.(*spdx3.Package); ok {
+				pkgIDs[pkg.SpdxID] = true
+			}
+		}
+
+		for _, rel := range sbomDoc.Relationships {
+			totalDependencies++
+			fromID := rel.From.SpdxID
+
+			if pkgIDs[fromID] && (rel.RelationshipType == spdx3.RelationshipTypeDependsOn || rel.RelationshipType == spdx3.RelationshipTypeContains) {
+				totalSelectedDependencies++
+				for _, to := range rel.To {
+					dependencies = append(dependencies, to.SpdxID)
+				}
+			}
+
+			// remove describes relationships for primary components
+			if rel.RelationshipType == spdx3.RelationshipTypeDescribes {
+				for _, to := range rel.To {
+					if pkgIDs[to.SpdxID] {
+						totalSelectedDependencies++
+						dependencies = append(dependencies, to.SpdxID)
+					}
+				}
+			}
+		}
+
 	case *spdx.Document:
 
 		pkgIDs := make(map[string]bool)
@@ -218,6 +301,14 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	var totalSelectedComponents int
 
 	switch doc := sbomDoc.Document().(type) {
+	case *parse.Document:
+		for _, p := range doc.Packages {
+			totalComponents++
+			if shouldSelectSPDX3Component(p, params) {
+				selectedComponents = append(selectedComponents, p)
+				totalSelectedComponents++
+			}
+		}
 	case *spdx.Document:
 		for _, p := range doc.Packages {
 			totalComponents++
@@ -288,6 +379,39 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *types.RmParams) bool {
 	// if params.Field == "" && params.Value != "" {
 	// 	return doesSPDXPackageContainValue(pkg, params.Value)
 	// }
+	return true
+}
+
+func shouldSelectSPDX3Component(pkg *spdx3.Package, params *types.RmParams) bool {
+	log := logger.FromContext(*params.Ctx)
+	log.Debugf("Checking component: %s@%s to be added to selection list", pkg.Name, pkg.PackageVersion)
+
+	// Case: specific name + version
+	if params.ComponentName != "" && params.ComponentVersion != "" {
+		return pkg.Name == params.ComponentName && pkg.PackageVersion == params.ComponentVersion
+	}
+
+	// case: simply to remove all components
+	if params.All && params.Field == "" && params.Value == "" {
+		log.Debugf("Selecting all components from SPDX 3.0 document")
+		return true
+	}
+
+	// case: match field presence, key and value present
+	if params.Field != "" && params.Key != "" && params.Value != "" {
+		return getSPDX3PackageFieldKeyValue(*params.Ctx, pkg, params.Field, params.Key) != ""
+	}
+
+	// Case: match field presence
+	if params.Field != "" && params.Value == "" {
+		return getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field) != ""
+	}
+
+	// Case: match field + value
+	if params.Field != "" && params.Value != "" {
+		return strings.Contains(getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field), params.Value)
+	}
+
 	return true
 }
 
@@ -567,6 +691,279 @@ func getSPDXComponentFieldKeyValue(ctx context.Context, pkg spdx.Package, field,
 				log.Debugf("Found hash values for %s: %s", pkg.PackageName, strings.Join(values, ","))
 				return strings.Join(values, ",")
 			}
+		}
+	}
+
+	return ""
+}
+
+func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field string) string {
+	log := logger.FromContext(ctx)
+	log.Debugf("Checking field presence")
+
+	switch strings.ToLower(field) {
+	case "name":
+		if pkg.Name != "" && pkg.Name != "NOASSERTION" {
+			log.Debugf("Found name value for %s: %s", pkg.Name, pkg.Name)
+			return pkg.Name
+		}
+
+	case "version":
+		if pkg.PackageVersion != "" && pkg.PackageVersion != "NOASSERTION" {
+			log.Debugf("Found version value for %s: %s", pkg.Name, pkg.PackageVersion)
+			return pkg.PackageVersion
+		}
+
+	case "description":
+		if pkg.Description != "" && pkg.Description != "NOASSERTION" {
+			log.Debugf("Found description value for %s: %s", pkg.Name, pkg.Description)
+			return pkg.Description
+		}
+
+	case "copyright":
+		if pkg.CopyrightText != "" && pkg.CopyrightText != "NOASSERTION" {
+			log.Debugf("Found copyright value for %s: %s", pkg.Name, pkg.CopyrightText)
+			return pkg.CopyrightText
+		}
+
+	case "supplier":
+		if pkg.SuppliedBy != nil {
+			org := pkg.SuppliedBy
+			if org.Name != "" && org.Name != "NOASSERTION" {
+				log.Debugf("Found supplier value for %s: %s", pkg.Name, org.Name)
+				return org.Name
+			}
+		}
+
+	case "author":
+		var values []string
+		for _, agent := range pkg.OriginatedBy {
+			if agent.Name != "" && agent.Name != "NOASSERTION" {
+				values = append(values, agent.Name)
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found author values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "type":
+		var values []string
+		if pkg.PrimaryPurpose != "" {
+			values = append(values, string(pkg.PrimaryPurpose))
+		}
+		for _, p := range pkg.AdditionalPurpose {
+			values = append(values, string(p))
+		}
+		if len(values) > 0 {
+			log.Debugf("Found type values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "repository":
+		var values []string
+		for _, ref := range pkg.ExternalRef {
+			if ref.ExternalRefType == spdx3.ExternalRefTypeVcs {
+				for _, loc := range ref.Locator {
+					if loc != "" && loc != "NOASSERTION" {
+						values = append(values, loc)
+					}
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found repository values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "license":
+		// License in SPDX 3.0 is via relationship; handled by caller
+		return ""
+
+	case "purl":
+		var values []string
+		for _, ext := range pkg.ExternalIdentifier {
+			if ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypePackageUrl && ext.Identifier != "" && ext.Identifier != "NOASSERTION" {
+				values = append(values, ext.Identifier)
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found purl values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "cpe":
+		var values []string
+		for _, ext := range pkg.ExternalIdentifier {
+			if (ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypeCpe22 || ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypeCpe23) && ext.Identifier != "" && ext.Identifier != "NOASSERTION" {
+				values = append(values, ext.Identifier)
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found CPE values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+
+	case "hash":
+		var values []string
+		for _, vu := range pkg.VerifiedUsing {
+			if hash, ok := vu.(*spdx3.Hash); ok {
+				if hash.Algorithm != "" {
+					values = append(values, string(hash.Algorithm))
+				}
+				if hash.HashValue != "" {
+					values = append(values, hash.HashValue)
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found hash values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
+		}
+	}
+	return ""
+}
+
+func getSPDX3PackageFieldKeyValue(ctx context.Context, pkg *spdx3.Package, field, key string) string {
+	log := logger.FromContext(ctx)
+	log.Debugf("Checking field presence for key and value")
+
+	field = strings.ToLower(field)
+	key = strings.ToLower(key)
+
+	switch field {
+	case "name":
+		if key == "name" || key == "" {
+			if pkg.Name != "" && pkg.Name != "NOASSERTION" {
+				log.Debugf("Found name value for %s: %s", pkg.Name, pkg.Name)
+				return pkg.Name
+			}
+		}
+
+	case "version":
+		if key == "version" || key == "" {
+			if pkg.PackageVersion != "" && pkg.PackageVersion != "NOASSERTION" {
+				log.Debugf("Found version value for %s: %s", pkg.Name, pkg.PackageVersion)
+				return pkg.PackageVersion
+			}
+		}
+
+	case "description":
+		if key == "description" || key == "" {
+			if pkg.Description != "" && pkg.Description != "NOASSERTION" {
+				log.Debugf("Found description value for %s: %s", pkg.Name, pkg.Description)
+				return pkg.Description
+			}
+		}
+
+	case "copyright":
+		if key == "copyright" || key == "" {
+			if pkg.CopyrightText != "" && pkg.CopyrightText != "NOASSERTION" {
+				log.Debugf("Found copyright value for %s: %s", pkg.Name, pkg.CopyrightText)
+				return pkg.CopyrightText
+			}
+		}
+
+	case "supplier":
+		if key == "supplier" && pkg.SuppliedBy != nil && pkg.SuppliedBy.Name != "" && pkg.SuppliedBy.Name != "NOASSERTION" {
+			log.Debugf("Found supplier values for %s: %s", pkg.Name, pkg.SuppliedBy.Name)
+			return pkg.SuppliedBy.Name
+		}
+
+	case "author":
+		if key == "originator" {
+			var values []string
+			for _, agent := range pkg.OriginatedBy {
+				if agent.Name != "" && agent.Name != "NOASSERTION" {
+					values = append(values, agent.Name)
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found author values for %s: %s", pkg.Name, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "type":
+		if key == "type" || key == "" {
+			var values []string
+			if pkg.PrimaryPurpose != "" {
+				values = append(values, string(pkg.PrimaryPurpose))
+			}
+			for _, p := range pkg.AdditionalPurpose {
+				values = append(values, string(p))
+			}
+			if len(values) > 0 {
+				log.Debugf("Found type values for %s: %s", pkg.Name, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "repository":
+		if key == "url" || key == "" {
+			var values []string
+			for _, ref := range pkg.ExternalRef {
+				if ref.ExternalRefType == spdx3.ExternalRefTypeVcs {
+					for _, loc := range ref.Locator {
+						if loc != "" && loc != "NOASSERTION" {
+							values = append(values, loc)
+						}
+					}
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found repository values for %s: %s", pkg.Name, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "license":
+		// License in SPDX 3.0 is via relationship; handled by caller
+		return ""
+
+	case "purl":
+		if key == "purl" || key == "" {
+			var values []string
+			for _, ext := range pkg.ExternalIdentifier {
+				if ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypePackageUrl && ext.Identifier != "" && ext.Identifier != "NOASSERTION" {
+					log.Debugf("Found purl value for %s: %s", pkg.Name, ext.Identifier)
+					values = append(values, ext.Identifier)
+				}
+			}
+			if len(values) > 0 {
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "cpe":
+		if key == "cpe" || key == "" {
+			var values []string
+			for _, ext := range pkg.ExternalIdentifier {
+				if (ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypeCpe22 || ext.ExternalIdentifierType == spdx3.ExternalIdentifierTypeCpe23) && ext.Identifier != "" && ext.Identifier != "NOASSERTION" {
+					log.Debugf("Found cpe value for %s: %s", pkg.Name, ext.Identifier)
+					values = append(values, ext.Identifier)
+				}
+			}
+			if len(values) > 0 {
+				return strings.Join(values, ",")
+			}
+		}
+
+	case "hash":
+		var values []string
+		for _, vu := range pkg.VerifiedUsing {
+			if hash, ok := vu.(*spdx3.Hash); ok {
+				if key == "alg" && hash.Algorithm != "" && string(hash.Algorithm) != "NOASSERTION" {
+					values = append(values, string(hash.Algorithm))
+				}
+				if key == "content" && hash.HashValue != "" && hash.HashValue != "NOASSERTION" {
+					values = append(values, hash.HashValue)
+				}
+			}
+		}
+		if len(values) > 0 {
+			log.Debugf("Found hash values for %s: %s", pkg.Name, strings.Join(values, ","))
+			return strings.Join(values, ",")
 		}
 	}
 

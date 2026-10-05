@@ -28,8 +28,11 @@ import (
 	cdxmeta "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/cdx/meta"
 	spdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx/comp"
 	spdxmeta "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx/meta"
+	spdx3comp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx3/comp"
+	spdx3meta "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/handler/spdx3/meta"
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
+	"github.com/interlynk-io/spdx-zen/parse"
 	spdxdoc "github.com/spdx/tools-golang/spdx"
 )
 
@@ -81,6 +84,28 @@ func RegisterHandlers(bom *cydx.BOM, spdxDoc *spdxdoc.Document) {
 	handlerRegistry["spdx:component:hash"] = &spdxcomp.SpdxComponentHashHandler{Doc: spdxDoc}
 
 	// Later: Component-scope or Dependency-scope handlers
+}
+
+// RegisterSPDX3Handlers registers all SPDX 3.0 field removal handlers.
+func RegisterSPDX3Handlers(doc *parse.Document) {
+	// Document-level handlers
+	handlerRegistry["spdx3:document:author"] = &spdx3meta.Spdx3DocAuthorHandler{Doc: doc}
+	handlerRegistry["spdx3:document:supplier"] = &spdx3meta.Spdx3DocSupplierHandler{Doc: doc}
+	handlerRegistry["spdx3:document:tool"] = &spdx3meta.Spdx3DocToolHandler{Doc: doc}
+	handlerRegistry["spdx3:document:timestamp"] = &spdx3meta.Spdx3DocTimestampHandler{Doc: doc}
+	handlerRegistry["spdx3:document:license"] = &spdx3meta.Spdx3DocLicenseHandler{Doc: doc}
+
+	// Component-level handlers (Phase 3)
+	handlerRegistry["spdx3:component:hash"] = &spdx3comp.Spdx3ComponentHashHandler{Doc: doc}
+	handlerRegistry["spdx3:component:purl"] = &spdx3comp.Spdx3ComponentPurlHandler{Doc: doc}
+	handlerRegistry["spdx3:component:cpe"] = &spdx3comp.Spdx3ComponentCpeHandler{Doc: doc}
+	handlerRegistry["spdx3:component:repository"] = &spdx3comp.Spdx3ComponentRepoHandler{Doc: doc}
+	handlerRegistry["spdx3:component:license"] = &spdx3comp.Spdx3ComponentLicenseHandler{Doc: doc}
+	handlerRegistry["spdx3:component:type"] = &spdx3comp.Spdx3ComponentTypeHandler{Doc: doc}
+	handlerRegistry["spdx3:component:description"] = &spdx3comp.Spdx3ComponentDescriptionHandler{Doc: doc}
+	handlerRegistry["spdx3:component:copyright"] = &spdx3comp.Spdx3ComponentCopyrightHandler{Doc: doc}
+	handlerRegistry["spdx3:component:author"] = &spdx3comp.Spdx3ComponentAuthorHandler{Doc: doc}
+	handlerRegistry["spdx3:component:supplier"] = &spdx3comp.Spdx3ComponentSupplierHandler{Doc: doc}
 }
 
 func (c *ComponentsOperationEngine) selectComponents(ctx context.Context, params *types.RmParams) ([]interface{}, error) {
