@@ -42,14 +42,15 @@ func newMerge(ms *MergeSettings) *merge {
 	}
 }
 
-func (m *merge) loadBoms() {
+func (m *merge) loadBoms() error {
 	for _, path := range m.settings.Input.Files {
 		bom, err := loadBom(*m.settings.Ctx, path)
 		if err != nil {
-			panic(err) // TODO: return error instead of panic
+			return fmt.Errorf("loading SBOM %s: %w", path, err)
 		}
 		m.in = append(m.in, bom)
 	}
+	return nil
 }
 
 func (m *merge) combinedMerge() error {

@@ -143,7 +143,9 @@ func Merge(ms *MergeSettings) error {
 	if ms.Assemble.IsAssemblyMergeWithPrimary || ms.Assemble.IsFlatMergeWithPrimary {
 		ms.Input.Files = append([]string{ms.Assemble.PrimaryFile}, ms.Input.Files...)
 	}
-	merger.loadBoms()
+	if err := merger.loadBoms(); err != nil {
+		return err
+	}
 	return merger.combinedMerge()
 }
 

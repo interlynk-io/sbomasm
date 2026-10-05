@@ -114,108 +114,155 @@ func findRelationshipsByType(t *testing.T, path string, fromType string, fromNam
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Test Data — Inline JSON Fixtures
+// Test Data — Reusable JSON Fixtures
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// docFrontendReact is an SPDX 3.0 SBOM with Frontend as primary and React as child.
+// docFrontendReact: Frontend (primary) → React (child) via dependsOn.
 var docFrontendReact = []byte(`{
   "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
   "@graph": [
-    {
-      "type": "SpdxDocument",
-      "spdxId": "https://example.org/doc1",
-      "name": "doc1",
-      "creationInfo": "_:creationinfo1",
-      "rootElement": ["https://example.org/pkg/frontend"]
-    },
-    {
-      "type": "CreationInfo",
-      "spdxId": "_:creationinfo1",
-      "specVersion": "3.0.1",
-      "created": "2025-01-01T00:00:00Z",
-      "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]
-    },
-    {
-      "type": "software_Package",
-      "spdxId": "https://example.org/pkg/frontend",
-      "name": "Frontend",
-      "software_packageVersion": "1.0.0",
-      "creationInfo": "_:creationinfo1"
-    },
-    {
-      "type": "software_Package",
-      "spdxId": "https://example.org/pkg/react",
-      "name": "React",
-      "software_packageVersion": "18.0.0",
-      "creationInfo": "_:creationinfo1"
-    },
-    {
-      "type": "Relationship",
-      "spdxId": "https://example.org/rel/describes-frontend",
-      "from": "https://example.org/doc1",
-      "relationshipType": "describes",
-      "to": ["https://example.org/pkg/frontend"],
-      "creationInfo": "_:creationinfo1"
-    },
-    {
-      "type": "Relationship",
-      "spdxId": "https://example.org/rel/dependsOn-frontend-react",
-      "from": "https://example.org/pkg/frontend",
-      "relationshipType": "dependsOn",
-      "to": ["https://example.org/pkg/react"],
-      "creationInfo": "_:creationinfo1"
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:creationinfo1", "rootElement": ["https://example.org/pkg/frontend"]},
+    {"type": "CreationInfo", "spdxId": "_:creationinfo1", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/frontend", "name": "Frontend", "software_packageVersion": "1.0.0", "creationInfo": "_:creationinfo1"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "creationInfo": "_:creationinfo1"},
+    {"type": "Relationship", "spdxId": "https://example.org/rel/describes-frontend", "from": "https://example.org/doc1", "relationshipType": "describes", "to": ["https://example.org/pkg/frontend"], "creationInfo": "_:creationinfo1"},
+    {"type": "Relationship", "spdxId": "https://example.org/rel/dependsOn-frontend-react", "from": "https://example.org/pkg/frontend", "relationshipType": "dependsOn", "to": ["https://example.org/pkg/react"], "creationInfo": "_:creationinfo1"}
+  ]
+}`)
+
+// docBackendExpress: Backend (primary) → Express (child) via dependsOn.
+var docBackendExpress = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:creationinfo2", "rootElement": ["https://example.org/pkg/backend"]},
+    {"type": "CreationInfo", "spdxId": "_:creationinfo2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/backend", "name": "Backend", "software_packageVersion": "1.0.0", "creationInfo": "_:creationinfo2"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/express", "name": "Express", "software_packageVersion": "4.0.0", "creationInfo": "_:creationinfo2"},
+    {"type": "Relationship", "spdxId": "https://example.org/rel/describes-backend", "from": "https://example.org/doc2", "relationshipType": "describes", "to": ["https://example.org/pkg/backend"], "creationInfo": "_:creationinfo2"},
+    {"type": "Relationship", "spdxId": "https://example.org/rel/dependsOn-backend-express", "from": "https://example.org/pkg/backend", "relationshipType": "dependsOn", "to": ["https://example.org/pkg/express"], "creationInfo": "_:creationinfo2"}
+  ]
+}`)
+
+// augmentPrimaryReact: React package with no description (fields to be filled).
+var augmentPrimaryReact = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/react"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// augmentPrimaryReactWithDesc: React package with existing description.
+var augmentPrimaryReactWithDesc = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/react"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "description": "Old description", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// augmentSecondaryReactWithDesc: React with description + axios dependency.
+var augmentSecondaryReactWithDesc = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/react"]},
+    {"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "description": "A UI library", "creationInfo": "_:ci2"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/axios", "name": "axios", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"},
+    {"type": "Relationship", "spdxId": "https://example.org/rel/r1", "from": "https://example.org/pkg/react", "relationshipType": "dependsOn", "to": ["https://example.org/pkg/axios"], "creationInfo": "_:ci2"}
+  ]
+}`)
+
+// augmentSecondaryReactWithCopyright: React with copyrightText.
+var augmentSecondaryReactWithCopyright = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/react"]},
+    {"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "software_copyrightText": "Copyright Meta Platforms, Inc.", "creationInfo": "_:ci2"}
+  ]
+}`)
+
+// augmentSecondaryReactWithHashes: React with verifiedUsing hashes.
+var augmentSecondaryReactWithHashes = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/react"]},
+    {"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "creationInfo": "_:ci2",
+      "verifiedUsing": [
+        {"type": "Hash", "algorithm": "sha256", "hashValue": "abc123"},
+        {"type": "Hash", "algorithm": "sha512", "hashValue": "def456"}
+      ]
     }
   ]
 }`)
 
-// docBackendExpress is an SPDX 3.0 SBOM with Backend as primary and Express as child.
-var docBackendExpress = []byte(`{
+// docSinglePkgA: Single package (PkgA) with Tool creator.
+var docSinglePkgA = []byte(`{
   "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
   "@graph": [
-    {
-      "type": "SpdxDocument",
-      "spdxId": "https://example.org/doc2",
-      "name": "doc2",
-      "creationInfo": "_:creationinfo2",
-      "rootElement": ["https://example.org/pkg/backend"]
-    },
-    {
-      "type": "CreationInfo",
-      "spdxId": "_:creationinfo2",
-      "specVersion": "3.0.1",
-      "created": "2025-01-01T00:00:00Z",
-      "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]
-    },
-    {
-      "type": "software_Package",
-      "spdxId": "https://example.org/pkg/backend",
-      "name": "Backend",
-      "software_packageVersion": "1.0.0",
-      "creationInfo": "_:creationinfo2"
-    },
-    {
-      "type": "software_Package",
-      "spdxId": "https://example.org/pkg/express",
-      "name": "Express",
-      "software_packageVersion": "4.0.0",
-      "creationInfo": "_:creationinfo2"
-    },
-    {
-      "type": "Relationship",
-      "spdxId": "https://example.org/rel/describes-backend",
-      "from": "https://example.org/doc2",
-      "relationshipType": "describes",
-      "to": ["https://example.org/pkg/backend"],
-      "creationInfo": "_:creationinfo2"
-    },
-    {
-      "type": "Relationship",
-      "spdxId": "https://example.org/rel/dependsOn-backend-express",
-      "from": "https://example.org/pkg/backend",
-      "relationshipType": "dependsOn",
-      "to": ["https://example.org/pkg/express"],
-      "creationInfo": "_:creationinfo2"
-    }
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test1", "name": "test1"}]},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// docOrg1Tool1PkgA: Package A supplied by Org1, created using Tool1.
+var docOrg1Tool1PkgA = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"], "createdUsing": ["https://example.org/tool1"]},
+    {"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+    {"type": "Tool", "spdxId": "https://example.org/tool1", "name": "tool1", "creationInfo": "_:ci"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "suppliedBy": "https://example.org/org1", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// docOrg1PkgA: Package A with Org1 as creator.
+var docOrg1PkgA = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
+    {"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// docOrg2PkgB: Package B with Org2 as creator.
+var docOrg2PkgB = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/b"]},
+    {"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
+    {"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/b", "name": "PkgB", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
+  ]
+}`)
+
+// docPrimaryFrontend: Primary SBOM with Frontend package + Org1.
+var docPrimaryFrontend = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/frontend"]},
+    {"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
+    {"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/frontend", "name": "Frontend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
+  ]
+}`)
+
+// docSecondaryBackend: Secondary SBOM with Backend package + Org2.
+var docSecondaryBackend = []byte(`{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/backend"]},
+    {"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
+    {"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
+    {"type": "software_Package", "spdxId": "https://example.org/pkg/backend", "name": "Backend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
   ]
 }`)
 
@@ -519,35 +566,12 @@ func TestAssemblyMergeWithPrimary_RootIsPrimary(t *testing.T) {
 func TestAugmentMerge_MatchedPackageGetsFieldsFilled(t *testing.T) {
 	ctx := context.Background()
 
-	// Primary: React with no description
-	primaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/react"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "creationInfo": "_:ci"}
-		]
-	}`
-
-	// Secondary: React with description + new Axios package
-	secondaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/react"]},
-			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "description": "A UI library", "creationInfo": "_:ci2"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/axios", "name": "axios", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"},
-			{"type": "Relationship", "spdxId": "https://example.org/rel/r1", "from": "https://example.org/pkg/react", "relationshipType": "dependsOn", "to": ["https://example.org/pkg/axios"], "creationInfo": "_:ci2"}
-		]
-	}`
-
-	primaryFile := writeTestDoc(t, primaryDoc)
-	secondaryFile := writeTestDoc(t, secondaryDoc)
+	primaryFile := writeTestDoc(t, string(augmentPrimaryReact))
+	secondaryFile := writeTestDoc(t, string(augmentSecondaryReactWithDesc))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
 		Ctx:      &ctx,
-		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
 		Input:    input{Files: []string{secondaryFile}},
 		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
 		Assemble: assemble{AugmentMerge: true, PrimaryFile: primaryFile},
@@ -594,33 +618,12 @@ func TestAugmentMerge_MatchedPackageGetsFieldsFilled(t *testing.T) {
 func TestAugmentMerge_OverwriteMode(t *testing.T) {
 	ctx := context.Background()
 
-	// Primary: React with existing description
-	primaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/react"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test", "name": "test"}]},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "description": "Old description", "creationInfo": "_:ci"}
-		]
-	}`
-
-	// Secondary: React with new description
-	secondaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/react"]},
-			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": [{"type": "Tool", "spdxId": "https://interlynk.io/tool/test2", "name": "test2"}]},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/react", "name": "React", "software_packageVersion": "18.0.0", "description": "New description", "creationInfo": "_:ci2"}
-		]
-	}`
-
-	primaryFile := writeTestDoc(t, primaryDoc)
-	secondaryFile := writeTestDoc(t, secondaryDoc)
+	primaryFile := writeTestDoc(t, string(augmentPrimaryReactWithDesc))
+	secondaryFile := writeTestDoc(t, string(augmentSecondaryReactWithDesc))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
 		Ctx:      &ctx,
-		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
 		Input:    input{Files: []string{secondaryFile}},
 		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
 		Assemble: assemble{AugmentMerge: true, PrimaryFile: primaryFile, MergeMode: "overwrite"},
@@ -634,8 +637,112 @@ func TestAugmentMerge_OverwriteMode(t *testing.T) {
 	if reactPkg == nil {
 		t.Fatal("React package not found in output")
 	}
-	if desc, ok := reactPkg["description"].(string); !ok || desc != "New description" {
-		t.Errorf("React description = %q, want %q (overwrite mode)", desc, "New description")
+	if desc, ok := reactPkg["description"].(string); !ok || desc != "A UI library" {
+		t.Errorf("React description = %q, want %q (overwrite mode)", desc, "A UI library")
+	}
+}
+
+// TestAugmentMerge_CopyrightTextFilled verifies that fill-missing mode copies
+// copyrightText from secondary to primary when primary is missing it.
+func TestAugmentMerge_CopyrightTextFilled(t *testing.T) {
+	ctx := context.Background()
+
+	primaryFile := writeTestDoc(t, string(augmentPrimaryReact))
+	secondaryFile := writeTestDoc(t, string(augmentSecondaryReactWithCopyright))
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		Input:    input{Files: []string{secondaryFile}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{AugmentMerge: true, PrimaryFile: primaryFile, MergeMode: "fill-missing"},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	reactPkg := findPkgByName(t, outFile, "React")
+	if reactPkg == nil {
+		t.Fatal("React package not found in output")
+	}
+	// In JSON-LD output, copyrightText gets prefixed as software_copyrightText
+	if ct, ok := reactPkg["software_copyrightText"].(string); !ok || ct != "Copyright Meta Platforms, Inc." {
+		t.Errorf("React copyrightText = %q, want %q (fill-missing mode)", ct, "Copyright Meta Platforms, Inc.")
+	}
+}
+
+// TestAugmentMerge_HashesFilled verifies that fill-missing mode copies
+// verifiedUsing (hashes) from secondary to primary when primary has none.
+func TestAugmentMerge_HashesFilled(t *testing.T) {
+	ctx := context.Background()
+
+	primaryFile := writeTestDoc(t, string(augmentPrimaryReact))
+	secondaryFile := writeTestDoc(t, string(augmentSecondaryReactWithHashes))
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		Input:    input{Files: []string{secondaryFile}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{AugmentMerge: true, PrimaryFile: primaryFile, MergeMode: "fill-missing"},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	reactPkg := findPkgByName(t, outFile, "React")
+	if reactPkg == nil {
+		t.Fatal("React package not found in output")
+	}
+	verifiedUsing, ok := reactPkg["verifiedUsing"].([]interface{})
+	if !ok || len(verifiedUsing) == 0 {
+		t.Fatalf("React verifiedUsing should contain hashes, got: %v", reactPkg["verifiedUsing"])
+	}
+	if len(verifiedUsing) != 2 {
+		t.Errorf("React verifiedUsing length = %d, want 2", len(verifiedUsing))
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Edge Case Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// TestFlatMerge_SingleInput produces correct output when only one SBOM is merged.
+func TestFlatMerge_SingleInput(t *testing.T) {
+	ctx := context.Background()
+
+	file1 := writeTestDoc(t, string(docSinglePkgA))
+	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
+
+	ms := &MergeSettings{
+		Ctx:      &ctx,
+		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
+		Input:    input{Files: []string{file1}},
+		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
+		Assemble: assemble{FlatMerge: true},
+	}
+
+	if err := Merge(ms); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+
+	// Should contain primary package + merged package + relationships
+	data, _ := os.ReadFile(outFile)
+	var doc map[string]interface{}
+	json.Unmarshal(data, &doc)
+
+	pkgCount := 0
+	for _, item := range doc["@graph"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if m["type"] == "software_Package" {
+			pkgCount++
+		}
+	}
+	// Primary package + PkgA = 2 packages
+	if pkgCount != 2 {
+		t.Errorf("Expected 2 packages, got %d", pkgCount)
 	}
 }
 
@@ -649,38 +756,13 @@ func TestAugmentMerge_OverwriteMode(t *testing.T) {
 func TestFlatMerge_CreationInfoHasCorrectAgents(t *testing.T) {
 	ctx := context.Background()
 
-	// SBOM with org1 as creator
-	doc1 := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"], "createdUsing": ["https://example.org/tool1"]},
-			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
-			{"type": "Tool", "spdxId": "https://example.org/tool1", "name": "tool1", "creationInfo": "_:ci"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
-		]
-	}`
-
-	// SBOM with org2 as creator
-	doc2 := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/b"]},
-			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"], "createdUsing": ["https://example.org/tool2"]},
-			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
-			{"type": "Tool", "spdxId": "https://example.org/tool2", "name": "tool2", "creationInfo": "_:ci2"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/b", "name": "PkgB", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
-		]
-	}`
-
-	file1 := writeTestDoc(t, doc1)
-	file2 := writeTestDoc(t, doc2)
+	file1 := writeTestDoc(t, string(docOrg1Tool1PkgA))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
 		Ctx:      &ctx,
 		App:      app{Name: "MyApp", Version: "1.0.0", PrimaryPurpose: "application"},
-		Input:    input{Files: []string{file1, file2}},
+		Input:    input{Files: []string{file1}},
 		Output:   output{FileFormat: "json", Spec: string(sbom.SBOMSpecSPDX), SpecVersion: "3.0.1", File: outFile},
 		Assemble: assemble{FlatMerge: true},
 	}
@@ -764,29 +846,8 @@ func TestFlatMerge_CreationInfoHasCorrectAgents(t *testing.T) {
 func TestFlatMerge_CreationInfoMergesBothOrgs(t *testing.T) {
 	ctx := context.Background()
 
-	// Both SBOMs have same org name but different IDs (simulates two different orgs)
-	doc1 := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
-			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
-		]
-	}`
-
-	doc2 := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/doc2", "name": "doc2", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/b"]},
-			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
-			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/b", "name": "PkgB", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
-		]
-	}`
-
-	file1 := writeTestDoc(t, doc1)
-	file2 := writeTestDoc(t, doc2)
+	file1 := writeTestDoc(t, string(docOrg1PkgA))
+	file2 := writeTestDoc(t, string(docOrg2PkgB))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
@@ -847,18 +908,7 @@ func TestFlatMerge_CreationInfoMergesBothOrgs(t *testing.T) {
 func TestFlatMerge_StaleSuppliedByIsRewritten(t *testing.T) {
 	ctx := context.Background()
 
-	doc1 := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/doc1", "name": "doc1", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/a"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"], "createdUsing": ["https://example.org/tool1"]},
-			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
-			{"type": "Tool", "spdxId": "https://example.org/tool1", "name": "tool1", "creationInfo": "_:ci"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/a", "name": "PkgA", "software_packageVersion": "1.0.0", "suppliedBy": "https://example.org/org1", "creationInfo": "_:ci"}
-		]
-	}`
-
-	file1 := writeTestDoc(t, doc1)
+	file1 := writeTestDoc(t, string(docOrg1Tool1PkgA))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
@@ -914,30 +964,8 @@ func TestFlatMerge_StaleSuppliedByIsRewritten(t *testing.T) {
 func TestFlatMergeWithPrimary_CreatedByNotNull(t *testing.T) {
 	ctx := context.Background()
 
-	// Primary SBOM with org1
-	primaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/primary", "name": "primary", "creationInfo": "_:ci", "rootElement": ["https://example.org/pkg/frontend"]},
-			{"type": "CreationInfo", "spdxId": "_:ci", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org1"]},
-			{"type": "Organization", "spdxId": "https://example.org/org1", "name": "Org1", "creationInfo": "_:ci"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/frontend", "name": "Frontend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci"}
-		]
-	}`
-
-	// Secondary SBOM with org2
-	secondaryDoc := `{
-		"@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
-		"@graph": [
-			{"type": "SpdxDocument", "spdxId": "https://example.org/sec", "name": "secondary", "creationInfo": "_:ci2", "rootElement": ["https://example.org/pkg/backend"]},
-			{"type": "CreationInfo", "spdxId": "_:ci2", "specVersion": "3.0.1", "created": "2025-01-01T00:00:00Z", "createdBy": ["https://example.org/org2"]},
-			{"type": "Organization", "spdxId": "https://example.org/org2", "name": "Org2", "creationInfo": "_:ci2"},
-			{"type": "software_Package", "spdxId": "https://example.org/pkg/backend", "name": "Backend", "software_packageVersion": "1.0.0", "creationInfo": "_:ci2"}
-		]
-	}`
-
-	primaryFile := writeTestDoc(t, primaryDoc)
-	secondaryFile := writeTestDoc(t, secondaryDoc)
+	primaryFile := writeTestDoc(t, string(docPrimaryFrontend))
+	secondaryFile := writeTestDoc(t, string(docSecondaryBackend))
 	outFile := filepath.Join(t.TempDir(), "out.spdx3.json")
 
 	ms := &MergeSettings{
