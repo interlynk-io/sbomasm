@@ -149,7 +149,11 @@ func RemoveLicenseFromMetadata(ctx context.Context, doc *parse.Document, targets
 		return nil
 	}
 
-	log.Debugf("Removed SPDX 3.0 document-level DataLicense")
+	licSpdxID := doc.SpdxDocument.DataLicense.SpdxID
+	log.Debugf("Removed SPDX 3.0 document-level DataLicense: %s", licSpdxID)
 	doc.SpdxDocument.DataLicense = nil
+
+	// Clean up orphaned license element if no longer referenced by components
+	CleanupOrphanedElements(ctx, doc, []string{licSpdxID})
 	return nil
 }

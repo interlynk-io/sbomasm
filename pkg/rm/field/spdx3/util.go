@@ -46,7 +46,7 @@ func getAgentName(doc *parse.Document, spdxID string) string {
 }
 
 // isReferencedElsewhere checks if an element with the given SpdxID is still
-// referenced anywhere in the document (CreationInfo, component fields, etc.)
+// referenced anywhere in the document (CreationInfo, component fields, relationships, etc.)
 func isReferencedElsewhere(doc *parse.Document, spdxID string) bool {
 	// Check CreationInfo.CreatedBy (Person or Organization)
 	if doc.CreationInfo != nil {
@@ -71,6 +71,22 @@ func isReferencedElsewhere(doc *parse.Document, spdxID string) bool {
 		}
 		if pkg.SuppliedBy != nil && pkg.SuppliedBy.SpdxID == spdxID {
 			return true
+		}
+	}
+
+	// Check SpdxDocument.DataLicense
+	if doc.SpdxDocument != nil && doc.SpdxDocument.DataLicense != nil {
+		if doc.SpdxDocument.DataLicense.SpdxID == spdxID {
+			return true
+		}
+	}
+
+	// Check relationships (license references, etc.)
+	for _, rel := range doc.Relationships {
+		for _, to := range rel.To {
+			if to.GetSpdxID() == spdxID {
+				return true
+			}
 		}
 	}
 
@@ -335,6 +351,30 @@ func CleanupOrphanedElements(ctx context.Context, doc *parse.Document, candidate
 			}
 			doc.Tools = filtered
 			log.Debugf("Orphaned Tool %s removed from document", spdxID)
+
+		case doc.GetAnyLicenseInfoByID(spdxID) != nil:
+			// Remove from SimpleLicensingTexts
+			var filteredSLT []*spdx.SimpleLicensingText
+			for _, slt := range doc.SimpleLicensingTexts {
+				if slt.SpdxID != spdxID {
+					filteredSLT = append(filteredSLT, slt)
+				}
+			}
+			doc.SimpleLicensingTexts = filteredSLT
+
+			// Remove from AnyLicenseInfos
+			var filteredALI []*spdx.AnyLicenseInfo
+			for _, ali := range doc.AnyLicenseInfos {
+				if ali.SpdxID != spdxID {
+					filteredALI = append(filteredALI, ali)
+				}
+			}
+			doc.AnyLicenseInfos = filteredALI
+
+			// Remove from ElementsByID
+			delete(doc.ElementsByID, spdxID)
+
+			log.Debugf("Orphaned license %s removed from document", spdxID)
 		}
 	}
 }
