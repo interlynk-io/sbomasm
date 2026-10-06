@@ -137,13 +137,16 @@ func SelectLicenseFromComponent(doc *parse.Document, params *types.RmParams) ([]
 				for _, to := range rel.To {
 					lic := doc.GetAnyLicenseInfoByID(to.GetSpdxID())
 					expr := ""
+					name := ""
 					if lic != nil {
 						expr = lic.SpdxID
+						name = lic.Name
 					}
 					selected = append(selected, ComponentLicenseEntry{
 						Component:    pkg,
 						Relationship: rel,
 						LicenseExpr:  expr,
+						LicenseName:  name,
 					})
 				}
 			}

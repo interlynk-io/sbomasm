@@ -60,7 +60,8 @@ type ComponentSupplierEntry struct {
 type ComponentLicenseEntry struct {
 	Component    *spdx.Package
 	Relationship *spdx.Relationship
-	LicenseExpr  string
+	LicenseExpr  string // SpdxID (reference URL)
+	LicenseName  string // resolved license name for value filtering
 }
 
 // ComponentTypeEntry binds a type value back to its component

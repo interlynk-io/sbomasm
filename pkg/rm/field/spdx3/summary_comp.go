@@ -82,7 +82,11 @@ func RenderSummaryLicenseFromComponent(target []interface{}) {
 	}
 	for _, entry := range target {
 		if e, ok := entry.(ComponentLicenseEntry); ok {
-			fmt.Printf("  - %s: %s\n", e.Component.Name, e.LicenseExpr)
+			display := e.LicenseName
+			if display == "" {
+				display = e.LicenseExpr
+			}
+			fmt.Printf("  - %s: %s\n", e.Component.Name, display)
 		}
 	}
 }

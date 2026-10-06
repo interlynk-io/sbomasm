@@ -170,7 +170,7 @@ func FilterLicenseFromComponent(entries []interface{}, params *types.RmParams) (
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.EqualFold(entry.LicenseExpr, params.Value) {
+			if strings.EqualFold(entry.LicenseExpr, params.Value) || strings.EqualFold(entry.LicenseName, params.Value) {
 				match = true
 			}
 		default:
@@ -294,7 +294,9 @@ func FilterAuthorFromComponent(entries []interface{}, params *types.RmParams) ([
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			if strings.Contains(entry.Person.Name, params.Value) {
+			email := getPersonEmail(entry.Person)
+			if strings.Contains(strings.ToLower(entry.Person.Name), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(email), strings.ToLower(params.Value)) {
 				match = true
 			}
 		default:
