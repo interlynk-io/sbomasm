@@ -98,3 +98,9 @@ type ComponentHashEntry struct {
 	Component *spdx.Package
 	Hash      *spdx.Hash
 }
+
+// SbomEntry binds an SbomType value back to its Sbom element
+type SbomEntry struct {
+	Sbom     *spdx.Sbom
+	SbomType []spdx.SbomType
+}
