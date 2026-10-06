@@ -102,6 +102,14 @@ func SelectLicenseFromMetadata(ctx context.Context, doc *parse.Document) ([]inte
 		return nil, nil
 	}
 
-	log.Debugf("Selected SPDX 3.0 document license: %s", doc.SpdxDocument.DataLicense.SpdxID)
+	licID := doc.SpdxDocument.DataLicense.SpdxID
+	// Resolve the referenced license element so Name is populated for value filtering.
+	resolved := doc.GetAnyLicenseInfoByID(licID)
+	if resolved != nil {
+		log.Debugf("Selected SPDX 3.0 document license: %s (resolved name: %s)", licID, resolved.Name)
+		return []interface{}{LicenseEntry{License: resolved}}, nil
+	}
+
+	log.Debugf("Selected SPDX 3.0 document license: %s (unresolved)", licID)
 	return []interface{}{LicenseEntry{License: doc.SpdxDocument.DataLicense}}, nil
 }

@@ -95,6 +95,7 @@ func RegisterSPDX3Handlers(doc *parse.Document) {
 	handlerRegistry["spdx3:document:timestamp"] = &spdx3meta.Spdx3DocTimestampHandler{Doc: doc}
 	handlerRegistry["spdx3:document:license"] = &spdx3meta.Spdx3DocLicenseHandler{Doc: doc}
 	handlerRegistry["spdx3:document:lifecycle"] = &spdx3meta.Spdx3DocLifecycleHandler{Doc: doc}
+	handlerRegistry["spdx3:document:repository"] = &spdx3meta.Spdx3DocRepositoryHandler{Doc: doc}
 
 	// Component-level handlers (Phase 3)
 	handlerRegistry["spdx3:component:hash"] = &spdx3comp.Spdx3ComponentHashHandler{Doc: doc}

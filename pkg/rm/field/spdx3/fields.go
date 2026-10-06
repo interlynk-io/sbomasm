@@ -104,3 +104,10 @@ type SbomEntry struct {
 	Sbom     *spdx.Sbom
 	SbomType []spdx.SbomType
 }
+
+// RepoEntry binds an ExternalRef back to the SpdxDocument
+type RepoEntry struct {
+	Doc       *spdx.SpdxDocument
+	ExtRef    *spdx.ExternalRef
+	ExtRefIdx int // index in doc.ExternalRef
+}

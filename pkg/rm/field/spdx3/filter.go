@@ -21,7 +21,29 @@ import (
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
+	spdx "github.com/interlynk-io/spdx-zen/model/v3.0.1"
 )
+
+// getPersonEmail returns the email identifier from a Person's ExternalIdentifier list.
+func getPersonEmail(person *spdx.Person) string {
+	for _, ei := range person.ExternalIdentifier {
+		if ei.ExternalIdentifierType == spdx.ExternalIdentifierTypeEmail {
+			return ei.Identifier
+		}
+	}
+	return ""
+}
+
+// getOrgUrls returns all URL-like locators from an Organization's ExternalRef list.
+func getOrgUrls(org *spdx.Organization) []string {
+	var urls []string
+	for _, ref := range org.ExternalRef {
+		if ref.ExternalRefType == spdx.ExternalRefTypeAltWebPage {
+			urls = append(urls, ref.Locator...)
+		}
+	}
+	return urls
+}
 
 func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) ([]interface{}, error) {
 	log := logger.FromContext(*params.Ctx)
@@ -34,14 +56,19 @@ func FilterAuthorFromMetadata(allAuthors []interface{}, params *types.RmParams) 
 		}
 
 		name := entry.Person.Name
+		email := getPersonEmail(entry.Person)
+
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(email), strings.ToLower(params.Value))
 		case params.IsKeyPresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Key))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Key)) ||
+				strings.Contains(strings.ToLower(email), strings.ToLower(params.Key))
 		case params.IsValuePresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(email), strings.ToLower(params.Value))
 		case params.All || (!params.IsKeyPresent && !params.IsValuePresent):
 			match = true
 		}
@@ -66,14 +93,38 @@ func FilterSupplierFromMetadata(allSuppliers []interface{}, params *types.RmPara
 		}
 
 		name := entry.Organization.Name
+		spdxID := entry.Organization.SpdxID
+		urls := getOrgUrls(entry.Organization)
+
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(spdxID), strings.ToLower(params.Value))
+			for _, u := range urls {
+				if strings.Contains(strings.ToLower(u), strings.ToLower(params.Value)) {
+					match = true
+					break
+				}
+			}
 		case params.IsKeyPresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Key))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Key)) ||
+				strings.Contains(strings.ToLower(spdxID), strings.ToLower(params.Key))
+			for _, u := range urls {
+				if strings.Contains(strings.ToLower(u), strings.ToLower(params.Key)) {
+					match = true
+					break
+				}
+			}
 		case params.IsValuePresent:
-			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value))
+			match = strings.Contains(strings.ToLower(name), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(spdxID), strings.ToLower(params.Value))
+			for _, u := range urls {
+				if strings.Contains(strings.ToLower(u), strings.ToLower(params.Value)) {
+					match = true
+					break
+				}
+			}
 		case params.All || (!params.IsKeyPresent && !params.IsValuePresent):
 			match = true
 		}
@@ -129,12 +180,14 @@ func FilterLicenseFromMetadata(allLicenses []interface{}, params *types.RmParams
 			continue
 		}
 
-		// Use SpdxID as the license identifier (e.g., "https://spdx.org/licenses/CC0-1.0")
+		// Match against both resolved Name and SpdxID (reference URL)
 		licID := entry.License.SpdxID
+		licName := entry.License.Name
 		match := false
 		switch {
 		case params.IsFieldAndValuePresent:
-			match = strings.Contains(strings.ToLower(licID), strings.ToLower(params.Value))
+			match = strings.Contains(strings.ToLower(licID), strings.ToLower(params.Value)) ||
+				strings.Contains(strings.ToLower(licName), strings.ToLower(params.Value))
 		case params.All || (!params.IsKeyPresent && !params.IsValuePresent):
 			match = true
 		}
