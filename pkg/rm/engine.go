@@ -66,7 +66,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	}
 
 	// parse into SBOM object
-	sbomDoc, err := sbom.ParseSBOM(f, spec, format, "")
+	sbomDoc, err := sbom.ParseSBOM(f, spec, format, version)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 		RegisterHandlers(bom, nil)
 
 	case sbom.SBOMSpecSPDX:
-		if strings.HasPrefix(string(version), "3.") {
+		if sbom.IsSpdx3Version(string(version)) {
 			spdx3Doc, ok := sbomDoc.Document().(*parse.Document)
 			if !ok {
 				return fmt.Errorf("expected SPDX 3.0 doc, got %T", sbomDoc.Document())

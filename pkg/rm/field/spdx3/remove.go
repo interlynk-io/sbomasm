@@ -57,6 +57,7 @@ func RemoveAuthorFromMetadata(ctx context.Context, doc *parse.Document, targets 
 		removedSpdxIDs = append(removedSpdxIDs, id)
 	}
 	CleanupOrphanedElements(ctx, doc, removedSpdxIDs)
+	SyncCreationInfoToAllElements(doc)
 	return nil
 }
 
@@ -91,6 +92,7 @@ func RemoveSupplierFromMetadata(ctx context.Context, doc *parse.Document, target
 		removedSpdxIDs = append(removedSpdxIDs, id)
 	}
 	CleanupOrphanedElements(ctx, doc, removedSpdxIDs)
+	SyncCreationInfoToAllElements(doc)
 	return nil
 }
 
@@ -125,6 +127,7 @@ func RemoveToolFromMetadata(ctx context.Context, doc *parse.Document, targets []
 		removedSpdxIDs = append(removedSpdxIDs, id)
 	}
 	CleanupOrphanedElements(ctx, doc, removedSpdxIDs)
+	SyncCreationInfoToAllElements(doc)
 	return nil
 }
 
@@ -136,6 +139,7 @@ func RemoveTimestampFromMetadata(ctx context.Context, doc *parse.Document, targe
 
 	log.Debugf("Removed SPDX 3.0 document creation timestamp")
 	doc.CreationInfo.Created = time.Time{}
+	SyncCreationInfoToAllElements(doc)
 	return nil
 }
 

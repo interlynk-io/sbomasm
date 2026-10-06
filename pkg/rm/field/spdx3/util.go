@@ -77,6 +77,222 @@ func isReferencedElsewhere(doc *parse.Document, spdxID string) bool {
 	return false
 }
 
+// SyncCreationInfoToAllElements copies the document-level CreationInfo to every
+// element in the document. This is necessary because spdx-zen's serializer
+// extracts CreationInfo from each element's own struct via reflection, not from
+// doc.CreationInfo. Without this sync, modifications to doc.CreationInfo won't
+// be reflected in the serialized output.
+func SyncCreationInfoToAllElements(doc *parse.Document) {
+	if doc.CreationInfo == nil {
+		return
+	}
+	ci := *doc.CreationInfo
+
+	if doc.SpdxDocument != nil {
+		doc.SpdxDocument.CreationInfo = ci
+	}
+	for _, e := range doc.Packages {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Files {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Snippets {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.SoftwareArtifacts {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Relationships {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.LifecycleScopedRelationships {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Annotations {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Organizations {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Persons {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.SoftwareAgents {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Tools {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Bundles {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Boms {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Sboms {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.AnyLicenseInfos {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.ConjunctiveLicenseSets {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.CustomLicenses {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.CustomLicenseAdditions {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.DisjunctiveLicenseSets {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.IndividualLicensingInfos {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.ListedLicenses {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.ListedLicenseExceptions {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.LicenseExpressions {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.OrLaterOperators {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.SimpleLicensingTexts {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.WithAdditionOperators {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Vulnerabilities {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.CvssV2VulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.CvssV3VulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.CvssV4VulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.EpssVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.SsvcVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.ExploitCatalogVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.VexAffectedVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.VexFixedVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.VexNotAffectedVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.VexUnderInvestigationVulnAssessments {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.AiPackages {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.DatasetPackages {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+	for _, e := range doc.Builds {
+		if e != nil {
+			e.CreationInfo = ci
+		}
+	}
+}
+
 // CleanupOrphanedElements removes Person, Organization, and Tool elements from
 // the document that are no longer referenced by any CreationInfo or component.
 // It should be called after removal operations that affect SpdxID references.
