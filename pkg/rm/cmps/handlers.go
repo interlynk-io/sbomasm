@@ -188,6 +188,26 @@ func RemoveComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedCo
 		}
 		doc.Relationships = filteredRelationships
 
+		// Clean up rootElement references to removed packages
+		if doc.SpdxDocument != nil {
+			var filteredRootElements []spdx3.Element
+			for _, re := range doc.SpdxDocument.RootElement {
+				if !toRemove[re.SpdxID] {
+					filteredRootElements = append(filteredRootElements, re)
+				}
+			}
+			doc.SpdxDocument.RootElement = filteredRootElements
+		}
+		for _, sbom := range doc.Sboms {
+			var filteredRootElements []spdx3.Element
+			for _, re := range sbom.RootElement {
+				if !toRemove[re.SpdxID] {
+					filteredRootElements = append(filteredRootElements, re)
+				}
+			}
+			sbom.RootElement = filteredRootElements
+		}
+
 		// Clean up orphaned elements (licenses, agents) no longer referenced
 		if len(orphanCandidates) > 0 {
 			var candidateIDs []string
