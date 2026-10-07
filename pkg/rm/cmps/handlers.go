@@ -304,7 +304,7 @@ func SelectComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, params *ty
 	case *parse.Document:
 		for _, p := range doc.Packages {
 			totalComponents++
-			if shouldSelectSPDX3Component(p, params) {
+			if shouldSelectSPDX3Component(p, params, doc) {
 				selectedComponents = append(selectedComponents, p)
 				totalSelectedComponents++
 			}
@@ -382,7 +382,7 @@ func shouldSelectSPDXComponent(pkg spdx.Package, params *types.RmParams) bool {
 	return true
 }
 
-func shouldSelectSPDX3Component(pkg *spdx3.Package, params *types.RmParams) bool {
+func shouldSelectSPDX3Component(pkg *spdx3.Package, params *types.RmParams, doc *parse.Document) bool {
 	log := logger.FromContext(*params.Ctx)
 	log.Debugf("Checking component: %s@%s to be added to selection list", pkg.Name, pkg.PackageVersion)
 
@@ -404,12 +404,12 @@ func shouldSelectSPDX3Component(pkg *spdx3.Package, params *types.RmParams) bool
 
 	// Case: match field presence
 	if params.Field != "" && params.Value == "" {
-		return getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field) != ""
+		return getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field, doc) != ""
 	}
 
 	// Case: match field + value
 	if params.Field != "" && params.Value != "" {
-		return strings.Contains(getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field), params.Value)
+		return strings.Contains(getSPDX3PackageFieldValue(*params.Ctx, pkg, params.Field, doc), params.Value)
 	}
 
 	return true
@@ -697,7 +697,7 @@ func getSPDXComponentFieldKeyValue(ctx context.Context, pkg spdx.Package, field,
 	return ""
 }
 
-func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field string) string {
+func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field string, doc *parse.Document) string {
 	log := logger.FromContext(ctx)
 	log.Debugf("Checking field presence")
 
@@ -728,23 +728,34 @@ func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field st
 
 	case "supplier":
 		if pkg.SuppliedBy != nil {
-			org := pkg.SuppliedBy
-			if org.Name != "" && org.Name != "NOASSERTION" {
-				log.Debugf("Found supplier value for %s: %s", pkg.Name, org.Name)
-				return org.Name
+			if doc != nil {
+				if org := doc.GetOrganizationByID(pkg.SuppliedBy.GetSpdxID()); org != nil && org.Name != "" {
+					log.Debugf("Found supplier for %s: %s", pkg.Name, org.Name)
+					return org.Name
+				}
 			}
+			log.Debugf("Found supplier for %s", pkg.Name)
+			return "present"
 		}
 
 	case "author":
-		var values []string
-		for _, agent := range pkg.OriginatedBy {
-			if agent.Name != "" && agent.Name != "NOASSERTION" {
-				values = append(values, agent.Name)
+		if len(pkg.OriginatedBy) > 0 {
+			if doc != nil {
+				var values []string
+				for _, agent := range pkg.OriginatedBy {
+					if person := doc.GetPersonByID(agent.GetSpdxID()); person != nil && person.Name != "" {
+						values = append(values, person.Name)
+					} else if org := doc.GetOrganizationByID(agent.GetSpdxID()); org != nil && org.Name != "" {
+						values = append(values, org.Name)
+					}
+				}
+				if len(values) > 0 {
+					log.Debugf("Found author values for %s: %s", pkg.Name, strings.Join(values, ","))
+					return strings.Join(values, ",")
+				}
 			}
-		}
-		if len(values) > 0 {
-			log.Debugf("Found author values for %s: %s", pkg.Name, strings.Join(values, ","))
-			return strings.Join(values, ",")
+			log.Debugf("Found author for %s", pkg.Name)
+			return "present"
 		}
 
 	case "type":
@@ -777,7 +788,24 @@ func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field st
 		}
 
 	case "license":
-		// License in SPDX 3.0 is via relationship; handled by caller
+		if doc != nil {
+			licInfo := doc.GetLicensesFor(pkg.SpdxID)
+			var values []string
+			for _, lic := range licInfo.ConcludedLicenses {
+				if lic.Name != "" {
+					values = append(values, lic.Name)
+				}
+			}
+			for _, lic := range licInfo.DeclaredLicenses {
+				if lic.Name != "" {
+					values = append(values, lic.Name)
+				}
+			}
+			if len(values) > 0 {
+				log.Debugf("Found license values for %s: %s", pkg.Name, strings.Join(values, ","))
+				return strings.Join(values, ",")
+			}
+		}
 		return ""
 
 	case "purl":
@@ -807,7 +835,14 @@ func getSPDX3PackageFieldValue(ctx context.Context, pkg *spdx3.Package, field st
 	case "hash":
 		var values []string
 		for _, vu := range pkg.VerifiedUsing {
-			if hash, ok := vu.(*spdx3.Hash); ok {
+			var hash *spdx3.Hash
+			switch h := vu.(type) {
+			case *spdx3.Hash:
+				hash = h
+			case spdx3.Hash:
+				hash = &h
+			}
+			if hash != nil {
 				if hash.Algorithm != "" {
 					values = append(values, string(hash.Algorithm))
 				}
