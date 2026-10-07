@@ -206,6 +206,7 @@ func RemoveRepoFromComponent(doc *parse.Document, targets []interface{}, params 
 func RemoveLicenseFromComponent(doc *parse.Document, targets []interface{}, params *types.RmParams) error {
 	log := logger.FromContext(*params.Ctx)
 
+	var orphanedLicIDs []string
 	for _, entry := range targets {
 		e, ok := entry.(ComponentLicenseEntry)
 		if !ok {
@@ -216,6 +217,13 @@ func RemoveLicenseFromComponent(doc *parse.Document, targets []interface{}, para
 
 		log.Debugf("Removing concluded license from component %s", pkg.SpdxID)
 
+		// Collect license SpdxIDs for orphan cleanup
+		for _, to := range rel.To {
+			if id := to.GetSpdxID(); id != "" {
+				orphanedLicIDs = append(orphanedLicIDs, id)
+			}
+		}
+
 		// Remove this relationship from the document
 		var filtered []*spdx.Relationship
 		for _, r := range doc.Relationships {
@@ -224,6 +232,11 @@ func RemoveLicenseFromComponent(doc *parse.Document, targets []interface{}, para
 			}
 		}
 		doc.Relationships = filtered
+	}
+
+	// Clean up orphaned license elements if no longer referenced
+	if len(orphanedLicIDs) > 0 {
+		CleanupOrphanedElements(*params.Ctx, doc, orphanedLicIDs)
 	}
 
 	return nil
