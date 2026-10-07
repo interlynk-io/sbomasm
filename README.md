@@ -68,6 +68,7 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
     - [Assembling SBOMs](#assembling-sboms)
       - [Simple Assembly](#simple-assembly)
       - [Container and Application Assembly](#container-and-application-assembly)
+      - [SPDX 3.0 JSON-LD Assembly](#spdx-30-json-ld-assembly)
       - [Document License](#document-license)
       - [Augment Merge (Enrich Existing SBOM)](#augment-merge-enrich-existing-sbom)
       - [Assembly Merge with Primary (Nest SBOMs)](#assembly-merge-with-primary-nest-sboms)
@@ -75,7 +76,9 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
     - [Editing SBOMs](#editing-sboms)
       - [Add Missing Supplier Information](#add-missing-supplier-information)
       - [Update Component Licenses](#update-component-licenses)
+      - [SPDX 3.0 JSON-LD Editing](#spdx-30-json-ld-editing)
     - [Removing Components](#removing-components)
+      - [SPDX 3.0 JSON-LD Removal](#spdx-30-json-ld-removal)
     - [Enriching SBOMs](#enriching-sboms)
       - [Basic License Enrichment](#basic-license-enrichment)
       - [Advanced Enrichment Options](#advanced-enrichment-options)
@@ -129,8 +132,6 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
 
 - **GitLab/GitHub CI**: Widely adopted in CI/CD pipelines for automated SBOM assembly
 
-  
-
 ## Why sbomasm?
 
 Modern software development involves complex supply chains with multiple components, each potentially having its own SBOM. Organizations face several challenges:
@@ -147,7 +148,7 @@ Modern software development involves complex supply chains with multiple compone
 
 - 🔀 **Assemble**: Merge multiple SBOMs into comprehensive documents
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
-- 🗑️ **Remove**: Strip sensitive components or fields
+- 🗑️ **Remove**: Strip sensitive components or fields (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
 - 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
 - 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
@@ -355,15 +356,38 @@ sbomasm edit \
 
 ### Removing Components
 
-Remove internal or sensitive components before sharing:
+Remove fields, components, or dependencies from SBOMs before sharing:
 
 ```bash
-# Remove internal components before sharing with customer
-sbomasm rm \
-  --subject component-name \
-  --search "internal-telemetry" \
-  --output public.json \
-  internal.json
+# Remove all authors from document metadata
+sbomasm rm --field author --scope document input.spdx.json -o output.spdx.json
+
+# Remove a specific field from a single component
+sbomasm rm --field purl --scope component --name "nginx" --version "v1.21.0" input.spdx.json -o output.spdx.json
+
+# Remove a field from all components
+sbomasm rm --field hash --scope component -a input.cdx.json -o output.cdx.json
+
+# Remove all components that have a specific field
+sbomasm rm --components --field license input.spdx.json -o output.spdx.json
+
+# Remove components where a field matches a specific value
+sbomasm rm --components --field supplier --value "Internal Team" input.cdx.json -o output.cdx.json
+```
+
+#### SPDX 3.0 JSON-LD Removal
+
+SPDX 3.0 uses an `@graph` flat element model. Component removal automatically cleans up orphaned elements (Person, Organization, Tool, License, Relationship) and dangling `rootElement` references.
+
+```bash
+# Remove all components with a specific license
+sbomasm rm --components --field license --value "Apache-2.0" input.spdx3.json -o output.spdx3.json
+
+# Remove a field from all components
+sbomasm rm --field hash --scope component -a input.spdx3.json -o output.spdx3.json
+
+# Remove all components that have a supplier
+sbomasm rm --components --field supplier input.spdx3.json -o output.spdx3.json
 ```
 
 ### Enriching SBOMs
@@ -436,6 +460,7 @@ sbomasm view sbom.cdx.json --format json -o analysis.json
 ```
 
 The view command is particularly useful for:
+
 - **Security Audits**: Identify and filter vulnerabilities by severity
 - **Dependency Analysis**: Understand component relationships and dependencies
 - **License Compliance**: Extract license information for compliance review
@@ -492,6 +517,7 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature '{"algo
 ### Microservices & Kubernetes
 
 Modern cloud-native applications consist of dozens of microservices, each with their own dependencies. Organizations using Kubernetes need to track components across:
+
 - Application code dependencies
 - Container base images
 - Kubernetes operators and controllers
@@ -521,10 +547,7 @@ sbomasm edit \
   daily-platform-sbom.json
 
 # Step 4: Remove internal debugging tools
-sbomasm rm \
-  --subject component-name \
-  --search "debug-console" \
-  daily-platform-sbom.json
+sbomasm rm --components --field supplier --value "Internal Team" daily-platform-sbom.json
 ```
 
 ### Automotive Industry
@@ -743,6 +766,7 @@ make build-all
 ```
 
 The project includes a comprehensive Makefile with targets for development, testing, building, and releasing. Run `make help` to see all available commands including:
+
 - **Development**: `make fmt`, `make vet`, `make lint`
 - **Testing**: `make test`, `make test-coverage`, `make test-short`
 - **Building**: `make build`, `make build-all`, `make install`
