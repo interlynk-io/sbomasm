@@ -23,6 +23,7 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	rm_spdx3 "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/spdx3"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
@@ -147,6 +148,54 @@ func RemoveComponents(ctx context.Context, sbomDoc sbom.SBOMDocument, selectedCo
 			}
 		}
 		doc.SoftwareArtifacts = filteredArtifacts
+
+		// Collect orphan candidates from removed packages and their relationships
+		orphanCandidates := make(map[string]bool)
+
+		// Collect agent references from removed packages
+		for _, pkg := range selectedComponents {
+			if p, ok := pkg.(*spdx3.Package); ok {
+				if p.SuppliedBy != nil {
+					orphanCandidates[p.SuppliedBy.GetSpdxID()] = true
+				}
+				for _, agent := range p.OriginatedBy {
+					orphanCandidates[agent.GetSpdxID()] = true
+				}
+			}
+		}
+
+		// Remove relationships whose From or To field points to a deleted package
+		var filteredRelationships []*spdx3.Relationship
+		for _, rel := range doc.Relationships {
+			if toRemove[rel.From.GetSpdxID()] {
+				// Relationship from a removed package — collect To elements as orphan candidates
+				for _, to := range rel.To {
+					orphanCandidates[to.GetSpdxID()] = true
+				}
+				continue
+			}
+			toRemoved := false
+			for _, to := range rel.To {
+				if toRemove[to.GetSpdxID()] {
+					toRemoved = true
+					break
+				}
+			}
+			if toRemoved {
+				continue
+			}
+			filteredRelationships = append(filteredRelationships, rel)
+		}
+		doc.Relationships = filteredRelationships
+
+		// Clean up orphaned elements (licenses, agents) no longer referenced
+		if len(orphanCandidates) > 0 {
+			var candidateIDs []string
+			for id := range orphanCandidates {
+				candidateIDs = append(candidateIDs, id)
+			}
+			rm_spdx3.CleanupOrphanedElements(ctx, doc, candidateIDs)
+		}
 
 	case *spdx.Document:
 		var filtered []*v2_3.Package
