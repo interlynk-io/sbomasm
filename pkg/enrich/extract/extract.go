@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx"
@@ -48,6 +50,15 @@ func Components(ctx context.Context, sbomDoc sbom.SBOMDocument, params *Params) 
 		for _, pkg := range doc.Packages {
 			totalComponents++
 			if shouldSelectSPDXComponent(ctx, *pkg, params) {
+				selectedComponents = append(selectedComponents, pkg)
+				totalSelectedComponents++
+			}
+		}
+
+	case *parse.Document:
+		for _, pkg := range doc.Packages {
+			totalComponents++
+			if shouldSelectSPDX3Component(ctx, pkg, params, doc) {
 				selectedComponents = append(selectedComponents, pkg)
 				totalSelectedComponents++
 			}
@@ -109,6 +120,44 @@ func shouldSelectSPDXComponent(ctx context.Context, pkg spdx.Package, params *Pa
 		}
 
 		// future work: Add checks for other fields
+	}
+	return false
+}
+
+// shouldSelectSPDX3Component checks if an SPDX 3.0 package needs license enrichment
+func shouldSelectSPDX3Component(ctx context.Context, pkg *spdx3.Package, params *Params, doc *parse.Document) bool {
+	log := logger.FromContext(ctx)
+
+	// Check for PURL in externalIdentifier
+	var hasPurl bool
+	for _, ei := range pkg.ExternalIdentifier {
+		if ei.ExternalIdentifierType == spdx3.ExternalIdentifierTypePackageUrl {
+			hasPurl = true
+			break
+		}
+	}
+	if !hasPurl {
+		log.Debugf("Skip component: No PURL found for package %s@%s", pkg.Name, pkg.PackageVersion)
+		return false
+	}
+
+	for _, field := range params.Fields {
+		if field == "license" {
+			if params.Force {
+				return true
+			}
+			// Check if package already has a concluded/declared license relationship
+			hasExistingLicense := false
+			for _, rel := range doc.GetRelationshipsFrom(pkg.SpdxID) {
+				if rel.IsConcludedLicense() || rel.IsDeclaredLicense() {
+					hasExistingLicense = true
+					break
+				}
+			}
+			if !hasExistingLicense {
+				return true
+			}
+		}
 	}
 	return false
 }
