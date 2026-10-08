@@ -28,16 +28,21 @@ import (
 var viewCmd = &cobra.Command{
 	Use:   "view <sbom-file>",
 	Short: "View SBOM in a human-readable tree format",
-	Long: `View displays CycloneDX SBOMs in a unified, hierarchical tree format.
+	Long: `View displays SBOMs in a unified, hierarchical tree format.
 
 The viewer consolidates information from various SBOM sections (components,
 dependencies, vulnerabilities, compositions, annotations) into an intuitive
 tree-based view that makes it easy to understand component relationships
 and security posture.
 
+Supports CycloneDX and SPDX 3.0 JSON-LD formats.
+
 Examples:
   # Basic view with defaults
   sbomasm view samples/product.json
+
+  # View SPDX 3.0 SBOM
+  sbomasm view samples/product.spdx3.json
 
   # Detailed view with all information
   sbomasm view samples/product.json --verbose

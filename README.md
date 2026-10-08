@@ -150,7 +150,7 @@ Modern software development involves complex supply chains with multiple compone
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
 - 🗑️ **Remove**: Strip sensitive components or fields (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
 - 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
-- 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
+- 👁️ **View**: Visualize SBOMs in human-readable hierarchical format (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
 - 📋 **Format Agnostic**: Supports SPDX 2.3, SPDX 3.0 JSON-LD, and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
