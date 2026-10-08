@@ -17,6 +17,7 @@
 package sbom
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
+	"github.com/interlynk-io/spdx-zen/parse"
 	spdx_json "github.com/spdx/tools-golang/json"
 	spdx_rdf "github.com/spdx/tools-golang/rdf"
 	"github.com/spdx/tools-golang/spdx/common"
@@ -31,6 +33,8 @@ import (
 	spdx_yaml "github.com/spdx/tools-golang/yaml"
 )
 
+// Parser detects the format of sbomFile, parses it into the appropriate typed
+// document (SPDX, SPDX 3.0, or CycloneDX), and returns it as an SBOMDocument.
 func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	log := logger.FromContext(ctx)
 	log.Debugf("Parsing SBOM file: %s", sbomFile)
@@ -41,12 +45,12 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := Detect(f)
+	spec, format, version, err := Detect(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	log.Debugf("detected SBOM format: %s, spec: %s", format, spec)
+	log.Debugf("detected SBOM format: %s, spec: %s, version: %s", format, spec, version)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -54,14 +58,16 @@ func Parser(ctx context.Context, sbomFile string) (SBOMDocument, error) {
 	}
 
 	// parse into SBOM object
-	sbomDoc, err := ParseSBOM(f, spec, format)
+	sbomDoc, err := ParseSBOM(f, spec, format, version)
 	if err != nil {
 		return nil, err
 	}
 	return sbomDoc, nil
 }
 
-func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, error) {
+// ParseSBOM parses an already-opened SBOM file given its detected spec, format,
+// and version. It routes to the appropriate parser based on the spec.
+func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat, version FormatVersion) (SBOMDocument, error) {
 	if f == nil {
 		return nil, fmt.Errorf("no SBOM file provided")
 	}
@@ -69,6 +75,9 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, erro
 
 	switch spec {
 	case SBOMSpecSPDX:
+		if IsSpdx3Version(string(version)) {
+			return ParseSPDX3(f, version)
+		}
 		return ParseSPDXSBOM(f, format)
 	case SBOMSpecCDX:
 		return ParseCDXSBOM(f, format)
@@ -78,6 +87,9 @@ func ParseSBOM(f *os.File, spec SBOMSpec, format FileFormat) (SBOMDocument, erro
 	}
 }
 
+// ParseSPDXSBOM parses an SPDX 2.x document from f using the format-specific
+// decoder (JSON, tag-value, YAML, or RDF). Returns an *SPDXDocument wrapping
+// the parsed result.
 func ParseSPDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	var d common.AnyDocument
 	var err error
@@ -98,6 +110,8 @@ func ParseSPDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	return &SPDXDocument{Doc: d}, err
 }
 
+// ParseCDXSBOM parses a CycloneDX BOM from f using the format-specific decoder
+// (JSON or XML). Returns a *CycloneDXDocument wrapping the parsed result.
 func ParseCDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	var err error
 	var bom *cydx.BOM
@@ -120,4 +134,26 @@ func ParseCDXSBOM(f *os.File, format FileFormat) (SBOMDocument, error) {
 	}
 
 	return &CycloneDXDocument{BOM: bom}, nil
+}
+
+// ParseSPDX3 parses an SPDX 3.0 JSON-LD document using spdx_zen.
+// It reads all content into memory so the underlying file can be reused.
+func ParseSPDX3(f io.ReadSeeker, version FormatVersion) (*SPDX3Document, error) {
+	// spdx_zen parses from an io.Reader; read all bytes to avoid consuming the file
+	rawContent, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SPDX 3.0 content: %w", err)
+	}
+
+	reader := parse.NewReader()
+	doc, err := reader.FromReader(bytes.NewReader(rawContent))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse SPDX 3.0 document: %w", err)
+	}
+
+	return &SPDX3Document{
+		Doc:     doc,
+		Version: version,
+		Format:  FileFormatJSON,
+	}, nil
 }

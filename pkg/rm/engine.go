@@ -30,6 +30,7 @@ import (
 	spdxcomp "github.com/interlynk-io/sbomasm/v2/pkg/rm/field/spdx"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
 )
@@ -52,12 +53,12 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	defer f.Close()
 
 	// detect sbom format
-	spec, format, err := sbom.Detect(f)
+	spec, format, version, err := sbom.Detect(f)
 	if err != nil {
 		return fmt.Errorf("failed to detect SBOM format: %w", err)
 	}
 
-	log.Debugf("Detected SBOM format: %s, spec: %s", format, spec)
+	log.Debugf("Detected SBOM format: %s, spec: %s, version: %s", format, spec, version)
 
 	// rewind before parsing
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -65,7 +66,7 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 	}
 
 	// parse into SBOM object
-	sbomDoc, err := sbom.ParseSBOM(f, spec, format)
+	sbomDoc, err := sbom.ParseSBOM(f, spec, format, version)
 	if err != nil {
 		return err
 	}
@@ -77,15 +78,27 @@ func Engine(ctx context.Context, args []string, params *types.RmParams) error {
 			return fmt.Errorf("expected CycloneDX BOM, got %T", sbomDoc.Document())
 		}
 		log.Debugf("CycloneDX BOM detected, registering handlers")
-
+		params.SpecKey = "cdx"
 		RegisterHandlers(bom, nil)
+
 	case sbom.SBOMSpecSPDX:
-		doc, ok := sbomDoc.Document().(*spdx.Document)
-		if !ok {
-			return fmt.Errorf("expected SPDX doc, got %T", sbomDoc.Document())
+		if sbom.IsSpdx3Version(string(version)) {
+			spdx3Doc, ok := sbomDoc.Document().(*parse.Document)
+			if !ok {
+				return fmt.Errorf("expected SPDX 3.0 doc, got %T", sbomDoc.Document())
+			}
+			log.Debugf("SPDX 3.0 Doc detected, registering handlers")
+			params.SpecKey = "spdx3"
+			RegisterSPDX3Handlers(spdx3Doc)
+		} else {
+			doc, ok := sbomDoc.Document().(*spdx.Document)
+			if !ok {
+				return fmt.Errorf("expected SPDX 2.3 doc, got %T", sbomDoc.Document())
+			}
+			log.Debugf("SPDX 2.3 Doc detected, registering handlers")
+			params.SpecKey = "spdx"
+			RegisterHandlers(nil, doc)
 		}
-		log.Debugf("SPDX Doc detected, registering handlers")
-		RegisterHandlers(nil, doc)
 	default:
 		return fmt.Errorf("unsupported spec: %s", spec)
 	}
@@ -135,7 +148,7 @@ func (f *FieldOperationEngine) ExecuteDocumentFieldRemoval(ctx context.Context, 
 	log := logger.FromContext(ctx)
 	log.Debugf("Initializing field removal process for document metadata")
 
-	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
+	spec, scope, field := params.SpecKey, strings.ToLower(params.Scope), strings.ToLower(params.Field)
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
 
 	log.Debugf("Handler key: %s", key)
@@ -240,7 +253,7 @@ func (f *FieldOperationEngine) ExecuteComponentFieldRemoval(ctx context.Context,
 	}
 
 	// Step 2: For each selected component, operate on field
-	spec, field := f.doc.SpecType(), strings.ToLower(params.Field)
+	spec, field := params.SpecKey, strings.ToLower(params.Field)
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), "component", field)
 
 	log.Debugf("Handler key for field removal: %s", key)

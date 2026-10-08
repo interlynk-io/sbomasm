@@ -105,6 +105,11 @@ func Serialize(ctx context.Context, doc sbom.SBOMDocument, out io.Writer) error 
 		return writeCDX(ctx, doc, w)
 
 	case string(sbom.SBOMSpecSPDX):
+		// SPDX 3.0 documents are wrapped in SPDX3Document.
+		// SPDX 2.3 documents are wrapped in SPDXDocument.
+		if _, ok := doc.(*sbom.SPDX3Document); ok {
+			return writeSPDX3(ctx, doc, w)
+		}
 		return writeSPDX(ctx, doc, w)
 
 	default:

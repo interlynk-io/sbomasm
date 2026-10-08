@@ -22,9 +22,13 @@ import (
 	"io"
 
 	"github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/spdx-zen/parse"
+	"github.com/interlynk-io/spdx-zen/serialize"
 	"github.com/spdx/tools-golang/spdx"
 )
 
+// WriteSBOM serializes the given SBOMDocument to w in its native format.
+// It supports CycloneDX (JSON), SPDX 2.x (JSON), and SPDX 3.0 (JSON-LD).
 func WriteSBOM(w io.Writer, doc SBOMDocument) error {
 	switch d := doc.Document().(type) {
 	case *cyclonedx.BOM:
@@ -43,7 +47,11 @@ func WriteSBOM(w io.Writer, doc SBOMDocument) error {
 		}
 		return nil
 
+	case *parse.Document:
+		writer := serialize.NewWriter(serialize.WithIndent("  "))
+		return writer.Write(d, w)
+
 	default:
-		return fmt.Errorf("unsupported SBOM type for writing")
+		return fmt.Errorf("unsupported SBOM type for writing: %T", d)
 	}
 }

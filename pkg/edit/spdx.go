@@ -95,14 +95,14 @@ func loadSpdxSbom(ctx context.Context, path string) (*spdx.Document, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := sbom.Detect(f)
+	spec, format, _, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debugf("loading bom:%s spec:%s format:%s", path, spec, format)
 
-	d, err = sbom.ParseSBOM(f, spec, format)
+	d, err = sbom.ParseSBOM(f, spec, format, "")
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func writeSpdxSbom(doc common.AnyDocument, m *configParams) error {
 	}
 	defer inf.Close()
 
-	_, format, err := sbom.Detect(inf)
+	_, format, _, err := sbom.Detect(inf)
 	if err != nil {
 		return err
 	}

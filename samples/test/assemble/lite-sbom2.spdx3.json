@@ -1,0 +1,78 @@
+{
+  "@context" : "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph" : [ {
+    "@id" : "_:creationinfo",
+    "type" : "CreationInfo",
+    "specVersion" : "3.0.1",
+    "createdBy" : [ "https://example.org/org2" ],
+    "createdUsing" : [ "https://example.org/tool2" ],
+    "created" : "2024-01-15T11:00:00Z"
+  }, {
+    "spdxId" : "https://example.org/doc2",
+    "type" : "SpdxDocument",
+    "name" : "Lite SBOM 2",
+    "creationInfo" : "_:creationinfo",
+    "rootElement" : [ "https://example.org/cosign" ],
+    "profileConformance" : [ "core", "software" ]
+  }, {
+    "spdxId" : "https://example.org/org2",
+    "type" : "Organization",
+    "name" : "Example Organization 2",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/tool2",
+    "type" : "Tool",
+    "name" : "sbom-tool-2",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/cosign",
+    "type" : "software_Package",
+    "name" : "github.com/sigstore/cosign",
+    "software_packageVersion" : "2.0.0",
+    "software_primaryPurpose" : "application",
+    "suppliedBy" : "https://example.org/org2",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/httpsnoop",
+    "type" : "software_Package",
+    "name" : "github.com/felixge/httpsnoop",
+    "software_packageVersion" : "0.1.0",
+    "software_primaryPurpose" : "library",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/fulcio",
+    "type" : "software_Package",
+    "name" : "github.com/sigstore/fulcio",
+    "software_packageVersion" : "1.0.0",
+    "software_primaryPurpose" : "library",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rekor",
+    "type" : "software_Package",
+    "name" : "github.com/sigstore/rekor",
+    "software_packageVersion" : "1.0.0",
+    "software_primaryPurpose" : "library",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel4",
+    "type" : "Relationship",
+    "relationshipType" : "describes",
+    "from" : "https://example.org/doc2",
+    "to" : [ "https://example.org/cosign" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel5",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/cosign",
+    "to" : [ "https://example.org/fulcio", "https://example.org/rekor" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel6",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/fulcio",
+    "to" : [ "https://example.org/httpsnoop" ],
+    "creationInfo" : "_:creationinfo"
+  } ]
+}

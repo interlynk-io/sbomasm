@@ -18,6 +18,8 @@ package edit
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 
 	"github.com/interlynk-io/sbomasm/v2/internal/version"
@@ -39,6 +41,16 @@ type spdxEditDoc struct {
 	c   *configParams
 }
 
+// warnIfAppendNotApplicable prints a warning when --append is used on a
+// single-value field for SPDX 2.3. The edit proceeds as an overwrite.
+func (d *spdxEditDoc) skipIfAppendNotApplicable(field string) bool {
+	if d.c.onAppend() {
+		fmt.Fprintf(os.Stderr, "WARN: --append is not applicable to --%s for SPDX 2.3 (single-value field). Skipping. Use --missing to add only if empty, or omit --append to overwrite.\n", field)
+		return true
+	}
+	return false
+}
+
 var supportedSPDXMetadataLifeCycle map[string]bool = map[string]bool{
 	"design":     true,
 	"source":     true,
@@ -53,7 +65,7 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 	doc.bom = bom
 	doc.c = c
 
-	if c.search.subject == "primary-component" {
+	if c.search.subject == SubjectPrimaryComponent {
 		pkg, err := spdxFindPkg(bom, c, true)
 		if err == nil {
 			doc.pkg = pkg
@@ -63,7 +75,7 @@ func NewSpdxEditDoc(bom *spdx.Document, c *configParams) (*spdxEditDoc, error) {
 		}
 	}
 
-	if c.search.subject == "component-name-version" {
+	if c.search.subject == SubjectComponentNameVersion {
 
 		pkg, err := spdxFindPkg(bom, c, false)
 		if err == nil {
@@ -88,7 +100,7 @@ func (d *spdxEditDoc) update() {
 		{"version", d.version},
 		{"supplier", d.supplier},
 		{"authors", d.authors},
-		{"purl", d.purl},
+		{ExtIDTypePurl, d.purl},
 		{"cpe", d.cpe},
 		{"licenses", d.licenses},
 		{"hashes", d.hashes},
@@ -104,7 +116,7 @@ func (d *spdxEditDoc) update() {
 	for _, item := range updateFuncs {
 		if err := item.f(); err != nil {
 			if err == errNotSupported {
-				log.Infof(fmt.Sprintf("SPDX error updating %s: %s", item.name, err))
+				log.Infof(notSupportedMsg(item.name, string(d.c.search.subject)))
 			}
 
 			if err == errInvalidInput {
@@ -119,8 +131,11 @@ func (d *spdxEditDoc) name() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("name") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -139,8 +154,11 @@ func (d *spdxEditDoc) version() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("version") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -161,7 +179,7 @@ func (d *spdxEditDoc) supplier() error {
 	comment := ""
 	comment += fmt.Sprintf("%s (%s)", d.c.supplier.name, d.c.supplier.value)
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		// add creator comment
 		if d.bom.CreationInfo == nil {
 			d.bom.CreationInfo = &spdx.CreationInfo{
@@ -173,11 +191,18 @@ func (d *spdxEditDoc) supplier() error {
 			} else {
 				if !strings.Contains(d.bom.CreationInfo.CreatorComment, SupplierPrefixComment) {
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf("\n\n"+SupplierPrefixComment+"%s", comment)
-				} else {
+				} else if d.c.onAppend() && !strings.Contains(d.bom.CreationInfo.CreatorComment, comment) {
+					// Append mode: add new supplier if not already present.
 					d.bom.CreationInfo.CreatorComment += fmt.Sprintf(", "+"%s", comment)
+				} else {
+					// Overwrite mode: replace the entire supplier text with the new one.
+					d.bom.CreationInfo.CreatorComment = SupplierPrefixComment + comment
 				}
 			}
 		}
+		return nil
+	}
+	if d.skipIfAppendNotApplicable("supplier") {
 		return nil
 	}
 
@@ -246,7 +271,7 @@ func (d *spdxEditDoc) purl() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -258,7 +283,7 @@ func (d *spdxEditDoc) purl() error {
 
 	foundPurlWithKeyAndValue := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == "purl" && ref.Locator == d.c.purl {
+		if strings.EqualFold(ref.RefType, "purl") && ref.Locator == d.c.purl {
 			foundPurlWithKeyAndValue = true
 		}
 	}
@@ -276,8 +301,6 @@ func (d *spdxEditDoc) purl() error {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
-		} else {
-			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		}
 	} else {
 		if d.pkg.PackageExternalReferences == nil {
@@ -285,7 +308,7 @@ func (d *spdxEditDoc) purl() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &purl)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == "purl"
+				return strings.EqualFold(x.RefType, "purl")
 			})
 
 			if extRef == nil {
@@ -303,7 +326,7 @@ func (d *spdxEditDoc) cpe() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -315,7 +338,7 @@ func (d *spdxEditDoc) cpe() error {
 
 	foundCpe := false
 	for _, ref := range d.pkg.PackageExternalReferences {
-		if ref.RefType == "cpe23Type" {
+		if strings.EqualFold(ref.RefType, "cpe23Type") {
 			foundCpe = true
 		}
 	}
@@ -333,8 +356,6 @@ func (d *spdxEditDoc) cpe() error {
 				d.pkg.PackageExternalReferences = []*spdx.PackageExternalReference{}
 			}
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
-		} else {
-			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		}
 	} else {
 		if d.pkg.PackageExternalReferences == nil {
@@ -342,7 +363,7 @@ func (d *spdxEditDoc) cpe() error {
 			d.pkg.PackageExternalReferences = append(d.pkg.PackageExternalReferences, &cpe)
 		} else {
 			extRef := lo.Reject(d.pkg.PackageExternalReferences, func(x *spdx.PackageExternalReference, _ int) bool {
-				return strings.ToLower(x.RefType) == "cpe23type"
+				return strings.EqualFold(x.RefType, "cpe23Type")
 			})
 
 			if extRef == nil {
@@ -359,11 +380,14 @@ func (d *spdxEditDoc) licenses() error {
 	if !d.c.shouldLicenses() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("license") {
+		return nil
+	}
 
 	license := spdxConstructLicenses(d.bom, d.c)
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.DataLicense == "" {
 				d.bom.DataLicense = license
 			}
@@ -373,7 +397,7 @@ func (d *spdxEditDoc) licenses() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.DataLicense = license
 		} else {
 			d.pkg.PackageLicenseConcluded = license
@@ -387,7 +411,7 @@ func (d *spdxEditDoc) hashes() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -401,13 +425,28 @@ func (d *spdxEditDoc) hashes() error {
 		if d.pkg.PackageChecksums == nil {
 			d.pkg.PackageChecksums = hashes
 		} else {
-			d.pkg.PackageChecksums = append(d.pkg.PackageChecksums, hashes...)
+			for _, h := range hashes {
+				if !d.hasChecksum(d.pkg.PackageChecksums, string(h.Algorithm), h.Value) {
+					d.pkg.PackageChecksums = append(d.pkg.PackageChecksums, h)
+				}
+			}
 		}
 	} else {
 		d.pkg.PackageChecksums = hashes
 	}
 
 	return nil
+}
+
+// hasChecksum returns true if a checksum with the same algorithm and value
+// already exists in the given slice.
+func (d *spdxEditDoc) hasChecksum(existing []spdx.Checksum, alg, val string) bool {
+	for _, cs := range existing {
+		if strings.EqualFold(string(cs.Algorithm), alg) && cs.Value == val {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *spdxEditDoc) tools() error {
@@ -512,8 +551,11 @@ func (d *spdxEditDoc) copyright() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("copyright") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -531,9 +573,12 @@ func (d *spdxEditDoc) description() error {
 	if !d.c.shouldDescription() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("description") {
+		return nil
+	}
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.DocumentComment == "" {
 				d.bom.DocumentComment = d.c.description
 			}
@@ -543,7 +588,7 @@ func (d *spdxEditDoc) description() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.DocumentComment = d.c.description
 		} else {
 			d.pkg.PackageDescription = d.c.description
@@ -558,8 +603,11 @@ func (d *spdxEditDoc) repository() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("repository") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -578,8 +626,11 @@ func (d *spdxEditDoc) typ() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("type") {
+		return nil
 	}
 
 	purpose := spdx_strings_to_types[strings.ToLower(d.c.typ)]
@@ -603,6 +654,9 @@ func (d *spdxEditDoc) timeStamp() error {
 	if !d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("timestamp") {
+		return nil
+	}
 
 	if d.bom.CreationInfo == nil {
 		d.bom.CreationInfo = &spdx.CreationInfo{}
@@ -617,7 +671,7 @@ func (d *spdxEditDoc) lifeCycles() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
+	if d.c.search.subject != SubjectDocument {
 		return errNotSupported
 	}
 
@@ -635,18 +689,26 @@ func (d *spdxEditDoc) lifeCycles() error {
 		lifecycles = fmt.Sprintf("lifecycle: %s", d.c.lifecycles[0])
 	}
 
-	if d.c.onMissing() {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
-		if d.bom.CreationInfo.CreatorComment == "" {
-			d.bom.CreationInfo.CreatorComment = lifecycles
-		}
-	} else {
-		if d.bom.CreationInfo == nil {
-			d.bom.CreationInfo = &spdx.CreationInfo{}
-		}
+	if d.bom.CreationInfo == nil {
+		d.bom.CreationInfo = &spdx.CreationInfo{}
+	}
+
+	if d.bom.CreationInfo.CreatorComment == "" {
+		// Empty comment — set lifecycle directly.
 		d.bom.CreationInfo.CreatorComment = lifecycles
+	} else if strings.Contains(d.bom.CreationInfo.CreatorComment, "lifecycle:") {
+		if d.c.onMissing() {
+			return nil // lifecycle already present, skip silently
+		}
+		// Overwrite mode — replace existing lifecycle line.
+		re := regexp.MustCompile(`(?m)^lifecycle:.*$`)
+		d.bom.CreationInfo.CreatorComment = re.ReplaceAllString(d.bom.CreationInfo.CreatorComment, lifecycles)
+	} else {
+		if d.c.onMissing() {
+			return nil // should not happen (missing guard above), but defensive
+		}
+		// Comment has other text (e.g. supplier) — append lifecycle on a new line.
+		d.bom.CreationInfo.CreatorComment += "\n\n" + lifecycles
 	}
 	return nil
 }

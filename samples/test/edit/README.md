@@ -122,3 +122,44 @@ sbomasm edit --subject component-name-version --search "github.com/fluxcd/pkg/oc
 
 sbomasm edit --subject component-name-version --search "github.com/fluxcd/pkg/oci (v0.45.0)" --type "library" samples/test/edit/in-complete-sbom.cdx.json -o append-comp-type-sbom.cdx.json
 ```
+
+## SPDX 3.0 Examples
+
+### 1. Edit Document (SPDX 3.0)
+
+```bash
+# Append author to the document
+sbomasm edit --subject document --author "Interlynk (hello@interlynk.io)" samples/test/edit/in-complete-sbom.spdx3.json -o append-author-sbom.spdx3.json --append
+
+# Add lifecycle
+sbomasm edit --subject document --lifecycle "build" samples/test/edit/in-complete-sbom.spdx3.json -o append-lifecycle-sbom.spdx3.json
+
+# Add tools and timestamp
+sbomasm edit --subject document --tool "sbomasm-test (v1.0.0)" --timestamp samples/test/edit/in-complete-sbom.spdx3.json -o append-tool-sbom.spdx3.json
+```
+
+### 2. Edit Primary Component (SPDX 3.0)
+
+```bash
+# Update name, version, and description
+sbomasm edit --subject primary-component --name "kyverno-renamed" --version "v2.0.0" --description "Test description" samples/test/edit/in-complete-sbom.spdx3.json -o edit-pc-sbom.spdx3.json
+
+# Update supplier (creates new Organization, preserves old one)
+sbomasm edit --subject primary-component --supplier "Kyverno (https://kyverno.io)" samples/test/edit/in-complete-sbom.spdx3.json -o edit-pc-supplier-sbom.spdx3.json
+
+# Update license (creates hasConcludedLicense relationship + LicenseExpression)
+sbomasm edit --subject primary-component --license "Apache-2.0" samples/test/edit/in-complete-sbom.spdx3.json -o edit-pc-license-sbom.spdx3.json
+
+# Append hash
+sbomasm edit --subject primary-component --hash "MD5 (d41d8cd98f00b204e9800998ecf8427e)" samples/test/edit/in-complete-sbom.spdx3.json -o append-pc-hash-sbom.spdx3.json --append
+```
+
+### 3. Edit Specific Component (SPDX 3.0)
+
+```bash
+# Update name and supplier
+sbomasm edit --subject component-name-version --search "github.com/fluxcd/pkg/oci (v0.45.0)" --name "fluxcd-renamed" --supplier "Flux (https://fluxcd.io)" samples/test/edit/in-complete-sbom.spdx3.json -o edit-comp-sbom.spdx3.json
+
+# Update repository and type
+sbomasm edit --subject component-name-version --search "github.com/fluxcd/pkg/oci (v0.45.0)" --repository "https://github.com/fluxcd/pkg/oci" --type "library" samples/test/edit/in-complete-sbom.spdx3.json -o edit-comp-repo-sbom.spdx3.json
+```

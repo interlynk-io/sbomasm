@@ -236,12 +236,31 @@ Failed: 0         # Components that failed to enrich
 
 | Format | Extensions |
 |--------|------------|
-| SPDX | .spdx, .spdx.json, .spdx.yaml |
+| SPDX 2.3 | .spdx, .spdx.json, .spdx.yaml |
+| SPDX 3.0 | .spdx3.json |
 | CycloneDX | .cdx, .cdx.json, .cdx.xml |
 
 ### Output Formats
 
 The enriched SBOM maintains the same format as the input file.
+
+### Format-Specific Behavior
+
+#### SPDX 2.3
+- License is stored inline in `package.licenseDeclared`
+- Components are matched via `PackageExternalReferences` (PURLs)
+- Selection checks if `licenseDeclared` is empty or "NOASSERTION"
+
+#### SPDX 3.0 (JSON-LD)
+- License is stored as a relationship: `hasConcludedLicense` pointing to a standalone license element (e.g. `SimpleLicensingText`)
+- Components are matched via `externalIdentifier` with `externalIdentifierType: packageUrl`
+- Selection checks if the package already has a `hasConcludedLicense` or `hasDeclaredLicense` relationship
+- When enriched, a new `SimpleLicensingText` element and `Relationship` element are added to the `@graph`
+
+#### CycloneDX
+- License is stored in `component.licenses` (expression or named)
+- Components are matched via `component.purl`
+- Selection checks if `licenses` is empty or contains "NOASSERTION"
 
 ## Limitations
 

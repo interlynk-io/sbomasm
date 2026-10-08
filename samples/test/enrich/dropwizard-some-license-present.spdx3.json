@@ -1,0 +1,248 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "type": "SpdxDocument",
+      "spdxId": "https://example.org/doc/dropwizard-test",
+      "creationInfo": "_:creationinfo",
+      "name": "Dropwizard Test SBOM (Some Licenses Present)",
+      "dataLicense": "https://example.org/license-bf2b99d3-336e-4c32-b7c9-e3c8a01ebd45",
+      "profileConformance": ["core", "software"],
+      "rootElement": ["https://example.org/pkg/dropwizard-core"]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-core",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-core",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "application",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-core@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/swift-protobuf",
+      "creationInfo": "_:creationinfo",
+      "name": "swift-protobuf",
+      "software_packageVersion": "1.31.1",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:swift/github.com/apple/swift-protobuf@1.31.1"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-archetypes",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-archetypes",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard.archetypes/dropwizard-archetypes@2.0.31?type=pom"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/java-simple",
+      "creationInfo": "_:creationinfo",
+      "name": "java-simple",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard.archetypes/java-simple@2.0.31?type=maven-archetype"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-example",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-example",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-example@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-assets",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-assets",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-assets@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-http2",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-http2",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-http2@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-metrics-graphite",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-metrics-graphite",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-metrics-graphite@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-views-mustache",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-views-mustache",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-views-mustache@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-views",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-views",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-views@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-views-freemarker",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-views-freemarker",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-views-freemarker@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-forms",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-forms",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-forms@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "https://example.org/pkg/dropwizard-auth",
+      "creationInfo": "_:creationinfo",
+      "name": "dropwizard-auth",
+      "software_packageVersion": "2.0.31",
+      "software_primaryPurpose": "library",
+      "externalIdentifier": [
+        {
+          "type": "ExternalIdentifier",
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:maven/io.dropwizard/dropwizard-auth@2.0.31?type=jar"
+        }
+      ]
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "https://example.org/rel/dropwizard-core-license",
+      "creationInfo": "_:creationinfo",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://example.org/pkg/dropwizard-core",
+      "to": ["https://example.org/lic/apache-2.0"]
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "https://example.org/rel/dropwizard-assets-license",
+      "creationInfo": "_:creationinfo",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://example.org/pkg/dropwizard-assets",
+      "to": ["https://example.org/lic/apache-2.0"]
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "https://example.org/rel/dropwizard-views-license",
+      "creationInfo": "_:creationinfo",
+      "relationshipType": "hasDeclaredLicense",
+      "from": "https://example.org/pkg/dropwizard-views",
+      "to": ["https://example.org/lic/apache-2.0"]
+    },
+    {
+      "type": "SimpleLicensingText",
+      "spdxId": "https://example.org/lic/apache-2.0",
+      "creationInfo": "_:creationinfo",
+      "name": "Apache-2.0"
+    },
+    {
+      "type": "CreationInfo",
+      "spdxId": "_:creationinfo",
+      "specVersion": "3.0.1",
+      "created": "2025-01-15T10:00:00Z",
+      "createdBy": [
+        "https://example.org/tool/sbomasm"
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ require (
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
+	github.com/interlynk-io/spdx-zen v0.1.6
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pingcap/log v1.1.0
@@ -29,6 +30,7 @@ require (
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/anchore/go-struct-converter v0.1.0 // indirect
+	github.com/cayleygraph/quad v1.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -37,6 +39,8 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/piprate/json-gold v0.9.1 // indirect
+	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -48,3 +52,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/interlynk-io/spdx-zen v0.1.6 => ../spdx-zen

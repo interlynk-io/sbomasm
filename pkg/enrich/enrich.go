@@ -23,6 +23,8 @@ import (
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/cheggaaa/pb/v3"
+	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/interlynk-io/sbomasm/v2/pkg/enrich/clearlydef"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
@@ -107,6 +109,27 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
 				skippedCount++
 				log.Debugf("Skipping %s@%s: license already exists (%s)\n", c.PackageName, c.PackageVersion, c.PackageLicenseConcluded)
+			}
+
+		case *spdx3.Package:
+			spdx3Doc, ok := sbomDoc.Document().(*parse.Document)
+			if !ok {
+				log.Warnf("invalid SPDX 3.0 document for component %s@%s", c.Name, c.PackageVersion)
+				bar.Increment()
+				continue
+			}
+
+			if force || !hasExistingLicense(spdx3Doc, c.SpdxID) {
+				lic := createSimpleLicensingText(spdx3Doc, compWithCorrespondingDefResponse.Licensed.Declared)
+				rel := createHasConcludedLicenseRelationship(spdx3Doc, c.SpdxID, lic.SpdxID)
+				addLicenseToDocument(spdx3Doc, lic, rel)
+				enrichedCount++
+				bar.Increment()
+				log.Debugf("Enriched license %s to %s@%s\n", compWithCorrespondingDefResponse.Licensed.Declared, c.Name, c.PackageVersion)
+			} else {
+				skippedReasons[purl] = LICENSE_ALREADY_EXISTS
+				skippedCount++
+				log.Debugf("Skipping %s@%s: license already exists\n", c.Name, c.PackageVersion)
 			}
 
 		case cydx.Component:
@@ -205,6 +228,13 @@ func getPurl(comp interface{}) string {
 			}
 		}
 
+	case *spdx3.Package:
+		for _, ei := range c.ExternalIdentifier {
+			if ei.ExternalIdentifierType == spdx3.ExternalIdentifierTypePackageUrl {
+				purls = append(purls, ei.Identifier)
+			}
+		}
+
 	case cydx.Component:
 		if c.PackageURL != "" {
 			purls = append(purls, c.PackageURL)
@@ -216,4 +246,104 @@ func getPurl(comp interface{}) string {
 	}
 
 	return purls[0]
+}
+
+// hasExistingLicense checks if a package already has a concluded or declared
+// license relationship in the SPDX 3.0 document.
+func hasExistingLicense(doc *parse.Document, pkgSpdxID string) bool {
+	for _, rel := range doc.GetRelationshipsFrom(pkgSpdxID) {
+		if rel.IsConcludedLicense() || rel.IsDeclaredLicense() {
+			return true
+		}
+	}
+	return false
+}
+
+// createSimpleLicensingText creates a new SimpleLicensingText element for
+// the given license name, reusing the document's CreationInfo.
+func createSimpleLicensingText(doc *parse.Document, name string) *spdx3.SimpleLicensingText {
+	var ci spdx3.CreationInfo
+	if doc.CreationInfo != nil {
+		ci = *doc.CreationInfo
+	}
+
+	licID := fmt.Sprintf("%s/lic-%s", doc.GetSpdxID(), sanitizeLicenseName(name))
+	return &spdx3.SimpleLicensingText{
+		Element: spdx3.Element{
+			SpdxID:       licID,
+			Name:         name,
+			CreationInfo: ci,
+		},
+	}
+}
+
+// createHasConcludedLicenseRelationship creates a Relationship element
+// linking a package to a license with hasConcludedLicense type.
+func createHasConcludedLicenseRelationship(doc *parse.Document, from, to string) *spdx3.Relationship {
+	var ci spdx3.CreationInfo
+	if doc.CreationInfo != nil {
+		ci = *doc.CreationInfo
+	}
+
+	relID := fmt.Sprintf("%s/rel-%s-%s", doc.GetSpdxID(), sanitizeForID(from), sanitizeForID(to))
+	return &spdx3.Relationship{
+		Element: spdx3.Element{
+			SpdxID:       relID,
+			CreationInfo: ci,
+		},
+		RelationshipType: spdx3.RelationshipTypeHasConcludedLicense,
+		From:             spdx3.Element{SpdxID: from},
+		To:               []spdx3.Element{{SpdxID: to}},
+	}
+}
+
+// addLicenseToDocument adds a SimpleLicensingText and its associated
+// Relationship to the SPDX 3.0 document, updating all indexes.
+func addLicenseToDocument(doc *parse.Document, lic *spdx3.SimpleLicensingText, rel *spdx3.Relationship) {
+	// Add to typed slice
+	doc.SimpleLicensingTexts = append(doc.SimpleLicensingTexts, lic)
+
+	// Add to element index
+	if doc.ElementsByID == nil {
+		doc.ElementsByID = make(map[string]interface{})
+	}
+	doc.ElementsByID[lic.SpdxID] = lic
+
+	// Add to SimpleLicensingTexts index
+	if doc.SimpleLicensingTextsByID == nil {
+		doc.SimpleLicensingTextsByID = make(map[string]*spdx3.SimpleLicensingText)
+	}
+	doc.SimpleLicensingTextsByID[lic.SpdxID] = lic
+
+	// Add relationship
+	doc.Relationships = append(doc.Relationships, rel)
+
+	// Update relationship indexes
+	if doc.RelationshipsFromIndex == nil {
+		doc.RelationshipsFromIndex = make(map[string][]*spdx3.Relationship)
+	}
+	doc.RelationshipsFromIndex[rel.From.SpdxID] = append(
+		doc.RelationshipsFromIndex[rel.From.SpdxID], rel)
+
+	if doc.RelationshipsToIndex == nil {
+		doc.RelationshipsToIndex = make(map[string][]*spdx3.Relationship)
+	}
+	for _, to := range rel.To {
+		doc.RelationshipsToIndex[to.SpdxID] = append(
+			doc.RelationshipsToIndex[to.SpdxID], rel)
+	}
+}
+
+// sanitizeLicenseName replaces characters that are invalid in SPDX IDs.
+func sanitizeLicenseName(name string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(name, " ", "-"), "+", "plus")
+}
+
+// sanitizeForID creates a safe suffix for relationship IDs.
+func sanitizeForID(s string) string {
+	parts := strings.Split(s, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return s
 }
