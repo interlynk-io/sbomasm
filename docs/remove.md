@@ -54,6 +54,7 @@ Removes specific fields from the document metadata or from components.
 | `type`        | `primaryPackagePurpose` | `Package.primaryPurpose` + `additionalPurpose`| `type`                 |
 
 **SPDX 3.0 JSON-LD Notes:**
+
 - Fields like `author` and `supplier` reference standalone elements (Person, Organization) in `@graph` via relationships, not inline strings.
 - `license` is stored as a `Relationship` element (e.g., `hasConcludedLicense`) linking a package to a license element.
 - `hash` is stored in `verifiedUsing` as a `Hash` element.

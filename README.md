@@ -149,7 +149,7 @@ Modern software development involves complex supply chains with multiple compone
 - 🔀 **Assemble**: Merge multiple SBOMs into comprehensive documents
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
 - 🗑️ **Remove**: Strip sensitive components or fields (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
-- 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
+- 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
 - 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
 - 📋 **Format Agnostic**: Supports SPDX 2.3, SPDX 3.0 JSON-LD, and CycloneDX
@@ -402,6 +402,25 @@ sbomasm enrich \
   --fields license \
   --output enriched.json \
   original.json
+```
+
+#### SPDX 3.0 JSON-LD Enrichment
+
+SPDX 3.0 stores licenses as standalone elements linked via `hasConcludedLicense` relationships. The enrich command handles this automatically:
+
+```bash
+# Enrich SPDX 3.0 SBOM — adds SimpleLicensingText elements + relationships
+sbomasm enrich \
+  --fields license \
+  --output enriched.spdx3.json \
+  samples/test/enrich/dropwizard-missing-all-license.spdx3.json
+
+# Force update existing licenses (replaces hasConcludedLicense relationships)
+sbomasm enrich \
+  --fields license \
+  --force \
+  --output enriched-force.spdx3.json \
+  samples/test/enrich/dropwizard-some-license-present.spdx3.json
 ```
 
 #### Advanced Enrichment Options
