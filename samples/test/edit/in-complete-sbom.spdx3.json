@@ -1,0 +1,166 @@
+{
+  "@context" : "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph" : [ {
+    "@id" : "_:creationinfo",
+    "type" : "CreationInfo",
+    "specVersion" : "3.0.1",
+    "createdBy" : [ "https://example.org/org-syft" ],
+    "createdUsing" : [ "https://example.org/tool-syft" ],
+    "created" : "2025-06-06T05:52:18Z"
+  }, {
+    "spdxId" : "https://example.org/doc1",
+    "type" : "SpdxDocument",
+    "name" : "CycloneDX BOM converted to SPDX",
+    "creationInfo" : "_:creationinfo",
+    "rootElement" : [ "https://example.org/pkg-kyverno" ],
+    "profileConformance" : [ "core", "software" ]
+  }, {
+    "spdxId" : "https://example.org/org-syft",
+    "type" : "Organization",
+    "name" : "Anchore, Inc",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/tool-syft",
+    "type" : "Tool",
+    "name" : "syft-1.26.1",
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/pkg-kyverno",
+    "type" : "software_Package",
+    "name" : "github.com/kyverno/kyverno",
+    "software_packageVersion" : "v1.14.0",
+    "software_downloadLocation" : "",
+    "software_primaryPurpose" : "application",
+    "suppliedBy" : "https://example.org/org-syft",
+    "copyrightText" : "NOASSERTION",
+    "creationInfo" : "_:creationinfo",
+    "verifiedUsing" : [ {
+      "type" : "Hash",
+      "algorithm" : "sha256",
+      "hashValue" : "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+    } ],
+    "externalIdentifier" : [ {
+      "externalIdentifierType" : "packageUrl",
+      "identifier" : "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module&goos=linux&goarch=amd64#cmd/kyverno"
+    }, {
+      "externalIdentifierType" : "cpe23",
+      "identifier" : "cpe:2.3:a:kyverno:kyverno:v1.14.0:*:*:*:*:*:*:*"
+    } ]
+  }, {
+    "spdxId" : "https://example.org/pkg-fluxcd",
+    "type" : "software_Package",
+    "name" : "github.com/fluxcd/pkg/oci",
+    "software_packageVersion" : "v0.45.0",
+    "software_downloadLocation" : "",
+    "software_primaryPurpose" : "library",
+    "suppliedBy" : "https://example.org/org-syft",
+    "copyrightText" : "NOASSERTION",
+    "creationInfo" : "_:creationinfo",
+    "verifiedUsing" : [ {
+      "type" : "Hash",
+      "algorithm" : "sha256",
+      "hashValue" : "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e"
+    } ],
+    "externalIdentifier" : [ {
+      "externalIdentifierType" : "packageUrl",
+      "identifier" : "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module&goos=linux&goarch=amd64"
+    }, {
+      "externalIdentifierType" : "cpe23",
+      "identifier" : "cpe:2.3:a:fluxcd:oci:v0.45.0:*:*:*:*:*:*:*"
+    } ]
+  }, {
+    "spdxId" : "https://example.org/pkg-azure",
+    "type" : "software_Package",
+    "name" : "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+    "software_packageVersion" : "v1.17.0",
+    "software_downloadLocation" : "",
+    "software_primaryPurpose" : "library",
+    "suppliedBy" : "https://example.org/org-syft",
+    "copyrightText" : "NOASSERTION",
+    "creationInfo" : "_:creationinfo",
+    "verifiedUsing" : [ {
+      "type" : "Hash",
+      "algorithm" : "sha256",
+      "hashValue" : "834119270cfbc645d0899008e718bd7f75961580655f508f4eb47e3434e84644"
+    } ],
+    "externalIdentifier" : [ {
+      "externalIdentifierType" : "packageUrl",
+      "identifier" : "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module&goos=linux&goarch=amd64"
+    }, {
+      "externalIdentifierType" : "cpe23",
+      "identifier" : "cpe:2.3:a:azure:azcore:v1.17.0:*:*:*:*:*:*:*"
+    } ]
+  }, {
+    "spdxId" : "https://example.org/pkg-rekor",
+    "type" : "software_Package",
+    "name" : "github.com/sigstore/rekor",
+    "software_packageVersion" : "v1.3.9",
+    "software_downloadLocation" : "",
+    "software_primaryPurpose" : "application",
+    "suppliedBy" : "https://example.org/org-syft",
+    "copyrightText" : "NOASSERTION",
+    "creationInfo" : "_:creationinfo",
+    "verifiedUsing" : [ {
+      "type" : "Hash",
+      "algorithm" : "sha256",
+      "hashValue" : "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335"
+    } ],
+    "externalIdentifier" : [ {
+      "externalIdentifierType" : "packageUrl",
+      "identifier" : "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module&goos=linux&goarch=amd64"
+    }, {
+      "externalIdentifierType" : "cpe23",
+      "identifier" : "cpe:2.3:a:sigstore:rekor:v1.3.9:*:*:*:*:*:*:*"
+    } ]
+  }, {
+    "spdxId" : "https://example.org/pkg-expr",
+    "type" : "software_Package",
+    "name" : "cel.dev/expr",
+    "software_packageVersion" : "v0.19.1",
+    "software_downloadLocation" : "https://cel.dev",
+    "software_primaryPurpose" : "library",
+    "suppliedBy" : "https://example.org/org-syft",
+    "copyrightText" : "NOASSERTION",
+    "creationInfo" : "_:creationinfo",
+    "verifiedUsing" : [ {
+      "type" : "Hash",
+      "algorithm" : "sha256",
+      "hashValue" : "35c898aed0d1211d253429c7d4b1497a0763b29371f5f239f4eed359cb9afd6e"
+    } ],
+    "externalIdentifier" : [ {
+      "externalIdentifierType" : "packageUrl",
+      "identifier" : "pkg:golang/cel.dev/expr@v0.19.1?type=module&goos=linux&goarch=amd64"
+    }, {
+      "externalIdentifierType" : "cpe23",
+      "identifier" : "cpe:2.3:a:cel:expr:v0.19.1:*:*:*:*:*:*:*"
+    } ]
+  }, {
+    "spdxId" : "https://example.org/rel-kyverno-fluxcd",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/pkg-kyverno",
+    "to" : [ "https://example.org/pkg-fluxcd" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel-kyverno-rekor",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/pkg-kyverno",
+    "to" : [ "https://example.org/pkg-rekor" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel-fluxcd-azure",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/pkg-fluxcd",
+    "to" : [ "https://example.org/pkg-azure" ],
+    "creationInfo" : "_:creationinfo"
+  }, {
+    "spdxId" : "https://example.org/rel-rekor-expr",
+    "type" : "Relationship",
+    "relationshipType" : "dependsOn",
+    "from" : "https://example.org/pkg-rekor",
+    "to" : [ "https://example.org/pkg-expr" ],
+    "creationInfo" : "_:creationinfo"
+  } ]
+}

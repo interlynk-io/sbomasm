@@ -125,6 +125,8 @@ All merge strategies also work with SPDX 3.0 JSON-LD format.
 
 ### Test Files
 
+These SPDX 3.0 JSON-LD files contain the same packages as the CDX versions above, structured in a flat `@graph` with `SpdxDocument` + `software_Package` elements + `Relationship` elements for dependencies.
+
 - `lite-sbom1.spdx3.json` — Primary SBOM with 3 packages (kyverno, oci, azcore)
 - `lite-sbom2.spdx3.json` — Secondary SBOM with 4 packages (cosign, httpsnoop, fulcio, rekor)
 
