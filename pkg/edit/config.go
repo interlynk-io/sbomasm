@@ -25,9 +25,9 @@ import (
 )
 
 var supportedSubjects map[string]bool = map[string]bool{
-	"document":               true,
-	"primary-component":      true,
-	"component-name-version": true,
+	SubjectDocument:            true,
+	SubjectPrimaryComponent:    true,
+	SubjectComponentNameVersion: true,
 }
 
 type SearchParams struct {
@@ -142,7 +142,7 @@ func (c *configParams) onAppend() bool {
 }
 
 func (c *configParams) shouldSearch() bool {
-	return c.search.subject == "component-name-version"
+	return c.search.subject == SubjectComponentNameVersion
 }
 
 func (c *configParams) getFormattedAuthors() string {
@@ -185,7 +185,7 @@ func convertToConfigParams(eParams *EditParams) (*configParams, error) {
 		return nil, fmt.Errorf("unsupported subject %s", eParams.Subject)
 	}
 
-	if p.search.subject == "component-name-version" {
+	if p.search.subject == SubjectComponentNameVersion {
 		name, version := parseInputFormat(eParams.Search)
 		if name == "" || version == "" {
 			return nil, fmt.Errorf("invalid component-name-version format both name and version must be provided")

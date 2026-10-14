@@ -9,7 +9,7 @@ The `assemble` command merges multiple SBOMs into a single comprehensive SBOM do
 - Preserving component relationships
 - Managing duplicate components (based on merge algorithm)
 - Creating proper metadata for the assembled SBOM
-- Supporting both SPDX and CycloneDX formats
+- Supporting SPDX 2.3, SPDX 3.0, and CycloneDX formats
 
 ## Basic Usage
 
@@ -172,9 +172,9 @@ Enriches an existing primary SBOM with additional information from secondary SBO
 
 #### Fields Merged by Specification
 
-##### SPDX Package Fields
+##### SPDX 2.3 Package Fields
 
-When components match, the following SPDX package fields are merged:
+When components match in SPDX 2.3 SBOMs, the following fields are merged:
 
 **Basic Information Fields:**
 
@@ -191,6 +191,32 @@ When components match, the following SPDX package fields are merged:
 - `PackageOriginator`: Originator information (Person/Organization)
 - `PackageChecksums`: List of checksums (SHA1, SHA256, etc.)
 - `PackageExternalReferences`: External references
+
+##### SPDX 3.0 Package Fields
+
+When components match in SPDX 3.0 SBOMs, the following fields are merged:
+
+**Basic Information Fields:**
+
+- `description` (Core): Package description text
+- `software_downloadLocation`: Where the package can be downloaded
+- `software_homePage`: Package home page URL
+- `software_sourceInfo`: Information about package source
+- `software_copyrightText`: Copyright text
+- `software_primaryPurpose`: Primary purpose of the package
+- `suppliedBy`: Supplier information (Agent reference)
+- `originatedBy`: Originator information (Agent reference)
+- `verifiedUsing`: List of hashes (SHA1, SHA256, etc.)
+- `externalIdentifier`: External identifiers (PURL, CPE, etc.)
+- `externalRef`: External references
+
+**Note on SPDX 3.0 Field Names:**
+
+SPDX 3.0 uses a flat `@graph` structure where properties are namespaced:
+- **Core properties** use bare names: `name`, `description`, `comment`
+- **Software profile properties** use `software_` prefix: `software_copyrightText`, `software_downloadLocation`
+
+The augment merge handles both namespaces transparently.
 
 **Merge Behavior:**
 
@@ -455,10 +481,11 @@ sbomasm assemble -c augment-config.yml enhancement1.json enhancement2.json
 
 ### Output Formats
 
-| Spec | Output Formats | Default Version |
-|------|---------------|-----------------|
-| SPDX | JSON, XML | 2.3 |
-| CycloneDX | JSON, XML | 1.6 |
+| Spec | Output Formats | Default Version | Notes |
+|------|---------------|-----------------|-------|
+| SPDX 2.3 | JSON, XML | 2.3 | Traditional nested format |
+| SPDX 3.0 | JSON-LD | 3.0.1 | Flat `@graph` structure with typed elements |
+| CycloneDX | JSON, XML | 1.6 | |
 
 ## Examples
 

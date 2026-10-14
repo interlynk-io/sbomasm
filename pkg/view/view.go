@@ -685,14 +685,9 @@ func specVersionToString(sv cydx.SpecVersion) string {
 // LoadSBOM loads an SBOM from a file path
 func LoadSBOM(path string) (*ComponentGraph, error) {
 	// Detect the SBOM format
-	spec, format, err := sbom.DetectSbom(path)
+	spec, format, version, err := sbom.DetectSbom(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect SBOM format: %w", err)
-	}
-
-	// Only support CycloneDX
-	if spec != sbom.SBOMSpecCDX {
-		return nil, fmt.Errorf("unsupported SBOM spec: %s (only CycloneDX is supported)", spec)
 	}
 
 	// Open the file
@@ -702,17 +697,30 @@ func LoadSBOM(path string) (*ComponentGraph, error) {
 	}
 	defer file.Close()
 
-	// Determine CycloneDX format
-	var cdxFormat cydx.BOMFileFormat
-	switch format {
-	case sbom.FileFormatJSON:
-		cdxFormat = cydx.BOMFileFormatJSON
-	case sbom.FileFormatXML:
-		cdxFormat = cydx.BOMFileFormatXML
-	default:
-		return nil, fmt.Errorf("unsupported CycloneDX format: %s", format)
-	}
+	switch spec {
+	case sbom.SBOMSpecCDX:
+		// Determine CycloneDX format
+		var cdxFormat cydx.BOMFileFormat
+		switch format {
+		case sbom.FileFormatJSON:
+			cdxFormat = cydx.BOMFileFormatJSON
+		case sbom.FileFormatXML:
+			cdxFormat = cydx.BOMFileFormatXML
+		default:
+			return nil, fmt.Errorf("unsupported CycloneDX format: %s", format)
+		}
+		viewer := NewCycloneDXViewer()
+		return viewer.ParseAndEnrichWithFormat(file, cdxFormat)
 
-	viewer := NewCycloneDXViewer()
-	return viewer.ParseAndEnrichWithFormat(file, cdxFormat)
+	case sbom.SBOMSpecSPDX:
+		// Check for SPDX 3.0
+		if sbom.IsSpdx3Version(string(version)) {
+			viewer := NewSPDX3Viewer()
+			return viewer.ParseAndEnrich(file)
+		}
+		return nil, fmt.Errorf("SPDX %s is not supported by view (use SPDX 3.0)", version)
+
+	default:
+		return nil, fmt.Errorf("unsupported SBOM spec: %s (supported: CycloneDX, SPDX 3.0)", spec)
+	}
 }

@@ -58,9 +58,47 @@ Total: 13, Selected: 0, Enriched: 0, Skipped: 0, Failed: 0
 6. Enrich SBOM, forcefully for all components.
 
 ```bash
- sbomasm enrich --fields="license" samples/test/enrich/apache_airflow-sbom-2.8.0-python3.10.json    --output enriched-apache-sbom.cdx.json  -f  -c 500   
+ sbomasm enrich --fields="license" samples/test/enrich/apache_airflow-sbom-2.8.0-python3.10.json    --output enriched-apache-sbom.cdx.json  -f  -c 500
 
 
 Total: 1750, Selected: 1750, Enriched: 1749, Skipped: 1, Failed: 0
 
 ```
+
+### SPDX 3.0 JSON-LD
+
+7. Enrich SPDX 3.0 SBOM with all components missing licenses.
+
+```bash
+sbomasm enrich --fields="license" samples/test/enrich/dropwizard-missing-all-license.spdx3.json --output enriched-missing-license.spdx3.json
+
+
+Total: 13, Selected: 12, Enriched: 9, Skipped: 3, Failed: 0
+
+```
+
+**NOTE**: SPDX 3.0 stores licenses as `SimpleLicensingText` elements linked via `hasConcludedLicense` relationships. The enrich command handles this automatically.
+
+8. Enrich SPDX 3.0 SBOM where some components already have licenses (skip existing without `--force`).
+
+```bash
+sbomasm enrich --fields="license" samples/test/enrich/dropwizard-some-license-present.spdx3.json --output enriched-some.skipped.spdx3.json
+
+
+Total: 13, Selected: 10, Enriched: 7, Skipped: 3, Failed: 0
+
+```
+
+**NOTE**: Components with existing `hasConcludedLicense` or `hasDeclaredLicense` relationships are skipped unless `--force` is used.
+
+9. Force update existing licenses in SPDX 3.0 SBOM.
+
+```bash
+sbomasm enrich --fields="license" --force samples/test/enrich/dropwizard-some-license-present.spdx3.json --output enriched-some.force.spdx3.json
+
+
+Total: 13, Selected: 13, Enriched: 10, Skipped: 3, Failed: 0
+
+```
+
+**NOTE**: `--force` replaces existing `hasConcludedLicense`/`hasDeclaredLicense` relationships with new ones pointing to freshly fetched license data.

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
 	"github.com/guacsec/sw-id-core/coordinates"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/package-url/packageurl-go"
@@ -66,6 +67,13 @@ func Mapper(ctx context.Context, components []interface{}) map[interface{}]coord
 			for _, ref := range c.PackageExternalReferences {
 				if ref.RefType == "purl" {
 					purls = append(purls, ref.Locator)
+				}
+			}
+
+		case *spdx3.Package:
+			for _, ei := range c.ExternalIdentifier {
+				if ei.ExternalIdentifierType == spdx3.ExternalIdentifierTypePackageUrl {
+					purls = append(purls, ei.Identifier)
 				}
 			}
 

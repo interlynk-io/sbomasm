@@ -1,0 +1,530 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "@id": "_:creationinfo",
+      "type": "CreationInfo",
+      "specVersion": "3.0.1",
+      "created": "2025-06-06T05:52:18Z",
+      "createdBy": [
+        "https://interlynk.io/people/person1",
+        "https://interlynk.io/people/person2",
+        "https://interlynk.io/people/person3",
+        "https://acme.com/org/acme"
+      ],
+      "createdUsing": [
+        "https://interlynk.io/tools/syft",
+        "https://interlynk.io/tools/sbomasm",
+        "https://interlynk.io/tools/sbomasm-devel"
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/doc1",
+      "type": "SpdxDocument",
+      "name": "CycloneDX BOM converted to SPDX",
+      "dataLicense": "https://interlynk.io/lic/cc0",
+      "creationInfo": "_:creationinfo",
+      "rootElement": [
+        "https://interlynk.io/pkg/kyverno"
+      ],
+      "profileConformance": [
+        "core",
+        "software"
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "github.com/foo/foo"
+          ]
+        },
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://kyverno.io/"
+          ]
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/sbom1",
+      "type": "software_Sbom",
+      "name": "CycloneDX BOM converted to SPDX",
+      "creationInfo": "_:creationinfo",
+      "software_sbomType": [
+        "build"
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/people/person1",
+      "type": "Person",
+      "name": "Interlynk",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "hello@interlynk.io"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/people/person2",
+      "type": "Person",
+      "name": "VulnCon SBOM Generation Workshop",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "vulncon@sbom.dev"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/people/person3",
+      "type": "Person",
+      "name": "Interlynk",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "hi@interlynk.io"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://acme.com/org/acme",
+      "type": "Organization",
+      "name": "Acme, Inc",
+      "creationInfo": "_:creationinfo",
+      "externalRef": [
+        {
+          "externalRefType": "altWebPage",
+          "locator": [
+            "https://acme.com"
+          ]
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/tools/syft",
+      "type": "Tool",
+      "name": "syft-1.26.1",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/tools/sbomasm",
+      "type": "Tool",
+      "name": "sbomasm-v1.0.4",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/tools/sbomasm-devel",
+      "type": "Tool",
+      "name": "sbomasm-devel",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/pkg/kyverno",
+      "type": "software_Package",
+      "name": "github.com/kyverno/kyverno",
+      "software_packageVersion": "v1.14.0",
+      "software_primaryPurpose": "application",
+      "description": "Kyverno is a policy engine designed for Kubernetes.",
+      "software_copyrightText": "Copyright 2025, the Kyverno project",
+      "originatedBy": [
+        "https://interlynk.io/people/jim"
+      ],
+      "suppliedBy": "https://interlynk.io/org/nirmata",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "89fb71dddbb3389dd3018c7f63dd6350b1611f382613c5c31edfee67006ac28e"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:golang/github.com/kyverno/kyverno@v1.14.0?type=module&goos=linux&goarch=amd64#cmd/kyverno"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:kyverno:kyverno:v1.14.0:*:*:*:*:*:*:*"
+        }
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://github.com/kyverno/kyverno"
+          ]
+        }
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/people/jim",
+      "type": "Person",
+      "name": "Jim",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "jim@kyverno.com"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/org/nirmata",
+      "type": "Organization",
+      "name": "NirmataCloud",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/pkg/fluxcd-oci",
+      "type": "software_Package",
+      "name": "github.com/fluxcd/pkg/oci",
+      "software_packageVersion": "v0.45.0",
+      "software_primaryPurpose": "library",
+      "description": "The OCI package provides utilities for working with OCI images and registries.",
+      "software_copyrightText": "Copyright 2025, the FluxCD project",
+      "originatedBy": [
+        "https://interlynk.io/people/stefan"
+      ],
+      "suppliedBy": "https://interlynk.io/org/flux",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "94fb71aaacc3385dd3018c7e63dd6750b1622f382613c5c31edfee67006ac78e"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:golang/github.com/fluxcd/pkg/oci@v0.45.0?type=module&goos=linux&goarch=amd64"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:fluxcd:oci:v0.45.0:*:*:*:*:*:*:*"
+        }
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://github.com/fluxcd/pkg/oci"
+          ]
+        }
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/people/stefan",
+      "type": "Person",
+      "name": "Stefan",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "stefan@fluxcd.io"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/org/flux",
+      "type": "Organization",
+      "name": "Flux",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/pkg/azcore",
+      "type": "software_Package",
+      "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+      "software_packageVersion": "v1.17.0",
+      "software_primaryPurpose": "library",
+      "description": "The azcore package provides core functionality for Azure SDKs in Go.",
+      "software_copyrightText": "Copyright 2025, the Azure SDK for Go project",
+      "originatedBy": [
+        "https://interlynk.io/people/nadela"
+      ],
+      "suppliedBy": "https://interlynk.io/org/azure",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "834119270cfbc645d0899008e718bd7f75961580655f508f4eb47e3434e84644"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.17.0?type=module&goos=linux&goarch=amd64"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:azure:azcore:v1.17.0:*:*:*:*:*:*:*"
+        }
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://github.com/Azure/azure-sdk-for-go/sdk/azcore"
+          ]
+        }
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/people/nadela",
+      "type": "Person",
+      "name": "Nadela",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "nadela@azure.com"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/org/azure",
+      "type": "Organization",
+      "name": "Azure",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/pkg/rekor",
+      "type": "software_Package",
+      "name": "github.com/sigstore/rekor",
+      "software_packageVersion": "v1.3.9",
+      "software_primaryPurpose": "library",
+      "description": "Rekor is a transparency log for software artifacts.",
+      "software_copyrightText": "Copyright 2025, the Sigstore project",
+      "originatedBy": [
+        "https://interlynk.io/people/dan"
+      ],
+      "suppliedBy": "https://interlynk.io/org/sigstore",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module&goos=linux&goarch=amd64"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:sigstore:rekor:v1.3.9:*:*:*:*:*:*:*"
+        }
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://github.com/sigstore/rekor"
+          ]
+        }
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/people/dan",
+      "type": "Person",
+      "name": "Dan",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "dan@sigstore.dev"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/org/sigstore",
+      "type": "Organization",
+      "name": "Sigstore",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/pkg/expr",
+      "type": "software_Package",
+      "name": "cel.dev/expr",
+      "software_packageVersion": "v0.19.1",
+      "software_primaryPurpose": "library",
+      "description": "CEL (Common Expression Language) is a non-Turing complete expression language.",
+      "software_copyrightText": "Copyright 2025, the Cel project",
+      "originatedBy": [
+        "https://interlynk.io/people/pichai"
+      ],
+      "suppliedBy": "https://interlynk.io/org/cel",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "35c898aed0d1211d253429c7d4b1497a0763b29371f5f239f4eed359cb9afd6e"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:golang/cel.dev/expr@v0.19.1?type=module&goos=linux&goarch=amd64"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:cel:expr:v0.19.1:*:*:*:*:*:*:*"
+        }
+      ],
+      "externalRef": [
+        {
+          "externalRefType": "vcs",
+          "locator": [
+            "https://cel.dev"
+          ]
+        }
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/people/pichai",
+      "type": "Person",
+      "name": "Pichai",
+      "creationInfo": "_:creationinfo",
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "email",
+          "identifier": "pichai@cel.dev"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://interlynk.io/org/cel",
+      "type": "Organization",
+      "name": "Cel",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/lic/apache20",
+      "type": "SimpleLicensingText",
+      "name": "Apache-2.0",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/lic/mit",
+      "type": "SimpleLicensingText",
+      "name": "MIT",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/lic/cc0",
+      "type": "SimpleLicensingText",
+      "name": "CC0-1.0",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/describes",
+      "type": "Relationship",
+      "relationshipType": "describes",
+      "from": "https://interlynk.io/doc1",
+      "to": [
+        "https://interlynk.io/pkg/kyverno"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/kyverno-depends-on-oci",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://interlynk.io/pkg/kyverno",
+      "to": [
+        "https://interlynk.io/pkg/fluxcd-oci"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/kyverno-depends-on-rekor",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://interlynk.io/pkg/kyverno",
+      "to": [
+        "https://interlynk.io/pkg/rekor"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/oci-depends-on-azcore",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://interlynk.io/pkg/fluxcd-oci",
+      "to": [
+        "https://interlynk.io/pkg/azcore"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/rekor-depends-on-expr",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://interlynk.io/pkg/rekor",
+      "to": [
+        "https://interlynk.io/pkg/expr"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/kyverno-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://interlynk.io/pkg/kyverno",
+      "to": [
+        "https://interlynk.io/lic/apache20"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/oci-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://interlynk.io/pkg/fluxcd-oci",
+      "to": [
+        "https://interlynk.io/lic/apache20"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/azcore-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://interlynk.io/pkg/azcore",
+      "to": [
+        "https://interlynk.io/lic/mit"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/rekor-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://interlynk.io/pkg/rekor",
+      "to": [
+        "https://interlynk.io/lic/apache20"
+      ],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://interlynk.io/rel/expr-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://interlynk.io/pkg/expr",
+      "to": [
+        "https://interlynk.io/lic/apache20"
+      ],
+      "creationInfo": "_:creationinfo"
+    }
+  ]
+}

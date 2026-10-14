@@ -22,14 +22,16 @@ import (
 
 	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/cdx"
 	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx"
+	"github.com/interlynk-io/sbomasm/v2/pkg/assemble/spdx3"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/samber/lo"
 )
 
 type combiner struct {
-	c         *config
-	finalSpec string
+	c             *config
+	finalSpec     string
+	finalVersion  string
 }
 
 func newCombiner(c *config) *combiner {
@@ -50,13 +52,26 @@ func (c *combiner) combine() error {
 	}
 
 	if strings.EqualFold(c.finalSpec, string(sbom.SBOMSpecSPDX)) {
-		log.Debugf("combining %d SPDX sboms", len(c.c.input.files))
+		if sbom.IsSpdx3Version(c.finalVersion) {
+			log.Debugf("combining %d SPDX 3.0 sboms", len(c.c.input.files))
+			ms := toSpdx3MergerSettings(c.c)
+			ms.Output.Spec = string(sbom.SBOMSpecSPDX)
+			if ms.Output.SpecVersion == "1.7" || ms.Output.SpecVersion == "" {
+				ms.Output.SpecVersion = strings.TrimPrefix(c.finalVersion, "SPDX-")
+			}
 
-		ms := toSpdxMergerSettings(c.c)
+			err := spdx3.Merge(ms)
+			if err != nil {
+				return err
+			}
+		} else {
+			log.Debugf("combining %d SPDX sboms", len(c.c.input.files))
+			ms := toSpdxMergerSettings(c.c)
 
-		err := spdx.Merge(ms)
-		if err != nil {
-			return err
+			err := spdx.Merge(ms)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -65,13 +80,15 @@ func (c *combiner) combine() error {
 
 func (c *combiner) canCombine() error {
 	specs := []string{}
+	versions := []string{}
 
 	for _, doc := range c.c.input.files {
-		spec, _, err := sbom.DetectSbom(doc)
+		spec, _, version, err := sbom.DetectSbom(doc)
 		if err != nil {
 			return fmt.Errorf("unable to detect sbom format for %s: %v", doc, err)
 		}
 		specs = append(specs, string(spec))
+		versions = append(versions, string(version))
 	}
 
 	// all input specs should be of the same type
@@ -80,6 +97,7 @@ func (c *combiner) canCombine() error {
 	}
 
 	c.finalSpec = specs[0]
+	c.finalVersion = versions[0]
 
 	return nil
 }
@@ -200,6 +218,67 @@ func toSpdxMergerSettings(c *config) *spdx.MergeSettings {
 	ms.App.Checksums = []spdx.Checksum{}
 	for _, c := range c.App.Checksums {
 		ms.App.Checksums = append(ms.App.Checksums, spdx.Checksum{
+			Algorithm: c.Algorithm,
+			Value:     c.Value,
+		})
+	}
+
+	return &ms
+}
+
+func toSpdx3MergerSettings(c *config) *spdx3.MergeSettings {
+	ms := spdx3.MergeSettings{}
+
+	ms.Ctx = c.ctx
+
+	ms.Assemble.FlatMerge = c.Assemble.FlatMerge
+	ms.Assemble.HierarchicalMerge = c.Assemble.HierarchicalMerge
+	ms.Assemble.AssemblyMerge = c.Assemble.AssemblyMerge
+	ms.Assemble.AugmentMerge = c.Assemble.AugmentMerge
+	ms.Assemble.PrimaryFile = c.Assemble.PrimaryFile
+	ms.Assemble.MergeMode = c.Assemble.MergeMode
+	ms.Assemble.DocLicense = c.Assemble.DocLicense
+	ms.Assemble.IncludeComponents = c.Assemble.IncludeComponents
+	ms.Assemble.IncludeDuplicateComponents = c.Assemble.includeDuplicateComponents
+	ms.Assemble.IncludeDependencyGraph = c.Assemble.IncludeDependencyGraph
+	ms.Assemble.IsAssemblyMergeWithPrimary = c.Assemble.IsAssemblyMergeWithPrimary
+	ms.Assemble.IsFlatMergeWithPrimary = c.Assemble.IsFlatMergeWithPrimary
+
+	ms.Input.Files = []string{}
+	ms.Input.Files = append(ms.Input.Files, c.input.files...)
+
+	ms.Output.File = c.Output.file
+	ms.Output.FileFormat = c.Output.FileFormat
+	ms.Output.Spec = string(sbom.SBOMSpecSPDX)
+	ms.Output.SpecVersion = c.Output.SpecVersion
+
+	ms.App.Name = c.App.Name
+	ms.App.Version = c.App.Version
+	ms.App.Description = c.App.Description
+	ms.App.PrimaryPurpose = c.App.PrimaryPurpose
+	ms.App.Purl = c.App.Purl
+	ms.App.CPE = c.App.CPE
+	ms.App.Copyright = c.App.Copyright
+	ms.App.Supplier = spdx3.Supplier{}
+	ms.App.Supplier.Name = c.App.Supplier.Name
+	ms.App.Supplier.Email = c.App.Supplier.Email
+
+	ms.App.License = spdx3.License{}
+	ms.App.License.Id = c.App.License.Id
+	ms.App.License.Expression = c.App.License.Expression
+
+	ms.App.Authors = []spdx3.Author{}
+	for _, a := range c.App.Author {
+		ms.App.Authors = append(ms.App.Authors, spdx3.Author{
+			Name:  a.Name,
+			Email: a.Email,
+			Phone: a.Phone,
+		})
+	}
+
+	ms.App.Checksums = []spdx3.Checksum{}
+	for _, c := range c.App.Checksums {
+		ms.App.Checksums = append(ms.App.Checksums, spdx3.Checksum{
 			Algorithm: c.Algorithm,
 			Value:     c.Value,
 		})

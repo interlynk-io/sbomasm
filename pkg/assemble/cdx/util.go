@@ -185,7 +185,7 @@ func loadBom(ctx context.Context, path string) (*cydx.BOM, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := sbom.Detect(f)
+	spec, format, _, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}

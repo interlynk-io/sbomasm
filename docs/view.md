@@ -1,6 +1,8 @@
 # sbomasm view - SBOM Visualization
 
-The `view` command displays CycloneDX SBOMs in a unified, hierarchical tree format that consolidates information from various SBOM sections (components, dependencies, vulnerabilities, compositions, annotations) into an intuitive view.
+The `view` command displays SBOMs in a unified, hierarchical tree format that consolidates information from various SBOM sections (components, dependencies, vulnerabilities, compositions, annotations) into an intuitive view.
+
+Supports **CycloneDX** and **SPDX 3.0 JSON-LD** formats.
 
 ## Table of Contents
 
@@ -18,6 +20,9 @@ The `view` command displays CycloneDX SBOMs in a unified, hierarchical tree form
 ```bash
 # Basic view with default settings
 sbomasm view sbom.cdx.json
+
+# View SPDX 3.0 JSON-LD SBOM
+sbomasm view sbom.spdx3.json
 
 # Detailed view with all information
 sbomasm view sbom.cdx.json --verbose
@@ -623,6 +628,47 @@ sbomasm view sbom.cdx.json --filter-type ""
 
 # Check if only-primary is hiding islands
 sbomasm view sbom.cdx.json --only-primary=false
+```
+
+## Format-Specific Behavior
+
+### SPDX 3.0 JSON-LD
+
+The viewer supports SPDX 3.0 flat `@graph` structure:
+
+- **Components**: `software_Package` and `software_File` elements are displayed
+- **Assembly Tree**: Built from `contains` relationships (parent → children)
+- **Dependencies**: Built from `dependsOn` relationships
+- **Licenses**: Resolved via `hasConcludedLicense` and `hasDeclaredLicense` relationships pointing to `SimpleLicensingText` elements
+- **Supplier**: Resolved from `suppliedBy` reference → Organization name
+- **Author**: Resolved from `originatedBy` references → Person names
+- **Hashes**: Extracted from `verifiedUsing` entries
+- **Primary Component**: Determined from `SpdxDocument.rootElement`
+
+```bash
+# View SPDX 3.0 SBOM with verbose output
+sbomasm view samples/test/view/dropwizard-view.spdx3.json --verbose
+
+# JSON output for programmatic processing
+sbomasm view samples/test/view/dropwizard-view.spdx3.json --format json
+```
+
+**Output example:**
+```
+SBOM: SPDX-3.0 3.0.1
+Generated: 2025-01-15 10:00:00
+Serial: https://example.org/doc/dropwizard-view
+
+┌─ dropwizard-core@2.0.31 [PRIMARY] (application)
+│   Type: application
+│   Supplier: Dropwizard Project
+│   PURL: pkg:maven/io.dropwizard/dropwizard-core@2.0.31?type=jar
+│   Licenses (1):
+│     - Apache-2.0
+│
+│ Assemblies (2):
+│ ├─ dropwizard-assets@2.0.31 (library)
+│ └─ dropwizard-auth@2.0.31 (library)
 ```
 
 ## See Also

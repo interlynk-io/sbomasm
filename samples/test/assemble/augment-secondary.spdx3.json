@@ -1,0 +1,162 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "@id": "_:creationinfo",
+      "type": "CreationInfo",
+      "specVersion": "3.0.1",
+      "createdBy": ["https://example.org/org2"],
+      "createdUsing": ["https://example.org/tool2"],
+      "created": "2024-01-15T11:00:00Z"
+    },
+    {
+      "spdxId": "https://example.org/doc-secondary",
+      "type": "SpdxDocument",
+      "name": "Secondary SBOM (Augment Test)",
+      "creationInfo": "_:creationinfo",
+      "rootElement": ["https://example.org/kyverno-sec"],
+      "profileConformance": ["core", "software"]
+    },
+    {
+      "spdxId": "https://example.org/org2",
+      "type": "Organization",
+      "name": "Example Organization 2",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/tool2",
+      "type": "Tool",
+      "name": "sbom-tool-2",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/kyverno-sec",
+      "type": "software_Package",
+      "name": "github.com/kyverno/kyverno",
+      "software_packageVersion": "1.12.0",
+      "software_primaryPurpose": "application",
+      "description": "Kubernetes Native Policy Management",
+      "software_downloadLocation": "https://github.com/kyverno/kyverno/releases/tag/v1.12.0",
+      "software_copyrightText": "Copyright 2024 Kyverno Authors",
+      "suppliedBy": "https://example.org/org2",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "abc123def456"
+        },
+        {
+          "type": "Hash",
+          "algorithm": "sha1",
+          "hashValue": "def789abc012"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "purl",
+          "identifier": "pkg:golang/github.com/kyverno/kyverno@1.12.0"
+        },
+        {
+          "externalIdentifierType": "cpe23Type",
+          "identifier": "cpe:2.3:a:kyverno:kyverno:1.12.0:*:*:*:*:*:*:*"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://example.org/oci-sec",
+      "type": "software_Package",
+      "name": "github.com/fluxcd/pkg/oci",
+      "software_packageVersion": "0.1.0",
+      "software_primaryPurpose": "library",
+      "description": "OCI helpers for FluxCD",
+      "software_copyrightText": "Copyright 2024 Flux Authors",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "oci123oci456"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "purl",
+          "identifier": "pkg:golang/github.com/fluxcd/pkg/oci@0.1.0"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://example.org/azcore-sec",
+      "type": "software_Package",
+      "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+      "software_packageVersion": "1.0.0",
+      "software_primaryPurpose": "library",
+      "description": "Azure SDK Core module",
+      "software_copyrightText": "Copyright Microsoft Corporation",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "azcore123azcore456"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://example.org/cosign-sec",
+      "type": "software_Package",
+      "name": "github.com/sigstore/cosign",
+      "software_packageVersion": "2.0.0",
+      "software_primaryPurpose": "application",
+      "description": "Container Signing with Sigstore",
+      "software_copyrightText": "Copyright 2024 Sigstore Authors",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "cosign123cosign456"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "purl",
+          "identifier": "pkg:golang/github.com/sigstore/cosign@2.0.0"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://example.org/rel1",
+      "type": "Relationship",
+      "relationshipType": "describes",
+      "from": "https://example.org/doc-secondary",
+      "to": ["https://example.org/kyverno-sec"],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/rel2",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://example.org/kyverno-sec",
+      "to": ["https://example.org/oci-sec"],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/rel3",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://example.org/oci-sec",
+      "to": ["https://example.org/azcore-sec"],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/rel4",
+      "type": "Relationship",
+      "relationshipType": "dependsOn",
+      "from": "https://example.org/kyverno-sec",
+      "to": ["https://example.org/cosign-sec"],
+      "creationInfo": "_:creationinfo"
+    }
+  ]
+}

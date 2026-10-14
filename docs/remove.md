@@ -27,31 +27,38 @@ Removes specific fields from the document metadata or from components.
 
 #### Common fields supported for document scope
 
-| Field         | SPDX                                    | CycloneDX                          |
-|---------------|-----------------------------------------|------------------------------------|
-| `author`      | `creationInfo.creators` (Person type)   | `metadata.authors`                 |
-| `supplier`    | `creationInfo.creators` (Organization)  | `metadata.supplier`                |
-| `tool`        | `creationInfo.creators` (Tool type)     | `metadata.tools`                   |
-| `lifecycle`   | *(custom extension)*                    | `metadata.lifecycles`              |
-| `license`     | `dataLicense`                           | `metadata.licenses`                |
-| `repository`  | *(not applicable)*                      | `metadata.component.externalRefs`  |
-| `timestamp`   | `creationInfo.created`                  | `metadata.timestamp`               |
+| Field         | SPDX 2.3                                | SPDX 3.0 JSON-LD                          | CycloneDX                          |
+|---------------|-----------------------------------------|-------------------------------------------|------------------------------------|
+| `author`      | `creationInfo.creators` (Person type)     | `CreationInfo.createdBy` (Person elements) | `metadata.authors`                 |
+| `supplier`    | `creationInfo.creators` (Organization)  | `CreationInfo.createdBy` (Organization)    | `metadata.supplier`                |
+| `tool`        | `creationInfo.creators` (Tool type)     | `CreationInfo.createdUsing` (Tool)        | `metadata.tools`                   |
+| `lifecycle`   | *(not applicable)*                      | `Sbom.sbomType`                           | `metadata.lifecycles`              |
+| `license`     | `dataLicense`                           | `SpdxDocument.dataLicense`                | `metadata.licenses`                |
+| `repository`  | *(not applicable)*                      | `SpdxDocument.externalRef` (vcs)          | `metadata.component.externalRefs`  |
+| `timestamp`   | `creationInfo.created`                  | `CreationInfo.created`                   | `metadata.timestamp`               |
 
 #### Common fields supported for component scope
 
-| Field         | SPDX                    | CycloneDX              |
-|---------------|-------------------------|------------------------|
-| `author`      | `originator`            | `authors`              |
-| `copyright`   | `copyrightText`         | `copyright`            |
-| `cpe`         | `externalRefs` (cpe23)  | `cpe`                  |
-| `group`       | *(not applicable)*      | `group`                |
-| `hash`        | `packageChecksums` / checksums | `hashes`  |
-| `license`     | `licenseDeclared`       | `licenses`             |
-| `publisher`   | *(not applicable)*      | `publisher`            |
-| `purl`        | `externalRefs` (purl)   | `purl`                 |
-| `repository`  | `externalRefs` (vcs)    | `externalReferences`   |
-| `supplier`    | `packageSupplier`       | `supplier`             |
-| `type`        | `primaryPackagePurpose` | `type`                 |
+| Field         | SPDX 2.3                | SPDX 3.0 JSON-LD                              | CycloneDX              |
+|---------------|-------------------------|-----------------------------------------------|------------------------|
+| `author`      | `originator`            | `Package.originatedBy` (Person elements)      | `authors`              |
+| `copyright`   | `copyrightText`         | `Package.copyrightText`                       | `copyright`            |
+| `cpe`         | `externalRefs` (cpe23) | `Package.externalIdentifier` (cpe23)        | `cpe`                  |
+| `group`       | *(not applicable)*      | *(not applicable)*                            | `group`                |
+| `hash`        | `packageChecksums`     | `Package.verifiedUsing` (Hash)                | `hashes`               |
+| `license`     | `licenseDeclared`       | `hasConcludedLicense` relationship           | `licenses`             |
+| `publisher`   | *(not applicable)*      | *(not applicable)*                            | `publisher`            |
+| `purl`        | `externalRefs` (purl)   | `Package.externalIdentifier` (packageUrl)     | `purl`                 |
+| `repository`  | `externalRefs` (vcs)    | `Package.externalRef` (vcs)                   | `externalReferences`   |
+| `supplier`    | `packageSupplier`       | `Package.suppliedBy` (Organization element)   | `supplier`             |
+| `type`        | `primaryPackagePurpose` | `Package.primaryPurpose` + `additionalPurpose`| `type`                 |
+
+**SPDX 3.0 JSON-LD Notes:**
+
+- Fields like `author` and `supplier` reference standalone elements (Person, Organization) in `@graph` via relationships, not inline strings.
+- `license` is stored as a `Relationship` element (e.g., `hasConcludedLicense`) linking a package to a license element.
+- `hash` is stored in `verifiedUsing` as a `Hash` element.
+- Component removal automatically cleans up orphaned elements (Person, Organization, Tool, License, Relationship) that are no longer referenced.
 
 #### Syntax
 
@@ -237,25 +244,34 @@ Removes every component that has the specified field set (non-empty):
 # Remove all components that have an author field
 sbomasm rm --components --field author input.spdx.json -o output.spdx.json
 sbomasm rm --components --field author input.cdx.json -o output.cdx.json
+sbomasm rm --components --field author input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a purl
 sbomasm rm --components --field purl input.spdx.json -o output.spdx.json
+sbomasm rm --components --field purl input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a cpe
 sbomasm rm --components --field cpe input.cdx.json -o output.cdx.json
+sbomasm rm --components --field cpe input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a license
 sbomasm rm --components --field license input.spdx.json -o output.spdx.json
+sbomasm rm --components --field license input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a supplier
 sbomasm rm --components --field supplier input.spdx.json -o output.spdx.json
+sbomasm rm --components --field supplier input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a hash
 sbomasm rm --components --field hash input.cdx.json -o output.cdx.json
+sbomasm rm --components --field hash input.spdx3.json -o output.spdx3.json
 
 # Remove all components that have a repository
 sbomasm rm --components --field repository input.spdx.json -o output.spdx.json
+sbomasm rm --components --field repository input.spdx3.json -o output.spdx3.json
 ```
+
+**SPDX 3.0 Note:** When removing all components, orphaned elements (Person, Organization, Tool, License, Relationship) are automatically cleaned up from `@graph`. `SpdxDocument.rootElement` references to deleted packages are also removed.
 
 #### Remove all components where a field matches a specific value
 
@@ -265,30 +281,38 @@ Removes every component whose specified field contains the given value (substrin
 # Remove all components with license "Apache-2.0"
 sbomasm rm --components --field license --value "Apache-2.0" input.spdx.json -o output.spdx.json
 sbomasm rm --components --field license --value "Apache-2.0" input.cdx.json -o output.cdx.json
+sbomasm rm --components --field license --value "Apache-2.0" input.spdx3.json -o output.spdx3.json
 
 # Remove all components with a specific purl
 sbomasm rm --components --field purl --value "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field purl --value "pkg:golang/github.com/sigstore/rekor@v1.3.9?type=module" input.spdx3.json -o output.spdx3.json
 
 # Remove all components authored by a specific person (partial name match)
 sbomasm rm --components --field author --value "dan@sigstore.dev" input.spdx.json -o output.spdx.json
 sbomasm rm --components --field author --value "Dan" input.cdx.json -o output.cdx.json
+sbomasm rm --components --field author --value "Dan" input.spdx3.json -o output.spdx3.json
 
 # Remove all components with a specific copyright
 sbomasm rm --components --field copyright --value "Copyright 2025, the Kyverno project" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field copyright --value "Copyright 2025, the Kyverno project" input.spdx3.json -o output.spdx3.json
 
 # Remove all components with a specific supplier
 sbomasm rm --components --field supplier --value "Sigstore (https://sigstore.dev)" input.spdx.json -o output.spdx.json
 sbomasm rm --components --field supplier --value "Sigstore" input.cdx.json -o output.cdx.json
+sbomasm rm --components --field supplier --value "Sigstore" input.spdx3.json -o output.spdx3.json
 
 # Remove all components with a specific hash value
 sbomasm rm --components --field hash --value "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field hash --value "b148d1a4a561fe1860a8632cd2df93b9b818b24b00ad9ea9a0b102dccb060335" input.spdx3.json -o output.spdx3.json
 
 # Remove all components with a specific repository
 sbomasm rm --components --field repository --value "https://github.com/sigstore/rekor" input.spdx.json -o output.spdx.json
+sbomasm rm --components --field repository --value "https://github.com/sigstore/rekor" input.spdx3.json -o output.spdx3.json
 
 # Remove all components of type "library"
 sbomasm rm --components --field type --value "library" input.spdx.json -o output.spdx.json
 sbomasm rm --components --field type --value "library" input.cdx.json -o output.cdx.json
+sbomasm rm --components --field type --value "library" input.spdx3.json -o output.spdx3.json
 ```
 
 ### 3. Dependency Removal (Not yet supported)
@@ -422,7 +446,7 @@ echo "Published SBOM written to $OUTPUT_SBOM"
 | `lifecycle`   | ✓              |                 |
 | `publisher`   |                | ✓ (CDX only)    |
 | `purl`        |                | ✓               |
-| `repository`  | ✓ (CDX only)   | ✓               |
+| `repository`  | ✓ (CDX/SPDX3)  | ✓               |
 | `supplier`    | ✓              | ✓               |
 | `timestamp`   | ✓              |                 |
 | `tool`        | ✓              |                 |
@@ -430,15 +454,17 @@ echo "Published SBOM written to $OUTPUT_SBOM"
 
 ### Format-specific behavior
 
-| Format    | Author removal                                   | Supplier removal                    |
-|-----------|--------------------------------------------------|-------------------------------------|
-| SPDX      | Removes `Person:` entries from `creationInfo.creators` | Removes `Organization:` entries from `creationInfo.creators` |
-| CycloneDX | Removes entries from `metadata.authors`          | Removes `metadata.supplier`         |
+| Format       | Author removal                                   | Supplier removal                    |
+|--------------|--------------------------------------------------|-------------------------------------|
+| SPDX 2.3     | Removes `Person:` entries from `creationInfo.creators` | Removes `Organization:` entries from `creationInfo.creators` |
+| SPDX 3.0     | Removes Person elements; updates `CreationInfo.createdBy` | Removes Organization elements; updates `CreationInfo.createdBy` |
+| CycloneDX    | Removes entries from `metadata.authors`          | Removes `metadata.supplier`         |
 
-| Format    | Component removal                                    |
-|-----------|------------------------------------------------------|
-| SPDX      | Removes packages and updates the relationships array |
-| CycloneDX | Removes from `components` array and updates `dependencies` |
+| Format       | Component removal                                    |
+|--------------|------------------------------------------------------|
+| SPDX 2.3     | Removes packages and updates the relationships array |
+| SPDX 3.0     | Removes packages; cleans up `@graph` relationships, orphaned elements, and dangling `rootElement` references |
+| CycloneDX    | Removes from `components` array and updates `dependencies` |
 
 ### Flags quick reference
 

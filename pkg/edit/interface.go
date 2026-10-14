@@ -65,11 +65,11 @@ func Edit(eParams *EditParams) error {
 	}
 	log.Debugf("config %+v", c)
 
-	spec, format, err := sbom.DetectSbom(eParams.Input)
+	spec, format, version, err := sbom.DetectSbom(eParams.Input)
 	if err != nil {
 		return err
 	}
-	log.Debugf("input sbom spec: %s format: %s", spec, format)
+	log.Debugf("input sbom spec: %s format: %s version: %s", spec, format, version)
 
 	switch spec {
 	case sbom.SBOMSpecCDX:
@@ -78,8 +78,14 @@ func Edit(eParams *EditParams) error {
 		}
 
 	case sbom.SBOMSpecSPDX:
-		if err = spdxEdit(c); err != nil {
-			return err
+		if sbom.IsSpdx3Version(string(version)) {
+			if err = spdx3Edit(c); err != nil {
+				return err
+			}
+		} else {
+			if err = spdxEdit(c); err != nil {
+				return err
+			}
 		}
 
 	default:

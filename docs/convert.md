@@ -69,6 +69,18 @@ The CSV output always includes a header row followed by one row per component. B
 - `LicenseExpressions` maps to `PackageLicenseDeclared`; `LicenseNames` maps to `PackageLicenseComments`
 - SPDX files are emitted with `Type = FILE`, version blank, and fields without a file-level equivalent left blank
 
+#### SPDX 3.0 (JSON-LD)
+
+- `Type` is `software_primaryPurpose` (e.g. `application`, `library`); blank if unset
+- `Author` is resolved from `originatedBy` references to standalone **`Person`** elements only
+- `Supplier` is resolved from `suppliedBy` reference to standalone **`Organization`** elements only
+- `Group` and `Scope` have no SPDX 3.0 equivalent and are always blank
+- `Purl` is extracted from `externalIdentifier` with `externalIdentifierType: packageUrl`
+- `Cpe` is extracted from `externalIdentifier` with `externalIdentifierType: cpe23` or `cpe22`
+- `LicenseExpressions` and `LicenseNames` are resolved via `hasConcludedLicense` / `hasDeclaredLicense` relationships pointing to license elements (e.g. `SimpleLicensingText`, `ListedLicense`)
+- Hashes are extracted from `verifiedUsing` entries of type `Hash`
+- SPDX 3.0 files (`software_File`) are emitted with `Type = FILE`
+
 ## Examples
 
 ### 1. Print to stdout/console/terminal

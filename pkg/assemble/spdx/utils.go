@@ -68,7 +68,7 @@ func loadBom(ctx context.Context, path string) (*v2_3.Document, error) {
 	}
 	defer f.Close()
 
-	spec, format, err := sbom.Detect(f)
+	spec, format, _, err := sbom.Detect(f)
 	if err != nil {
 		return nil, err
 	}

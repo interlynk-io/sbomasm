@@ -18,6 +18,7 @@ package edit
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
@@ -47,6 +48,17 @@ type cdxEditDoc struct {
 	c    *configParams
 }
 
+// skipIfAppendNotApplicable prints a warning when --append is used on a
+// single-value field for CycloneDX and returns true if the mutation should be
+// skipped (i.e. the existing value is preserved).
+func (d *cdxEditDoc) skipIfAppendNotApplicable(field string) bool {
+	if d.c.onAppend() {
+		fmt.Fprintf(os.Stderr, "WARN: --append is not applicable to --%s for CycloneDX (single-value field). Skipping. Use --missing to add only if empty, or omit --append to overwrite.\n", field)
+		return true
+	}
+	return false
+}
+
 var supportedCDXMetadataLifeCycle map[string]bool = map[string]bool{
 	"design":       true,
 	"pre-build":    true,
@@ -63,14 +75,14 @@ func NewCdxEditDoc(b *cydx.BOM, c *configParams) (*cdxEditDoc, error) {
 	doc.bom = b
 	doc.c = c
 
-	if c.search.subject == "primary-component" {
+	if c.search.subject == SubjectPrimaryComponent {
 		if b.Metadata == nil || b.Metadata.Component == nil {
 			return nil, fmt.Errorf("primary component is missing")
 		}
 		doc.comp = b.Metadata.Component
 	}
 
-	if c.search.subject == "component-name-version" {
+	if c.search.subject == SubjectComponentNameVersion {
 		doc.comp = cdxFindComponent(b, c)
 		if doc.comp == nil {
 			return nil, fmt.Errorf("component is missing")
@@ -98,7 +110,7 @@ func (d *cdxEditDoc) update() {
 		{"version", d.version},
 		{"supplier", d.supplier},
 		{"authors", d.authors},
-		{"purl", d.purl},
+		{ExtIDTypePurl, d.purl},
 		{"cpe", d.cpe},
 		{"licenses", d.licenses},
 		{"hashes", d.hashes},
@@ -114,7 +126,7 @@ func (d *cdxEditDoc) update() {
 	for _, item := range updateFuncs {
 		if err := item.f(); err != nil {
 			if err == errNotSupported {
-				log.Infof(fmt.Sprintf("CDX error updating %s: %s", item.name, err))
+				log.Infof(notSupportedMsg(item.name, string(d.c.search.subject)))
 			}
 			if err == errInvalidInput {
 				log.Infof(fmt.Sprintf("%s: %s", item.name, err))
@@ -127,6 +139,9 @@ func (d *cdxEditDoc) timeStamp() error {
 	if !d.c.shouldTimeStamp() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("timestamp") {
+		return nil
+	}
 
 	d.ensureMetadata()
 	d.bom.Metadata.Timestamp = utcNowTime()
@@ -138,7 +153,7 @@ func (d *cdxEditDoc) lifeCycles() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject != "document" {
+	if d.c.search.subject != SubjectDocument {
 		return errNotSupported
 	}
 
@@ -178,6 +193,9 @@ func (d *cdxEditDoc) typ() error {
 	if !d.c.shouldTyp() {
 		return errNoConfiguration
 	}
+	if d.skipIfAppendNotApplicable("type") {
+		return nil
+	}
 
 	newType := strings.ToLower(d.c.typ)
 
@@ -185,7 +203,7 @@ func (d *cdxEditDoc) typ() error {
 		return errInvalidInput
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -212,7 +230,7 @@ func (d *cdxEditDoc) repository() error {
 
 	var foundVcs *cydx.ExternalReference
 
-	if d.c.search.subject != "document" {
+	if d.c.search.subject != SubjectDocument {
 		if d.comp.ExternalReferences != nil {
 			for _, ref := range *d.comp.ExternalReferences {
 				if ref.Type == cydx.ERTypeVCS {
@@ -234,7 +252,7 @@ func (d *cdxEditDoc) repository() error {
 
 	if d.c.onMissing() {
 		if foundVcs == nil {
-			if d.c.search.subject != "document" {
+			if d.c.search.subject != SubjectDocument {
 				if d.comp.ExternalReferences == nil {
 					d.comp.ExternalReferences = &[]cydx.ExternalReference{}
 				}
@@ -247,7 +265,7 @@ func (d *cdxEditDoc) repository() error {
 			}
 		}
 	} else if d.c.onAppend() {
-		if d.c.search.subject != "document" {
+		if d.c.search.subject != SubjectDocument {
 			if d.comp.ExternalReferences == nil {
 				d.comp.ExternalReferences = &[]cydx.ExternalReference{}
 			}
@@ -260,7 +278,7 @@ func (d *cdxEditDoc) repository() error {
 		}
 	} else {
 		if foundVcs != nil {
-			if d.c.search.subject != "document" {
+			if d.c.search.subject != SubjectDocument {
 				extRef := lo.Reject(*d.comp.ExternalReferences, func(x cydx.ExternalReference, _ int) bool {
 					return x.Type == vcs.Type && x.URL == vcs.URL
 				})
@@ -273,7 +291,7 @@ func (d *cdxEditDoc) repository() error {
 			}
 		}
 
-		if d.c.search.subject != "document" {
+		if d.c.search.subject != SubjectDocument {
 			if d.comp.ExternalReferences == nil {
 				d.comp.ExternalReferences = &[]cydx.ExternalReference{}
 			}
@@ -293,8 +311,11 @@ func (d *cdxEditDoc) description() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("description") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -313,8 +334,11 @@ func (d *cdxEditDoc) copyright() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("copyright") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -584,7 +608,7 @@ func (d *cdxEditDoc) hashes() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
 	}
 
@@ -596,7 +620,11 @@ func (d *cdxEditDoc) hashes() error {
 		}
 	} else if d.c.onAppend() {
 		if d.comp.Hashes != nil {
-			*d.comp.Hashes = append(*d.comp.Hashes, *h...)
+			for _, nh := range *h {
+				if !d.hasHash(*d.comp.Hashes, string(nh.Algorithm), nh.Value) {
+					*d.comp.Hashes = append(*d.comp.Hashes, nh)
+				}
+			}
 		} else {
 			d.comp.Hashes = h
 		}
@@ -605,6 +633,17 @@ func (d *cdxEditDoc) hashes() error {
 	}
 
 	return nil
+}
+
+// hasHash returns true if a hash with the same algorithm and value already
+// exists in the given slice.
+func (d *cdxEditDoc) hasHash(existing []cydx.Hash, alg, val string) bool {
+	for _, h := range existing {
+		if strings.EqualFold(string(h.Algorithm), alg) && h.Value == val {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *cdxEditDoc) licenses() error {
@@ -617,7 +656,7 @@ func (d *cdxEditDoc) licenses() error {
 	lics := cdxConstructLicenses(d.bom, d.c)
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Licenses == nil {
 				d.bom.Metadata.Licenses = &lics
 			}
@@ -625,21 +664,21 @@ func (d *cdxEditDoc) licenses() error {
 			d.comp.Licenses = &lics
 		}
 	} else if d.c.onAppend() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Licenses != nil {
-				*d.bom.Metadata.Licenses = append(*d.bom.Metadata.Licenses, lics...)
+				*d.bom.Metadata.Licenses = d.mergeLicenses(*d.bom.Metadata.Licenses, lics)
 			} else {
 				d.bom.Metadata.Licenses = &lics
 			}
 		} else {
 			if d.comp.Licenses != nil {
-				*d.comp.Licenses = append(*d.comp.Licenses, lics...)
+				*d.comp.Licenses = d.mergeLicenses(*d.comp.Licenses, lics)
 			} else {
 				d.comp.Licenses = &lics
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.Metadata.Licenses = &lics
 		} else {
 			d.comp.Licenses = &lics
@@ -648,13 +687,53 @@ func (d *cdxEditDoc) licenses() error {
 	return nil
 }
 
+// mergeLicenses appends new licenses to the existing slice, skipping any
+// duplicates.  A license is considered a duplicate if its Name or Id matches
+// an existing entry.
+func (d *cdxEditDoc) mergeLicenses(existing, incoming []cydx.LicenseChoice) []cydx.LicenseChoice {
+	result := existing
+	for _, in := range incoming {
+		if !d.hasLicense(existing, in) {
+			result = append(result, in)
+		}
+	}
+	return result
+}
+
+// hasLicense returns true if the given license already exists in the slice.
+func (d *cdxEditDoc) hasLicense(licenses []cydx.LicenseChoice, lic cydx.LicenseChoice) bool {
+	inName := ""
+	if lic.License != nil {
+		inName = lic.License.Name
+		if inName == "" {
+			inName = lic.License.ID
+		}
+	}
+	for _, existing := range licenses {
+		existingName := ""
+		if existing.License != nil {
+			existingName = existing.License.Name
+			if existingName == "" {
+				existingName = existing.License.ID
+			}
+		}
+		if existingName == inName && inName != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *cdxEditDoc) purl() error {
 	if !d.c.shouldPurl() {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("purl") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -673,8 +752,11 @@ func (d *cdxEditDoc) cpe() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("cpe") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -692,8 +774,11 @@ func (d *cdxEditDoc) name() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("name") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -711,8 +796,11 @@ func (d *cdxEditDoc) version() error {
 		return errNoConfiguration
 	}
 
-	if d.c.search.subject == "document" {
+	if d.c.search.subject == SubjectDocument {
 		return errNotSupported
+	}
+	if d.skipIfAppendNotApplicable("version") {
+		return nil
 	}
 
 	if d.c.onMissing() {
@@ -731,11 +819,14 @@ func (d *cdxEditDoc) supplier() error {
 	}
 
 	d.ensureMetadata()
+	if d.skipIfAppendNotApplicable("supplier") {
+		return nil
+	}
 
 	supplier := cdxConstructSupplier(d.bom, d.c)
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Supplier == nil {
 				d.bom.Metadata.Supplier = supplier
 			}
@@ -745,7 +836,7 @@ func (d *cdxEditDoc) supplier() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.Metadata.Supplier = supplier
 		} else {
 			d.comp.Supplier = supplier
@@ -765,7 +856,7 @@ func (d *cdxEditDoc) authors() error {
 	authors := cdxConstructAuthors(d.bom, d.c)
 
 	if d.c.onMissing() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Authors == nil {
 				d.bom.Metadata.Authors = authors
 			}
@@ -781,7 +872,7 @@ func (d *cdxEditDoc) authors() error {
 			}
 		}
 	} else if d.c.onAppend() {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			if d.bom.Metadata.Authors == nil {
 				d.bom.Metadata.Authors = authors
 			} else {
@@ -796,7 +887,7 @@ func (d *cdxEditDoc) authors() error {
 			}
 		}
 	} else {
-		if d.c.search.subject == "document" {
+		if d.c.search.subject == SubjectDocument {
 			d.bom.Metadata.Authors = authors
 		} else {
 			if d.bom.SpecVersion <= cydx.SpecVersion1_5 {

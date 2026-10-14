@@ -25,6 +25,7 @@ import (
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/rm/types"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/spdx/tools-golang/spdx"
 )
 
@@ -48,6 +49,34 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 
 	switch c.doc.SpecType() {
 	case string(sbom.SBOMSpecSPDX):
+		if params.SpecKey == "spdx3" {
+			raw, ok := c.doc.Document().(*parse.Document)
+			if !ok {
+				return nil, fmt.Errorf("unexpected SPDX 3.0 document type")
+			}
+
+			if params.AllComponents {
+				for _, pkg := range raw.Packages {
+					result = append(result, pkg)
+				}
+				log.Debugf("Selected all components from SPDX 3.0 document")
+				return result, nil
+			}
+
+			name := strings.TrimSpace(params.ComponentName)
+			version := strings.TrimSpace(params.ComponentVersion)
+			if name == "" || version == "" {
+				return nil, fmt.Errorf("component name and version are required unless --all-components is set")
+			}
+
+			for _, pkg := range raw.Packages {
+				if strings.EqualFold(pkg.Name, name) && strings.EqualFold(pkg.PackageVersion, version) {
+					result = append(result, pkg)
+					break
+				}
+			}
+			return result, nil
+		}
 		raw, ok := c.doc.Document().(*spdx.Document)
 		if !ok {
 			return nil, fmt.Errorf("unexpected SPDX document type")
@@ -129,7 +158,7 @@ func (f *FieldOperationEngine) Execute(ctx context.Context, params *types.RmPara
 		return nil
 	}
 
-	spec, scope, field := f.doc.SpecType(), strings.ToLower(params.Scope), strings.ToLower(params.Field)
+	spec, scope, field := params.SpecKey, strings.ToLower(params.Scope), strings.ToLower(params.Field)
 
 	key := fmt.Sprintf("%s:%s:%s", strings.ToLower(spec), scope, field)
 	log.Debugf("Handler Key: %s", key)
@@ -183,7 +212,7 @@ func (c *ComponentsOperationEngine) Execute(ctx context.Context, params *types.R
 
 	// Validate field if provided
 	if params.Field != "" {
-		spec := c.doc.SpecType()
+		spec := params.SpecKey
 		if err := types.ValidateComponentField(spec, params.Field); err != nil {
 			return err
 		}

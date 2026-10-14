@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/spdx-zen/parse"
 	"github.com/interlynk-io/sbomasm/v2/pkg/logger"
 	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	"github.com/spdx/tools-golang/spdx/v2/common"
@@ -210,6 +211,204 @@ var spdxSBOM = []byte(`
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
       "relatedSpdxElement": "SPDXRef-root"
+    }
+  ]
+}
+`)
+
+var spdx3SBOM = []byte(`
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "@id": "_:creationinfo",
+      "type": "CreationInfo",
+      "specVersion": "3.0.1",
+      "createdBy": ["https://example.org/org1"],
+      "createdUsing": ["https://example.org/tool1"],
+      "created": "2024-01-01T00:00:00Z"
+    },
+    {
+      "spdxId": "https://example.org/doc1",
+      "type": "SpdxDocument",
+      "name": "test-sbom",
+      "creationInfo": "_:creationinfo",
+      "rootElement": ["https://example.org/pkg-primary"],
+      "profileConformance": ["core", "software"]
+    },
+    {
+      "spdxId": "https://example.org/org1",
+      "type": "Organization",
+      "name": "Acme Corp",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/person1",
+      "type": "Person",
+      "name": "Alice",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/tool1",
+      "type": "Tool",
+      "name": "test-tool",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/pkg-primary",
+      "type": "software_Package",
+      "name": "my-app",
+      "software_packageVersion": "2.0.0",
+      "software_primaryPurpose": "application",
+      "suppliedBy": "https://example.org/org1",
+      "originatedBy": ["https://example.org/person1"],
+      "description": "My application",
+      "copyrightText": "Copyright 2024 Acme Corp",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "md5",
+          "hashValue": "abc123"
+        },
+        {
+          "type": "Hash",
+          "algorithm": "sha1",
+          "hashValue": "def456"
+        },
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "ghi789"
+        },
+        {
+          "type": "Hash",
+          "algorithm": "sha512",
+          "hashValue": "jkl012"
+        }
+      ],
+      "externalIdentifier": [
+        {
+          "externalIdentifierType": "packageUrl",
+          "identifier": "pkg:npm/my-app@2.0.0"
+        },
+        {
+          "externalIdentifierType": "cpe23",
+          "identifier": "cpe:2.3:a:acme:my-app:2.0.0:*:*:*:*:*:*:*"
+        }
+      ]
+    },
+    {
+      "spdxId": "https://example.org/pkg-secondary",
+      "type": "software_Package",
+      "name": "lib-a",
+      "software_packageVersion": "1.0.0",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/lic-mit",
+      "type": "SimpleLicensingText",
+      "name": "MIT",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/rel-describes",
+      "type": "Relationship",
+      "relationshipType": "describes",
+      "from": "https://example.org/doc1",
+      "to": ["https://example.org/pkg-primary"],
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/rel-license",
+      "type": "Relationship",
+      "relationshipType": "hasConcludedLicense",
+      "from": "https://example.org/pkg-primary",
+      "to": ["https://example.org/lic-mit"],
+      "creationInfo": "_:creationinfo"
+    }
+  ]
+}
+`)
+
+// spdx3WithNoPackages is a minimal SPDX 3.0 document with no packages.
+var spdx3WithNoPackages = []byte(`
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "@id": "_:creationinfo",
+      "type": "CreationInfo",
+      "specVersion": "3.0.1",
+      "createdBy": ["https://example.org/org1"],
+      "createdUsing": ["https://example.org/tool1"],
+      "created": "2024-01-01T00:00:00Z"
+    },
+    {
+      "spdxId": "https://example.org/doc1",
+      "type": "SpdxDocument",
+      "name": "empty-sbom",
+      "creationInfo": "_:creationinfo",
+      "rootElement": [],
+      "profileConformance": ["core"]
+    },
+    {
+      "spdxId": "https://example.org/org1",
+      "type": "Organization",
+      "name": "Acme Corp",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/tool1",
+      "type": "Tool",
+      "name": "test-tool",
+      "creationInfo": "_:creationinfo"
+    }
+  ]
+}
+`)
+
+// spdx3WithFilesOnly is an SPDX 3.0 document with files but no packages.
+var spdx3WithFilesOnly = []byte(`
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "@graph": [
+    {
+      "@id": "_:creationinfo",
+      "type": "CreationInfo",
+      "specVersion": "3.0.1",
+      "createdBy": ["https://example.org/org1"],
+      "createdUsing": ["https://example.org/tool1"],
+      "created": "2024-01-01T00:00:00Z"
+    },
+    {
+      "spdxId": "https://example.org/doc1",
+      "type": "SpdxDocument",
+      "name": "files-only-sbom",
+      "creationInfo": "_:creationinfo",
+      "rootElement": [],
+      "profileConformance": ["core", "software"]
+    },
+    {
+      "spdxId": "https://example.org/org1",
+      "type": "Organization",
+      "name": "Acme Corp",
+      "creationInfo": "_:creationinfo"
+    },
+    {
+      "spdxId": "https://example.org/file1",
+      "type": "software_File",
+      "name": "/src/main.go",
+      "contentType": "text/x-go",
+      "copyrightText": "Copyright 2024",
+      "creationInfo": "_:creationinfo",
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "filesha256"
+        }
+      ]
     }
   ]
 }
@@ -1813,6 +2012,158 @@ func TestSPDXAll(t *testing.T) {
 		for i, want := range wantTypes {
 			if got := rows[i+1][typeIdx]; got != want {
 				t.Errorf("row %d Type = %q, want %q", i+1, got, want)
+			}
+		}
+	})
+}
+
+func TestSPDX3Conversion(t *testing.T) {
+	path := writeTempFile(t, spdx3SBOM, ".spdx3.json")
+	defer os.Remove(path)
+
+	initTestLogger()
+	ctx := logger.WithLogger(context.Background())
+
+	sbomDoc, err := sbom.Parser(ctx, path)
+	if err != nil {
+		t.Fatalf("Parser() error: %v", err)
+	}
+
+	doc, ok := sbomDoc.Document().(*parse.Document)
+	if !ok {
+		t.Fatalf("expected SPDX 3.0 document, got %T", sbomDoc.Document())
+	}
+
+	buf := &bytes.Buffer{}
+	if err := Serialize(ctx, sbomDoc, buf); err != nil {
+		t.Fatalf("Serialize() error: %v", err)
+	}
+
+	rows, err := csv.NewReader(buf).ReadAll()
+	if err != nil {
+		t.Fatalf("failed to read CSV output: %v", err)
+	}
+
+	// header + 2 packages = 3 rows
+	if len(rows) != 3 {
+		t.Fatalf("expected 3 rows (header + 2 packages), got %d", len(rows))
+	}
+
+	header := rows[0]
+	if len(header) != len(headers) {
+		t.Fatalf("header has %d columns, want %d", len(header), len(headers))
+	}
+	for i, h := range headers {
+		if header[i] != h {
+			t.Errorf("header[%d] = %q, want %q", i, header[i], h)
+		}
+	}
+
+	primaryPkg := doc.Packages[0]
+	secondaryPkg := doc.Packages[1]
+
+	checkRow := func(t *testing.T, row []string, checks []struct{ col, want string }) {
+		t.Helper()
+		for _, tt := range checks {
+			idx := columnIndex(t, header, tt.col)
+			if row[idx] != tt.want {
+				t.Errorf("column %q = %q, want %q", tt.col, row[idx], tt.want)
+			}
+		}
+	}
+
+	t.Run("primary-package", func(t *testing.T) {
+		checkRow(t, rows[1], []struct{ col, want string }{
+			{"Name", primaryPkg.Name},
+			{"Version", primaryPkg.PackageVersion},
+			{"Type", string(primaryPkg.PrimaryPurpose)},
+			{"Author", "Alice"},
+			{"Supplier", "Acme Corp"},
+			{"Group", ""},
+			{"Scope", ""},
+			{"Purl", "pkg:npm/my-app@2.0.0"},
+			{"Cpe", "cpe:2.3:a:acme:my-app:2.0.0:*:*:*:*:*:*:*"},
+			{"LicenseExpressions", "MIT"},
+			{"LicenseNames", "MIT"},
+			{"Copyright", "Copyright 2024 Acme Corp"},
+			{"Description", "My application"},
+			{"MD5", "abc123"},
+			{"SHA-1", "def456"},
+			{"SHA-256", "ghi789"},
+			{"SHA-512", "jkl012"},
+		})
+	})
+
+	t.Run("secondary-package", func(t *testing.T) {
+		checkRow(t, rows[2], []struct{ col, want string }{
+			{"Name", secondaryPkg.Name},
+			{"Version", secondaryPkg.PackageVersion},
+			{"Type", ""},
+			{"Author", ""},
+			{"Supplier", ""},
+			{"Group", ""},
+			{"Scope", ""},
+			{"Purl", ""},
+			{"Cpe", ""},
+			{"LicenseExpressions", ""},
+			{"LicenseNames", ""},
+			{"Copyright", ""},
+			{"Description", ""},
+			{"MD5", ""},
+			{"SHA-1", ""},
+			{"SHA-256", ""},
+			{"SHA-512", ""},
+		})
+	})
+}
+
+func TestSPDX3EdgeCases(t *testing.T) {
+	t.Run("no-packages", func(t *testing.T) {
+		path := writeTempFile(t, spdx3WithNoPackages, ".spdx3.json")
+		defer os.Remove(path)
+
+		rows := parseAndSerialize(t, path)
+		if len(rows) != 1 {
+			t.Errorf("expected 1 row (header only), got %d", len(rows))
+		}
+	})
+
+	t.Run("files-only", func(t *testing.T) {
+		path := writeTempFile(t, spdx3WithFilesOnly, ".spdx3.json")
+		defer os.Remove(path)
+
+		rows := parseAndSerialize(t, path)
+		// header + 1 file = 2 rows
+		if len(rows) != 2 {
+			t.Fatalf("expected 2 rows (header + 1 file), got %d", len(rows))
+		}
+
+		header := rows[0]
+		row := rows[1]
+
+		checks := []struct{ col, want string }{
+			{"Name", "/src/main.go"},
+			{"Version", ""},
+			{"Type", "FILE"},
+			{"Author", ""},
+			{"Supplier", ""},
+			{"Group", ""},
+			{"Scope", ""},
+			{"Purl", ""},
+			{"Cpe", ""},
+			{"LicenseExpressions", ""},
+			{"LicenseNames", ""},
+			{"Copyright", "Copyright 2024"},
+			{"Description", ""},
+			{"MD5", ""},
+			{"SHA-1", ""},
+			{"SHA-256", "filesha256"},
+			{"SHA-512", ""},
+		}
+		for _, c := range checks {
+			idx := columnIndex(t, header, c.col)
+			if got := row[idx]; got != c.want {
+				t.Errorf("%s = %q, want %q", c.col, got, c.want)
 			}
 		}
 	})

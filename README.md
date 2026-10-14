@@ -68,6 +68,7 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
     - [Assembling SBOMs](#assembling-sboms)
       - [Simple Assembly](#simple-assembly)
       - [Container and Application Assembly](#container-and-application-assembly)
+      - [SPDX 3.0 JSON-LD Assembly](#spdx-30-json-ld-assembly)
       - [Document License](#document-license)
       - [Augment Merge (Enrich Existing SBOM)](#augment-merge-enrich-existing-sbom)
       - [Assembly Merge with Primary (Nest SBOMs)](#assembly-merge-with-primary-nest-sboms)
@@ -75,7 +76,9 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
     - [Editing SBOMs](#editing-sboms)
       - [Add Missing Supplier Information](#add-missing-supplier-information)
       - [Update Component Licenses](#update-component-licenses)
+      - [SPDX 3.0 JSON-LD Editing](#spdx-30-json-ld-editing)
     - [Removing Components](#removing-components)
+      - [SPDX 3.0 JSON-LD Removal](#spdx-30-json-ld-removal)
     - [Enriching SBOMs](#enriching-sboms)
       - [Basic License Enrichment](#basic-license-enrichment)
       - [Advanced Enrichment Options](#advanced-enrichment-options)
@@ -129,8 +132,6 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
 
 - **GitLab/GitHub CI**: Widely adopted in CI/CD pipelines for automated SBOM assembly
 
-  
-
 ## Why sbomasm?
 
 Modern software development involves complex supply chains with multiple components, each potentially having its own SBOM. Organizations face several challenges:
@@ -147,11 +148,11 @@ Modern software development involves complex supply chains with multiple compone
 
 - 🔀 **Assemble**: Merge multiple SBOMs into comprehensive documents
 - ✏️ **Edit**: Add or modify metadata for compliance and completeness
-- 🗑️ **Remove**: Strip sensitive components or fields
-- 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined
-- 👁️ **View**: Visualize SBOMs in human-readable hierarchical format
+- 🗑️ **Remove**: Strip sensitive components or fields (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
+- 🚀 **Enrich**: Augment SBOMs with missing license information from ClearlyDefined (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
+- 👁️ **View**: Visualize SBOMs in human-readable hierarchical format (SPDX 2.3, SPDX 3.0 JSON-LD, CycloneDX)
 - 🔐 **Sign**: Cryptographically Sign & Verify SBOMs (uses 3rd party service from ShiftLeftCyber)
-- 📋 **Format Agnostic**: Supports both SPDX and CycloneDX
+- 📋 **Format Agnostic**: Supports SPDX 2.3, SPDX 3.0 JSON-LD, and CycloneDX
 - ⚡ **Blazing Fast**: Optimized for large-scale operations
 - 🔧 **Flexible**: CLI, configuration files, and API integration options
 
@@ -192,6 +193,36 @@ sbomasm assemble \
   --type "container" \
   -o final-container.spdx.json \
   alpine-base.spdx.json app-deps.spdx.json
+```
+
+#### SPDX 3.0 JSON-LD Assembly
+
+sbomasm supports SPDX 3.0 JSON-LD format with flat `@graph` structure. All merge strategies work with SPDX 3.0:
+
+```bash
+# Flat merge SPDX 3.0 SBOMs (default mode)
+sbomasm assemble \
+  -n "my-app" -v "1.0.0" -t "application" \
+  frontend.spdx3.json backend.spdx3.json \
+  -o merged.spdx3.json
+
+# Assembly merge with primary (nest secondary SBOMs into primary)
+sbomasm assemble --assemblyMerge \
+  --primary container.spdx3.json \
+  app1.spdx3.json app2.spdx3.json \
+  -o complete.spdx3.json
+
+# Augment merge (enrich primary with secondary fields)
+sbomasm assemble --augmentMerge \
+  --primary base.spdx3.json \
+  scan-results.spdx3.json \
+  -o enriched.spdx3.json
+
+# Flat merge with primary (preserve primary as root)
+sbomasm assemble --flatMerge \
+  --primary primary.spdx3.json \
+  secondary.spdx3.json \
+  -o combined.spdx3.json
 ```
 
 #### Document License
@@ -304,17 +335,59 @@ sbomasm edit \
   input.json
 ```
 
-### Removing Components
-
-Remove internal or sensitive components before sharing:
+#### SPDX 3.0 JSON-LD Editing
 
 ```bash
-# Remove internal components before sharing with customer
-sbomasm rm \
-  --subject component-name \
-  --search "internal-telemetry" \
-  --output public.json \
-  internal.json
+# Add document metadata to an SPDX 3.0 SBOM (creates Person/Organization elements)
+sbomasm edit \
+  --subject document \
+  --author "Security Team (security@example.com)" \
+  --tool "sbomasm (v0.1.0)" \
+  --timestamp \
+  input.spdx3.json -o enriched.spdx3.json
+
+# Add component identifiers (stored as externalIdentifier + verifiedUsing)
+sbomasm edit \
+  --subject primary-component \
+  --purl "pkg:golang/github.com/example/app@v1.0.0" \
+  --hash "SHA256 (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)" \
+  enriched.spdx3.json -o final.spdx3.json
+```
+
+### Removing Components
+
+Remove fields, components, or dependencies from SBOMs before sharing:
+
+```bash
+# Remove all authors from document metadata
+sbomasm rm --field author --scope document input.spdx.json -o output.spdx.json
+
+# Remove a specific field from a single component
+sbomasm rm --field purl --scope component --name "nginx" --version "v1.21.0" input.spdx.json -o output.spdx.json
+
+# Remove a field from all components
+sbomasm rm --field hash --scope component -a input.cdx.json -o output.cdx.json
+
+# Remove all components that have a specific field
+sbomasm rm --components --field license input.spdx.json -o output.spdx.json
+
+# Remove components where a field matches a specific value
+sbomasm rm --components --field supplier --value "Internal Team" input.cdx.json -o output.cdx.json
+```
+
+#### SPDX 3.0 JSON-LD Removal
+
+SPDX 3.0 uses an `@graph` flat element model. Component removal automatically cleans up orphaned elements (Person, Organization, Tool, License, Relationship) and dangling `rootElement` references.
+
+```bash
+# Remove all components with a specific license
+sbomasm rm --components --field license --value "Apache-2.0" input.spdx3.json -o output.spdx3.json
+
+# Remove a field from all components
+sbomasm rm --field hash --scope component -a input.spdx3.json -o output.spdx3.json
+
+# Remove all components that have a supplier
+sbomasm rm --components --field supplier input.spdx3.json -o output.spdx3.json
 ```
 
 ### Enriching SBOMs
@@ -329,6 +402,25 @@ sbomasm enrich \
   --fields license \
   --output enriched.json \
   original.json
+```
+
+#### SPDX 3.0 JSON-LD Enrichment
+
+SPDX 3.0 stores licenses as standalone elements linked via `hasConcludedLicense` relationships. The enrich command handles this automatically:
+
+```bash
+# Enrich SPDX 3.0 SBOM — adds SimpleLicensingText elements + relationships
+sbomasm enrich \
+  --fields license \
+  --output enriched.spdx3.json \
+  samples/test/enrich/dropwizard-missing-all-license.spdx3.json
+
+# Force update existing licenses (replaces hasConcludedLicense relationships)
+sbomasm enrich \
+  --fields license \
+  --force \
+  --output enriched-force.spdx3.json \
+  samples/test/enrich/dropwizard-some-license-present.spdx3.json
 ```
 
 #### Advanced Enrichment Options
@@ -387,6 +479,7 @@ sbomasm view sbom.cdx.json --format json -o analysis.json
 ```
 
 The view command is particularly useful for:
+
 - **Security Audits**: Identify and filter vulnerabilities by severity
 - **Dependency Analysis**: Understand component relationships and dependencies
 - **License Compliance**: Extract license information for compliance review
@@ -443,6 +536,7 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature '{"algo
 ### Microservices & Kubernetes
 
 Modern cloud-native applications consist of dozens of microservices, each with their own dependencies. Organizations using Kubernetes need to track components across:
+
 - Application code dependencies
 - Container base images
 - Kubernetes operators and controllers
@@ -472,10 +566,7 @@ sbomasm edit \
   daily-platform-sbom.json
 
 # Step 4: Remove internal debugging tools
-sbomasm rm \
-  --subject component-name \
-  --search "debug-console" \
-  daily-platform-sbom.json
+sbomasm rm --components --field supplier --value "Internal Team" daily-platform-sbom.json
 ```
 
 ### Automotive Industry
@@ -694,6 +785,7 @@ make build-all
 ```
 
 The project includes a comprehensive Makefile with targets for development, testing, building, and releasing. Run `make help` to see all available commands including:
+
 - **Development**: `make fmt`, `make vet`, `make lint`
 - **Testing**: `make test`, `make test-coverage`, `make test-short`
 - **Building**: `make build`, `make build-all`, `make install`
