@@ -7,7 +7,7 @@ require (
 	github.com/DependencyTrack/client-go v0.19.0
 	github.com/cheggaaa/pb/v3 v3.2.1
 	github.com/fatih/color v1.19.0
-	github.com/github/go-spdx/v2 v2.7.0
+	github.com/github/go-spdx/v2 v2.7.1
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
@@ -24,7 +24,7 @@ require (
 	go.uber.org/zap v1.28.0
 	golang.org/x/time v0.16.0
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/release-utils v0.12.4
+	sigs.k8s.io/release-utils v0.12.5
 )
 
 require (
@@ -48,7 +48,7 @@ require (
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
