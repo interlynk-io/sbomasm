@@ -32,6 +32,9 @@ type uniqueComponentService struct {
 
 	// mapping from old component id to new component id
 	idMap map[string]string
+
+	// bom-refs already assigned to a component
+	usedIDs map[string]bool
 }
 
 func newUniqueComponentService(ctx context.Context) *uniqueComponentService {
@@ -39,6 +42,7 @@ func newUniqueComponentService(ctx context.Context) *uniqueComponentService {
 		ctx:     ctx,
 		compMap: make(map[string]*cydx.Component),
 		idMap:   make(map[string]string),
+		usedIDs: make(map[string]bool),
 	}
 }
 
@@ -64,12 +68,36 @@ func (s *uniqueComponentService) StoreAndCloneWithNewID(c *cydx.Component) (*cyd
 		panic(err)
 	}
 
-	newID := generateComponentBomRef(nc)
+	newID := s.reserveID(nc)
 	nc.BOMRef = newID
 
 	s.compMap[lookupKey] = nc
 	s.idMap[c.BOMRef] = newID
 	return nc, false
+}
+
+// reserveID returns a bom-ref no other component holds. A purl names a package,
+// not a component, so distinct components can share one; the later component
+// then falls back to name@version, and finally to a numeric suffix.
+func (s *uniqueComponentService) reserveID(c *cydx.Component) string {
+	candidates := []string{generateComponentBomRef(c)}
+	if c.Name != "" && c.Version != "" {
+		candidates = append(candidates, fmt.Sprintf("%s@%s", c.Name, c.Version))
+	}
+	for _, id := range candidates {
+		if !s.usedIDs[id] {
+			s.usedIDs[id] = true
+			return id
+		}
+	}
+	base := candidates[len(candidates)-1]
+	for n := 2; ; n++ {
+		id := fmt.Sprintf("%s-%d", base, n)
+		if !s.usedIDs[id] {
+			s.usedIDs[id] = true
+			return id
+		}
+	}
 }
 
 func (s *uniqueComponentService) ResolveDepID(depID string) (string, bool) {
@@ -81,8 +109,11 @@ func (s *uniqueComponentService) ResolveDepID(depID string) (string, bool) {
 
 func (s *uniqueComponentService) ResolveDepIDs(depIDs []string) []string {
 	ids := make([]string, 0, len(depIDs))
+	seen := make(map[string]bool, len(depIDs))
 	for _, depID := range depIDs {
-		if newID, ok := s.idMap[depID]; ok {
+		// Refs from different inputs can resolve to one merged component.
+		if newID, ok := s.idMap[depID]; ok && !seen[newID] {
+			seen[newID] = true
 			ids = append(ids, newID)
 		}
 	}
