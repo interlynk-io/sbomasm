@@ -7,7 +7,7 @@ require (
 	github.com/DependencyTrack/client-go v0.19.0
 	github.com/cheggaaa/pb/v3 v3.2.1
 	github.com/fatih/color v1.19.0
-	github.com/github/go-spdx/v2 v2.7.1
+	github.com/github/go-spdx/v2 v2.8.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
