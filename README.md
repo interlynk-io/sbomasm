@@ -17,7 +17,7 @@ Get started with SBOM compliance in under two minutes — no credit card, no tim
 
 ```bash
 # Install sbomasm
-go install github.com/interlynk-io/sbomasm@latest
+go install github.com/interlynk-io/sbomasm/v2@latest
 
 # Assemble multiple SBOMs into one
 sbomasm assemble -n "my-app" -v "1.0.0" -o final.json service1.json service2.json service3.json
@@ -81,6 +81,7 @@ sbomasm verify --key-id a7b3c9e1-2f4d-4a8b-9c6e-1d5f7a9b2c4e --signature sbom.sp
       - [SPDX 3.0 JSON-LD Removal](#spdx-30-json-ld-removal)
     - [Enriching SBOMs](#enriching-sboms)
       - [Basic License Enrichment](#basic-license-enrichment)
+      - [SPDX 3.0 JSON-LD Enrichment](#spdx-30-json-ld-enrichment)
       - [Advanced Enrichment Options](#advanced-enrichment-options)
     - [Viewing SBOMs](#viewing-sboms)
       - [Basic SBOM Visualization](#basic-sbom-visualization)
@@ -741,7 +742,7 @@ Detailed documentation for each command:
 ### Using Go install (Recommended)
 
 ```bash
-go install github.com/interlynk-io/sbomasm@latest
+go install github.com/interlynk-io/sbomasm/v2@latest
 ```
 
 ### Using Homebrew
