@@ -5,9 +5,9 @@ go 1.27.1
 require (
 	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/DependencyTrack/client-go v0.19.0
-	github.com/cheggaaa/pb/v3 v3.2.1
+	github.com/cheggaaa/pb/v3 v3.3.0
 	github.com/fatih/color v1.19.0
-	github.com/github/go-spdx/v2 v2.7.1
+	github.com/github/go-spdx/v2 v2.8.0
 	github.com/google/uuid v1.6.0
 	github.com/guacsec/sw-id-core v0.1.3
 	github.com/hashicorp/go-retryablehttp v0.7.8
@@ -18,7 +18,7 @@ require (
 	github.com/pingcap/log v1.1.0
 	github.com/rogpeppe/go-internal v1.16.0
 	github.com/samber/lo v1.53.0
-	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.7.1
+	github.com/shiftleftcyber/securesbom-sdk-golang/v2 v2.8.1
 	github.com/spdx/tools-golang v0.5.7
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
@@ -44,7 +44,7 @@ require (
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.4 // indirect
+	go.yaml.in/yaml/v2 v2.4.5 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
