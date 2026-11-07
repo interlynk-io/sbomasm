@@ -210,11 +210,22 @@ func (m *merge) combinedMerge() error {
 
 			newPcId, _ := cs.ResolveDepID(oldPc.BOMRef)
 
+			foundPc := false
 			for i, pc := range priCompList {
 				if pc.BOMRef == newPcId {
 					newPc = i
+					foundPc = true
 					break
 				}
+			}
+
+			// A BOM without metadata.component contributes no primary, so there
+			// may be no entry to nest its components under. Falling through
+			// would index priCompList[0] and either panic on an empty list or
+			// attach these components to an unrelated primary.
+			if !foundPc {
+				log.Errorf("hierarchical merge: no primary component matches %s, skipping its components", newPcId)
+				continue
 			}
 
 			//Initialize the components list for the primary component (only once)
