@@ -130,6 +130,40 @@ var sbomCdxBomWithTwoComponentsNamedAppAndLib = []byte(`{
   ]
 }`)
 
+// sbomCdxBomWithComponentVcsExternalRef contains a component with an existing VCS externalReference.
+var sbomCdxBomWithComponentVcsExternalRef = []byte(`{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "app",
+      "version": "1.0.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/old-org/app"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "application",
+      "name": "app",
+      "version": "1.0.0",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/old-org/app"
+        }
+      ]
+    }
+  ]
+}`)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Document-Level Tests
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -596,4 +630,53 @@ func TestCdxDoc_AppendPurl_WarnsAndSkips(t *testing.T) {
 	stderr := captureStderr(func() { editor.update() })
 
 	assertWarningContains(t, stderr, "purl")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Repository Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+func TestCdxPC_OverwriteRepository_ReplacesExistingVcs(t *testing.T) {
+	bom := parseCdxFromBytes(t, sbomCdxBomWithComponentVcsExternalRef)
+
+	cfg := newConfig(t, "primary-component", "overwrite", withRepository("https://github.com/new-org/app"))
+
+	editor, err := NewCdxEditDoc(bom, cfg)
+	if err != nil {
+		t.Fatalf("failed to create editor: %v", err)
+	}
+	editor.update()
+
+	comp := bom.Metadata.Component
+	if comp.ExternalReferences == nil {
+		t.Fatal("expected ExternalReferences to be set")
+	}
+	if len(*comp.ExternalReferences) != 1 {
+		t.Fatalf("expected 1 external reference after overwrite, got %d", len(*comp.ExternalReferences))
+	}
+	if (*comp.ExternalReferences)[0].URL != "https://github.com/new-org/app" {
+		t.Fatalf("expected new VCS URL, got %q", (*comp.ExternalReferences)[0].URL)
+	}
+}
+
+func TestCdxDoc_OverwriteRepository_ReplacesExistingVcs(t *testing.T) {
+	bom := parseCdxFromBytes(t, sbomCdxBomWithComponentVcsExternalRef)
+
+	cfg := newConfig(t, "document", "overwrite", withRepository("https://github.com/new-org/app"))
+
+	editor, err := NewCdxEditDoc(bom, cfg)
+	if err != nil {
+		t.Fatalf("failed to create editor: %v", err)
+	}
+	editor.update()
+
+	if bom.ExternalReferences == nil {
+		t.Fatal("expected BOM-level ExternalReferences to be set")
+	}
+	if len(*bom.ExternalReferences) != 1 {
+		t.Fatalf("expected 1 external reference after overwrite, got %d", len(*bom.ExternalReferences))
+	}
+	if (*bom.ExternalReferences)[0].URL != "https://github.com/new-org/app" {
+		t.Fatalf("expected new VCS URL, got %q", (*bom.ExternalReferences)[0].URL)
+	}
 }
