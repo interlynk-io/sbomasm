@@ -144,13 +144,13 @@ func Enricher(ctx context.Context, sbomDoc sbom.SBOMDocument, components []inter
 			isCDX_1_6_Version := specVersion == cydx.SpecVersion1_6
 
 			found := false
-			if doc.Metadata != nil && doc.Metadata.Component != nil && doc.Metadata.Component.Name == c.Name && doc.Metadata.Component.Version == c.Version {
+			if doc.Metadata != nil && doc.Metadata.Component != nil && doc.Metadata.Component.PackageURL == c.PackageURL {
 				targetComp = doc.Metadata.Component
 				found = true
 
 			} else if doc.Components != nil {
 				for i := range *doc.Components {
-					if (*doc.Components)[i].Name == c.Name && (*doc.Components)[i].Version == c.Version {
+					if (*doc.Components)[i].PackageURL == c.PackageURL {
 						targetComp = &(*doc.Components)[i]
 						found = true
 						break
