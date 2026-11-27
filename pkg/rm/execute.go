@@ -110,18 +110,16 @@ func (c *FieldOperationComponentEngine) SelectComponents(ctx context.Context, pa
 			return nil, fmt.Errorf("unexpected CycloneDX BOM type")
 		}
 
-		if raw.Components == nil {
-			return nil, nil
-		}
-
 		if params.AllComponents {
 			log.Debugf("Selecting all components from CycloneDX BOM")
 			if raw.Metadata != nil && raw.Metadata.Component != nil {
 				result = append(result, raw.Metadata.Component)
 			}
 
-			for i := range *raw.Components {
-				result = append(result, &(*raw.Components)[i])
+			if raw.Components != nil {
+				for i := range *raw.Components {
+					result = append(result, &(*raw.Components)[i])
+				}
 			}
 			return result, nil
 		}
