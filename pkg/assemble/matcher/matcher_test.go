@@ -186,6 +186,48 @@ func TestCPEMatcher(t *testing.T) {
 			expectMatch:   false,
 			confidence:    0,
 		},
+		{
+			// Regression: CPE 2.3 escaped colons in product names must not be
+			// treated as field separators. Two different Jenkins plugins with
+			// escaped colons in their product names should NOT match.
+			name: "escaped colon different product no match",
+			primary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_build_step:2.12:*:*:*:*:jenkins:*:*",
+			},
+			secondary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_input_step:2.12:*:*:*:*:jenkins:*:*",
+			},
+			ignoreVersion: false,
+			expectMatch:   false,
+			confidence:    0,
+		},
+		{
+			// Same plugin with escaped colon, different versions, should match
+			// when version is ignored.
+			name: "escaped colon same product different version match",
+			primary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_build_step:2.12:*:*:*:*:jenkins:*:*",
+			},
+			secondary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_build_step:2.18:*:*:*:*:jenkins:*:*",
+			},
+			ignoreVersion: true,
+			expectMatch:   true,
+			confidence:    90,
+		},
+		{
+			// Same plugin with escaped colon, exact version match.
+			name: "escaped colon same product exact version match",
+			primary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_build_step:2.12:*:*:*:*:jenkins:*:*",
+			},
+			secondary: &mockComponent{
+				cpe: "cpe:2.3:a:jenkins:pipeline\\:_build_step:2.12:*:*:*:*:jenkins:*:*",
+			},
+			ignoreVersion: false,
+			expectMatch:   true,
+			confidence:    90,
+		},
 	}
 
 	for _, tt := range tests {

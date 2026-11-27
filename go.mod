@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/interlynk-io/sbomqs v1.3.0
 	github.com/interlynk-io/spdx-zen v0.1.7
+	github.com/knqyf263/go-cpe v0.0.0-20261105105232-0e8dfa8dd44c
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pingcap/log v1.1.0
@@ -40,6 +41,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/piprate/json-gold v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/spdx/gordf v0.0.0-20250128162952-000978ccd6fb // indirect
 	github.com/spf13/pflag v1.0.10 // indirect

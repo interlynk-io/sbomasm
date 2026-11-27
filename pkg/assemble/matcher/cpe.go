@@ -18,6 +18,9 @@ package matcher
 
 import (
 	"strings"
+
+	"github.com/knqyf263/go-cpe/common"
+	"github.com/knqyf263/go-cpe/naming"
 )
 
 // CPEMatcher matches components based on Common Platform Enumeration (CPE)
@@ -85,34 +88,36 @@ func (m *CPEMatcher) normalizeCPE(cpe string) string {
 
 // convertCPE22to23 converts CPE 2.2 format to CPE 2.3 format
 func (m *CPEMatcher) convertCPE22to23(cpe22 string) string {
-	// CPE 2.2: cpe:/part:vendor:product:version:update:edition:language
-	// CPE 2.3: cpe:2.3:part:vendor:product:version:update:edition:language:*:*:*:*
-
 	if !strings.HasPrefix(cpe22, "cpe:/") {
 		return cpe22
 	}
 
-	// Remove "cpe:/" prefix and split
-	parts := strings.Split(strings.TrimPrefix(cpe22, "cpe:/"), ":")
-
-	// Pad with wildcards to make 11 parts (part + 10 attributes)
-	for len(parts) < 11 {
-		parts = append(parts, "*")
+	wfn, err := naming.UnbindURI(cpe22)
+	if err != nil {
+		// fallback to naive conversion if library fails
+		parts := strings.Split(strings.TrimPrefix(cpe22, "cpe:/"), ":")
+		for len(parts) < 11 {
+			parts = append(parts, "*")
+		}
+		return "cpe:2.3:" + strings.Join(parts, ":")
 	}
 
-	// Reconstruct as CPE 2.3
-	return "cpe:2.3:" + strings.Join(parts, ":")
+	return naming.BindToFS(wfn)
 }
 
 // removeVersion removes the version part from a CPE
 func (m *CPEMatcher) removeVersion(cpe string) string {
-	parts := strings.Split(cpe, ":")
-
-	// CPE 2.3 format has version at index 5 (0-based)
-	// cpe:2.3:part:vendor:product:version:...
-	if len(parts) > 5 {
-		parts[5] = "*" // Replace version with wildcard
+	wfn, err := naming.UnbindFS(cpe)
+	if err != nil {
+		// fallback to naive split if library fails
+		parts := strings.Split(cpe, ":")
+		if len(parts) > 5 {
+			parts[5] = "*"
+		}
+		return strings.Join(parts, ":")
 	}
 
-	return strings.Join(parts, ":")
+	lv, _ := common.NewLogicalValue("ANY")
+	wfn[common.AttributeVersion] = lv
+	return naming.BindToFS(wfn)
 }
