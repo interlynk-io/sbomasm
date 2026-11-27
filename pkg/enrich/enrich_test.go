@@ -17,8 +17,12 @@
 package enrich
 
 import (
+	"context"
 	"testing"
 
+	cydx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/interlynk-io/sbomasm/v2/pkg/enrich/clearlydef"
+	"github.com/interlynk-io/sbomasm/v2/pkg/sbom"
 	spdx3 "github.com/interlynk-io/spdx-zen/model/v3.0.1"
 	"github.com/interlynk-io/spdx-zen/parse"
 )
@@ -216,5 +220,84 @@ func TestSanitizeForID(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("sanitizeForID(%q) = %q, want %q", tt.input, got, tt.want)
 		}
+	}
+}
+
+// TestEnricherCDX_PURLMatching verifies that two CycloneDX components with the
+// same Name and Version but different PURLs are matched correctly during
+// enrichment. Prior to the fix, the lookup matched on Name+Version only,
+// causing the first component to be overwritten with the second component's
+// license.
+func TestEnricherCDX_PURLMatching(t *testing.T) {
+	bomRef1 := "pkg:npm/%40types/aria-query@4.2.2"
+	bomRef2 := "pkg:npm/aria-query@4.2.2"
+
+	components := []cydx.Component{
+		{
+			Type:       cydx.ComponentTypeLibrary,
+			BOMRef:     bomRef1,
+			Group:      "@types",
+			Name:       "aria-query",
+			Version:    "4.2.2",
+			PackageURL: bomRef1,
+		},
+		{
+			Type:       cydx.ComponentTypeLibrary,
+			BOMRef:     bomRef2,
+			Name:       "aria-query",
+			Version:    "4.2.2",
+			PackageURL: bomRef2,
+		},
+	}
+
+	bom := &cydx.BOM{
+		SpecVersion: cydx.SpecVersion1_6,
+		Components:  &components,
+	}
+
+	doc := &sbom.CycloneDXDocument{BOM: bom}
+
+	respMIT := clearlydef.DefinitionResponse{}
+	respMIT.Licensed.Declared = "MIT"
+
+	respApache := clearlydef.DefinitionResponse{}
+	respApache.Licensed.Declared = "Apache-2.0"
+
+	responses := map[interface{}]clearlydef.DefinitionResponse{
+		components[0]: respMIT,
+		components[1]: respApache,
+	}
+
+	_, enriched, skipped, _, err := Enricher(context.Background(), doc, []interface{}{components[0], components[1]}, responses, false, "")
+	if err != nil {
+		t.Fatalf("Enricher error: %v", err)
+	}
+
+	if enriched != 2 {
+		t.Errorf("enriched = %d, want 2", enriched)
+	}
+	if skipped != 0 {
+		t.Errorf("skipped = %d, want 0", skipped)
+	}
+
+	// Verify each component received the correct license.
+	gotLic0 := ""
+	if (*bom.Components)[0].Licenses != nil && len(*(*bom.Components)[0].Licenses) > 0 {
+		if (*(*bom.Components)[0].Licenses)[0].License != nil {
+			gotLic0 = (*(*bom.Components)[0].Licenses)[0].License.ID
+		}
+	}
+	if gotLic0 != "MIT" {
+		t.Errorf("component[0] license = %q, want MIT", gotLic0)
+	}
+
+	gotLic1 := ""
+	if (*bom.Components)[1].Licenses != nil && len(*(*bom.Components)[1].Licenses) > 0 {
+		if (*(*bom.Components)[1].Licenses)[0].License != nil {
+			gotLic1 = (*(*bom.Components)[1].Licenses)[0].License.ID
+		}
+	}
+	if gotLic1 != "Apache-2.0" {
+		t.Errorf("component[1] license = %q, want Apache-2.0", gotLic1)
 	}
 }
