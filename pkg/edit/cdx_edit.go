@@ -280,12 +280,12 @@ func (d *cdxEditDoc) repository() error {
 		if foundVcs != nil {
 			if d.c.search.subject != SubjectDocument {
 				extRef := lo.Reject(*d.comp.ExternalReferences, func(x cydx.ExternalReference, _ int) bool {
-					return x.Type == vcs.Type && x.URL == vcs.URL
+					return x.Type == vcs.Type
 				})
 				*d.comp.ExternalReferences = extRef
 			} else {
 				extRef := lo.Reject(*d.bom.ExternalReferences, func(x cydx.ExternalReference, _ int) bool {
-					return x.Type == vcs.Type && x.URL == vcs.URL
+					return x.Type == vcs.Type
 				})
 				*d.bom.ExternalReferences = extRef
 			}
